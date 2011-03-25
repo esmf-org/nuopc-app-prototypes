@@ -38,6 +38,7 @@ Code structure:
   
 TODO:
   - Develop a standard way of documenting "Generic Components", that:
-    1. makes it clear how the generic Components relate to each other,
-    2. show how to use them, i.e. what they are for and how to specialize them.
+    1. shows how the generic Components relate to each other (hierarchy),
+    2. shows how to specialize them, and
+    3. shows the scenarious they are intented to be used in.
   
