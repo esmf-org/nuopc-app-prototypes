@@ -15,7 +15,9 @@ module NUOPC
   public NUOPC_CplCompAttributeGet
   public NUOPC_CplCompAttributeAdd
   public NUOPC_TimePrint
-  public NUOPC_ClockPrintTime
+  public NUOPC_ClockPrintCurrTime
+  public NUOPC_ClockPrintStartTime
+  public NUOPC_ClockPrintStopTime
   public NUOPC_ClockInitialize
   public NUOPC_GridCompSetClock
   public NUOPC_GridCompCheckSetClock
@@ -313,10 +315,13 @@ module NUOPC
   
   !-----------------------------------------------------------------------------
 
-  subroutine NUOPC_ClockPrintTime(clock, string, rc)
+  subroutine NUOPC_ClockPrintCurrTime(clock, string, rc)
     type(ESMF_Clock)                              :: clock
     character(*),           intent(in),  optional :: string
     integer,                intent(out), optional :: rc
+    
+    ! Description:
+    ! Formatted print of the current time in clock.
     
     type(ESMF_Time)         :: currTime
     if (present(rc)) rc = ESMF_SUCCESS
@@ -336,11 +341,63 @@ module NUOPC
 
   !-----------------------------------------------------------------------------
 
+  subroutine NUOPC_ClockPrintStartTime(clock, string, rc)
+    type(ESMF_Clock)                              :: clock
+    character(*),           intent(in),  optional :: string
+    integer,                intent(out), optional :: rc
+    
+    ! Description:
+    ! Formatted print of the start time in clock.
+    
+    type(ESMF_Time)         :: startTime
+    if (present(rc)) rc = ESMF_SUCCESS
+  
+    call ESMF_ClockGet(clock, startTime=startTime, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    call NUOPC_TimePrint(startTime, string, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+  end subroutine
+
+  !-----------------------------------------------------------------------------
+
+  subroutine NUOPC_ClockPrintStopTime(clock, string, rc)
+    type(ESMF_Clock)                              :: clock
+    character(*),           intent(in),  optional :: string
+    integer,                intent(out), optional :: rc
+    
+    ! Description:
+    ! Formatted print of the stop time in clock.
+    
+    type(ESMF_Time)         :: stopTime
+    if (present(rc)) rc = ESMF_SUCCESS
+  
+    call ESMF_ClockGet(clock, stopTime=stopTime, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    call NUOPC_TimePrint(stopTime, string, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+  end subroutine
+
+  !-----------------------------------------------------------------------------
+
   function NUOPC_ClockInitialize(externalClock, stabilityTimeStep, rc)
     type(ESMF_Clock) :: NUOPC_ClockInitialize
-    type(ESMF_Clock)                              :: externalClock
-    type(ESMF_TimeInterval)                       :: stabilityTimeStep
-    integer,                intent(out), optional :: rc
+    type(ESMF_Clock)                               :: externalClock
+    type(ESMF_TimeInterval), intent(in),  optional :: stabilityTimeStep
+    integer,                 intent(out), optional :: rc
     
     type(ESMF_Clock)        :: internalClock
     type(ESMF_TimeInterval) :: externalTimeStep
@@ -355,28 +412,31 @@ module NUOPC
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+      
+    if (present(stabilityTimeStep)) then
     
-    ! determine the internal timeStep
-    ! The external (parent) timeStep must be a multiple of the internal
-    ! timeStep. At the same time there is typically a physical/stability limit
-    ! for the internal timeStep. The following procedure finds an internal
-    ! timeStep that is as close as possible to the provided stability limit, 
-    ! while <= that limit. At the same time the external timeStep is a multiple
-    ! of the internal timeStep.
-    call ESMF_ClockGet(externalClock, timeStep=externalTimeStep, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
+      ! determine the internal timeStep
+      ! The external (parent) timeStep must be a multiple of the internal
+      ! timeStep. At the same time there is typically a physical/stability limit
+      ! for the internal timeStep. The following procedure finds an internal
+      ! timeStep that is as close as possible to the provided stability limit, 
+      ! while <= that limit. At the same time the external timeStep is a multiple
+      ! of the internal timeStep.
+      call ESMF_ClockGet(externalClock, timeStep=externalTimeStep, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
     
-    internalStepCount = ceiling(externalTimeStep / stabilityTimeStep)
-    actualTimeStep = externalTimeStep / internalStepCount
+      internalStepCount = ceiling(externalTimeStep / stabilityTimeStep)
+      actualTimeStep = externalTimeStep / internalStepCount
     
-    call ESMF_ClockSet(internalClock, timeStep=actualTimeStep, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
+      call ESMF_ClockSet(internalClock, timeStep=actualTimeStep, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    endif
       
     NUOPC_ClockInitialize = internalClock
   end function
@@ -386,8 +446,16 @@ module NUOPC
   subroutine NUOPC_GridCompSetClock(comp, externalClock, stabilityTimeStep, rc)
     type(ESMF_GridComp),     intent(inout)         :: comp
     type(ESMF_Clock),        intent(in)            :: externalClock
-    type(ESMF_TimeInterval), intent(in)            :: stabilityTimeStep
+    type(ESMF_TimeInterval), intent(in),  optional :: stabilityTimeStep
     integer,                 intent(out), optional :: rc
+    
+    ! Description:
+    ! Set the Component internal Clock as a copy of the externalClock, but
+    ! with a timeStep that is less than or equal to the stabilityTimeStep.
+    ! At the same time ensure that the timeStep of the externalClock is
+    ! a multiple of the internal Clock's timeStep. If the stabilityTimeStep
+    ! argument is not provided then the internal Clock will simply be set
+    ! as a copy of the externalClock.
     
     ! local variables
     type(ESMF_Clock)        :: internalClock
@@ -414,7 +482,15 @@ module NUOPC
     type(ESMF_GridComp),     intent(inout)         :: comp
     type(ESMF_Clock),        intent(in)            :: externalClock
     integer,                 intent(out), optional :: rc
-  
+    
+    ! Description:
+    ! Compare the externalClock to the Component internal Clock to make sure
+    ! they match in their current Time. Further ensure that the externalClock's
+    ! timeStep is a multiple of the internal Clock's timeStep. If both
+    ! these condition are satisfied then the stopTime of the internal Clock is
+    ! set to be reachable in one timeStep of the external Clock, taking into
+    ! account the direction of the Clock.
+    
     ! local variables    
     type(ESMF_Clock)        :: internalClock
     type(ESMF_Time)         :: externalCurrTime, currTime, stopTime
@@ -1130,7 +1206,7 @@ module NUOPC_ModelExplicit
       file=__FILE__)) &
       return  ! bail out
 
-    call NUOPC_ClockPrintTime(internalClock, ">>>"// &
+    call NUOPC_ClockPrintCurrTime(internalClock, ">>>"// &
       trim(modelName)//" entered Run with current time: ", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
       line=__LINE__, &
@@ -1182,7 +1258,7 @@ module NUOPC_ModelExplicit
         file=__FILE__)) &
         return  ! bail out
     
-      call NUOPC_ClockPrintTime(internalClock, &
+      call NUOPC_ClockPrintCurrTime(internalClock, &
         trim(modelName)//" time stepping loop, current time: ", rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
         line=__LINE__, &
