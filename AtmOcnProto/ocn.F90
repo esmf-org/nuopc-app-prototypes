@@ -109,11 +109,11 @@ module OCN
     
     rc = ESMF_SUCCESS
     
-    ! initialize internal clock 
-    ! according to external clock and stability time interval
+    ! initialize internal clock
+    ! here: parent Clock and stability timeStep determine actual model timeStep
 
-    !TODO: stabilityTimeStep should be read in from configuation or computed
-    !TODO: from internal Grid information
+    !TODO: stabilityTimeStep should be read in from configuation
+    !TODO: or computed from internal Grid information
     call ESMF_TimeIntervalSet(stabilityTimeStep, m=5, rc=rc) ! 5 minute steps
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
       line=__LINE__, &
@@ -185,6 +185,8 @@ module OCN
     ! local variables
     type(ESMF_Clock)              :: clock
     type(ESMF_State)              :: importState, exportState
+    type(ESMF_Time)               :: currTime
+    type(ESMF_TimeInterval)       :: timeStep
 
     rc = ESMF_SUCCESS
     
@@ -196,10 +198,30 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
 
-    ! HERE THE MODEL ADVANCES: currtime -> currtime + timestep
+    ! HERE THE MODEL ADVANCES: currTime -> currTime + timeStep
     
-    call NUOPC_ClockPrintTime(clock, "--------->Explicitly advancing model: ", &
-      rc=rc)
+    ! Because of the way that the internal Clock was set in InitializeP1()
+    ! its timeStep is likely smaller than the parent timeStep. As a consequence
+    ! the time interval covered by a single parent timeStep will result in 
+    ! multiple calls to the ModelAdvance() routine. Every time the currTime
+    ! will come in by one internal timeStep advanced. This goes until the
+    ! stopTime of the internal Clock has been reached.
+    
+    call NUOPC_ClockPrintCurrTime(clock, &
+      "------>Explicitly advancing OCN from: ", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    call ESMF_ClockGet(clock, currTime=currTime, timeStep=timeStep, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    call NUOPC_TimePrint(currTime + timeStep, &
+      "--------------------------------> to: ", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
       line=__LINE__, &
       file=__FILE__)) &
