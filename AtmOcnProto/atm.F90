@@ -107,14 +107,6 @@ module ATM
     
     rc = ESMF_SUCCESS
     
-    ! initialize internal clock
-    ! here: simply use parent timeStep to driver model
-    call NUOPC_GridCompSetClock(gcomp, clock, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
     ! create a Grid object for Fields
     gridIn = NUOPC_GridCreateSimpleXY(10._ESMF_KIND_R8, 20._ESMF_KIND_R8, &
       100._ESMF_KIND_R8, 200._ESMF_KIND_R8, 10, 100, rc)
@@ -163,6 +155,14 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
+    ! initialize internal clock
+    ! here: simply use parent timeStep to driver model
+    call NUOPC_GridCompSetClock(gcomp, clock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
   end subroutine
   
   !-----------------------------------------------------------------------------

@@ -109,23 +109,6 @@ module OCN
     
     rc = ESMF_SUCCESS
     
-    ! initialize internal clock
-    ! here: parent Clock and stability timeStep determine actual model timeStep
-
-    !TODO: stabilityTimeStep should be read in from configuation
-    !TODO: or computed from internal Grid information
-    call ESMF_TimeIntervalSet(stabilityTimeStep, m=5, rc=rc) ! 5 minute steps
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-      
-    call NUOPC_GridCompSetClock(gcomp, clock, stabilityTimeStep, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
     ! create a Grid object for Fields
     gridIn = NUOPC_GridCreateSimpleXY(10._ESMF_KIND_R8, 20._ESMF_KIND_R8, &
       100._ESMF_KIND_R8, 200._ESMF_KIND_R8, 100, 10, rc)
@@ -174,6 +157,21 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
 
+    ! initialize internal clock
+    ! here: parent Clock and stability timeStep determine actual model timeStep
+    !TODO: stabilityTimeStep should be read in from configuation
+    !TODO: or computed from internal Grid information
+    call ESMF_TimeIntervalSet(stabilityTimeStep, m=5, rc=rc) ! 5 minute steps
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_GridCompSetClock(gcomp, clock, stabilityTimeStep, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
   end subroutine
   
   !-----------------------------------------------------------------------------
