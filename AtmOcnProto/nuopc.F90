@@ -1058,13 +1058,27 @@ module NUOPC_ModelExplicit
     integer, intent(out) :: rc
     
     ! local variables    
+    integer           :: localrc
     type(ESMF_Clock)  :: internalClock
     logical           :: allConnected
+    logical           :: existflag
         
     rc = ESMF_SUCCESS
     
-    !TODO: fill all export Fields with valid initial data for current time
+    ! fill all export Fields with valid initial data for current time
     ! note that only connected Fields reside in exportState at this time
+    ! SPECIALIZE by calling into attached method to fill initial data
+    call ESMF_MethodExecute(gcomp, label="ModelExplicit_DataInitialize", &
+      existflag=existflag, userRc=localrc, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRPASS, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOG_ERRPASS, &
+      line=__LINE__, &
+      file=__FILE__, &
+      rcToReturn=rc)) &
+      return  ! bail out
     
     ! update timestamp on export Fields
     call ESMF_GridCompGet(gcomp, clock=internalClock, rc=rc)
@@ -1088,6 +1102,7 @@ module NUOPC_ModelExplicit
     type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
     
+    ! local variables    
     integer                 :: localrc
     type(ESMF_Clock)        :: internalClock
     logical                 :: allCurrent
@@ -1197,8 +1212,25 @@ module NUOPC_ModelExplicit
     type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
 
+    ! local variables    
+    integer           :: localrc
+    logical           :: existflag
+
     rc = ESMF_SUCCESS
     
+    ! SPECIALIZE by calling into optional attached method
+    call ESMF_MethodExecute(gcomp, label="ModelExplicit_Finalize", &
+      existflag=existflag, userRc=localrc, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRPASS, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOG_ERRPASS, &
+      line=__LINE__, &
+      file=__FILE__, &
+      rcToReturn=rc)) &
+      return  ! bail out
+
   end subroutine
 
 end module
