@@ -101,25 +101,15 @@ module ATM
     integer, intent(out) :: rc
     
     ! local variables    
-    type(ESMF_TimeInterval) :: stabilityTimeStep
     type(ESMF_Field)        :: field
     type(ESMF_Grid)         :: gridIn
     type(ESMF_Grid)         :: gridOut
     
     rc = ESMF_SUCCESS
     
-    ! initialize internal clock 
-    ! according to external clock and stability time interval
-
-    !TODO: stabilityTimeStep should be read in from configuation or computed
-    !TODO: from internal Grid information
-    call ESMF_TimeIntervalSet(stabilityTimeStep, m=2, rc=rc) ! 2 minute steps
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-      
-    call NUOPC_GridCompSetClock(gcomp, clock, stabilityTimeStep, rc=rc)
+    ! initialize internal clock
+    ! here: simply use parent timeStep to driver model
+    call NUOPC_GridCompSetClock(gcomp, clock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -195,10 +185,22 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
-    ! HERE THE MODEL ADVANCES: currtime -> currtime + timestep
+    ! HERE THE MODEL ADVANCES: currTime -> currTime + timeStep
     
-    call NUOPC_ClockPrintTime(clock, "--------->Explicitly advancing model: ", &
-      rc=rc)
+    ! Because of the way that the internal Clock was set in InitializeP1()
+    ! its timeStep is equal to the parent timeStep. As a consequence the
+    ! currTime + timeStep is equal to the stopTime of the internal Clock
+    ! for this call of the ModelAdvance() routine.
+    
+    call NUOPC_ClockPrintCurrTime(clock, &
+      "------>Explicitly advancing ATM from: ", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    call NUOPC_ClockPrintStopTime(clock, &
+      "--------------------------------> to: ", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
       line=__LINE__, &
       file=__FILE__)) &
