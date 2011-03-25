@@ -44,7 +44,7 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+    
     ! attach specializing method(s)
     call ESMF_MethodAdd(gcomp, label="ModelExplicit_Advance", &
       userRoutine=ModelAdvance, rc=rc)
@@ -187,8 +187,6 @@ module ATM
 
     rc = ESMF_SUCCESS
     
-    ! HERE THE MODEL ADVANCES: currtime -> currtime + timestep
-    
     ! query the Component for its clock, importState and exportState
     call ESMF_GridCompGet(gcomp, clock=clock, importState=importState, &
       exportState=exportState, rc=rc)
@@ -197,6 +195,8 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
+    ! HERE THE MODEL ADVANCES: currtime -> currtime + timestep
+    
     call NUOPC_ClockPrintTime(clock, "--------->Explicitly advancing model: ", &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
@@ -205,5 +205,5 @@ module ATM
       return  ! bail out
 
   end subroutine
-    
+
 end module
