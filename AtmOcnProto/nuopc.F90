@@ -34,12 +34,22 @@ module NUOPC
   contains
   !-----------------------------------------------------------------------------
   
+  !-----------------------------------------------------------------------------
+!BOP
+! !IROUTINE: NUOPC_FieldAttributeGet - Get a NUOPC Field Attribute
+! !INTERFACE:
   subroutine NUOPC_FieldAttributeGet(field, name, value, rc)
+! !ARGUMENTS:
     type(ESMF_Field)                      :: field
     character(*), intent(in)              :: name
     character(*), intent(out)             :: value
     integer,      intent(out), optional   :: rc
-    
+! !DESCRIPTION:
+!   Access the Attribute {\tt name} inside of {\tt field} using the
+!   convention {\tt NUOPC} and purpose {\tt General}. Return with error if
+!   the Attribute is not present or not set.
+!EOP
+  !-----------------------------------------------------------------------------
     ! local variables
     character(ESMF_MAXSTR)  :: defaultvalue
     
@@ -71,16 +81,22 @@ module NUOPC
     endif
     
   end subroutine
+  !-----------------------------------------------------------------------------
 
   !-----------------------------------------------------------------------------
-  
+!BOP
+! !IROUTINE: NUOPC_FieldAttributeAdd - Add a NUOPC Field Attribute
+! !INTERFACE:
   subroutine NUOPC_FieldAttributeAdd(field, StandardName, Units, Connected, rc)
+! !ARGUMENTS:
     type(ESMF_Field)                      :: field
     character(*), intent(in)              :: StandardName
     character(*), intent(in)              :: Units
     character(*), intent(in)              :: Connected
     integer,      intent(out), optional   :: rc
-
+! !DESCRIPTION:
+!EOP
+  !-----------------------------------------------------------------------------
     ! local variables
     character(ESMF_MAXSTR)  :: attrList(2)
 
@@ -137,15 +153,21 @@ module NUOPC
       file=__FILE__)) &
       return  ! bail out
   end subroutine
-
   !-----------------------------------------------------------------------------
   
+  !-----------------------------------------------------------------------------
+!BOP
+! !IROUTINE: NUOPC_CplCompAttributeGet - Get a NUOPC CplComp Attribute
+! !INTERFACE:
   subroutine NUOPC_CplCompAttributeGet(comp, cplList, cplListSize, rc)
+! !ARGUMENTS:
     type(ESMF_CplComp)                    :: comp
     character(*), intent(inout)           :: cplList(:)
     integer,      intent(inout)           :: cplListSize
     integer,      intent(out), optional   :: rc
-    
+! !DESCRIPTION:
+!EOP
+  !-----------------------------------------------------------------------------
     ! local variables
     character(ESMF_MAXSTR)  :: defaultvalue
     
@@ -160,15 +182,21 @@ module NUOPC
       return  ! bail out
     
   end subroutine
-
   !-----------------------------------------------------------------------------
   
+  !-----------------------------------------------------------------------------
+!BOP
+! !IROUTINE: NUOPC_CplCompAttributeAdd - Add a NUOPC CplComp Attribute
+! !INTERFACE:
   subroutine NUOPC_CplCompAttributeAdd(comp, importState, exportState, rc)
+! !ARGUMENTS:
     type(ESMF_CplComp), intent(inout)         :: comp
     type(ESMF_State),   intent(in)            :: importState
     type(ESMF_State),   intent(in)            :: exportState
     integer,            intent(out), optional :: rc
-    
+! !DESCRIPTION:
+!EOP
+  !-----------------------------------------------------------------------------
     ! local variables
     character(ESMF_MAXSTR)  :: attrList(2)
     integer, parameter      :: maxCount=10
@@ -218,16 +246,23 @@ module NUOPC
     endif
       
   end subroutine
-
   !-----------------------------------------------------------------------------
 
+  !-----------------------------------------------------------------------------
+!BOP
+! !IROUTINE: NUOPC_FillCplList - Fill the cplList according to matching Fields
+! !INTERFACE:
   subroutine NUOPC_FillCplList(importState, exportState, cplList, count, rc)
+! !ARGUMENTS:
     type(ESMF_State),       intent(in)            :: importState
     type(ESMF_State),       intent(in)            :: exportState
     character(ESMF_MAXSTR), intent(inout)         :: cplList(:)
     integer,                intent(out)           :: count
     integer,                intent(out), optional :: rc
-    
+! !DESCRIPTION:
+!EOP
+  !-----------------------------------------------------------------------------
+    ! local variables
     integer                         :: maxCount, i, j
     character(ESMF_MAXSTR), pointer :: importStandardNameList(:)
     character(ESMF_MAXSTR), pointer :: exportStandardNameList(:)
@@ -285,14 +320,21 @@ module NUOPC
     if (associated(exportStandardNameList)) deallocate(exportStandardNameList)
     
   end subroutine
-
   !-----------------------------------------------------------------------------
   
+  !-----------------------------------------------------------------------------
+!BOP
+! !IROUTINE: NUOPC_TimePrint - Formatted print ot time information
+! !INTERFACE:
   subroutine NUOPC_TimePrint(time, string, rc)
+! !ARGUMENTS:
     type(ESMF_Time)                               :: time
     character(*),           intent(in),  optional :: string
     integer,                intent(out), optional :: rc
-    
+! !DESCRIPTION:
+!EOP
+  !-----------------------------------------------------------------------------
+    ! local variables
     integer                 :: yy, mm, dd, h, m, s, ms
     
     if (present(rc)) rc = ESMF_SUCCESS
@@ -312,17 +354,22 @@ module NUOPC
     endif
     
   end subroutine
-  
   !-----------------------------------------------------------------------------
 
+  !-----------------------------------------------------------------------------
+!BOP
+! !IROUTINE: NUOPC_ClockPrintCurrTime - Formatted print ot current time
+! !INTERFACE:
   subroutine NUOPC_ClockPrintCurrTime(clock, string, rc)
+! !ARGUMENTS:
     type(ESMF_Clock)                              :: clock
     character(*),           intent(in),  optional :: string
     integer,                intent(out), optional :: rc
-    
-    ! Description:
-    ! Formatted print of the current time in clock.
-    
+! !DESCRIPTION:
+!   Formatted print of the current time in clock.
+!EOP
+  !-----------------------------------------------------------------------------
+    ! local variables
     type(ESMF_Time)         :: currTime
     if (present(rc)) rc = ESMF_SUCCESS
   
@@ -341,14 +388,20 @@ module NUOPC
 
   !-----------------------------------------------------------------------------
 
+  !-----------------------------------------------------------------------------
+!BOP
+! !IROUTINE: NUOPC_ClockPrintStartTime - Formatted print ot start time
+! !INTERFACE:
   subroutine NUOPC_ClockPrintStartTime(clock, string, rc)
+! !ARGUMENTS:
     type(ESMF_Clock)                              :: clock
     character(*),           intent(in),  optional :: string
     integer,                intent(out), optional :: rc
-    
-    ! Description:
-    ! Formatted print of the start time in clock.
-    
+! !DESCRIPTION:
+!   Formatted print of the start time in clock.
+!EOP
+  !-----------------------------------------------------------------------------
+    ! local variables
     type(ESMF_Time)         :: startTime
     if (present(rc)) rc = ESMF_SUCCESS
   
@@ -364,17 +417,22 @@ module NUOPC
       file=__FILE__)) &
       return  ! bail out
   end subroutine
-
   !-----------------------------------------------------------------------------
 
+  !-----------------------------------------------------------------------------
+!BOP
+! !IROUTINE: NUOPC_ClockPrintStopTime - Formatted print ot stop time
+! !INTERFACE:
   subroutine NUOPC_ClockPrintStopTime(clock, string, rc)
+! !ARGUMENTS:
     type(ESMF_Clock)                              :: clock
     character(*),           intent(in),  optional :: string
     integer,                intent(out), optional :: rc
-    
-    ! Description:
-    ! Formatted print of the stop time in clock.
-    
+! !DESCRIPTION:
+!   Formatted print of the stop time in clock.
+!EOP
+  !-----------------------------------------------------------------------------
+    ! local variables
     type(ESMF_Time)         :: stopTime
     if (present(rc)) rc = ESMF_SUCCESS
   
@@ -390,15 +448,22 @@ module NUOPC
       file=__FILE__)) &
       return  ! bail out
   end subroutine
-
   !-----------------------------------------------------------------------------
 
+  !-----------------------------------------------------------------------------
+!BOP
+! !IROUTINE: NUOPC_ClockInitialize - Initialize a clock from clock with stabilityTimeStep
+! !INTERFACE:
   function NUOPC_ClockInitialize(externalClock, stabilityTimeStep, rc)
+! !ARGUMENTS:
     type(ESMF_Clock) :: NUOPC_ClockInitialize
     type(ESMF_Clock)                               :: externalClock
     type(ESMF_TimeInterval), intent(in),  optional :: stabilityTimeStep
     integer,                 intent(out), optional :: rc
-    
+! !DESCRIPTION:
+!EOP
+  !-----------------------------------------------------------------------------
+    ! local variables
     type(ESMF_Clock)        :: internalClock
     type(ESMF_TimeInterval) :: externalTimeStep
     type(ESMF_TimeInterval) :: actualTimeStep
@@ -440,23 +505,27 @@ module NUOPC
       
     NUOPC_ClockInitialize = internalClock
   end function
-
   !-----------------------------------------------------------------------------
 
+  !-----------------------------------------------------------------------------
+!BOP
+! !IROUTINE: NUOPC_GridCompSetClock - Set initialized a clock in GridComp
+! !INTERFACE:
   subroutine NUOPC_GridCompSetClock(comp, externalClock, stabilityTimeStep, rc)
+! !ARGUMENTS:
     type(ESMF_GridComp),     intent(inout)         :: comp
     type(ESMF_Clock),        intent(in)            :: externalClock
     type(ESMF_TimeInterval), intent(in),  optional :: stabilityTimeStep
     integer,                 intent(out), optional :: rc
-    
-    ! Description:
-    ! Set the Component internal Clock as a copy of the externalClock, but
-    ! with a timeStep that is less than or equal to the stabilityTimeStep.
-    ! At the same time ensure that the timeStep of the externalClock is
-    ! a multiple of the internal Clock's timeStep. If the stabilityTimeStep
-    ! argument is not provided then the internal Clock will simply be set
-    ! as a copy of the externalClock.
-    
+! !DESCRIPTION:
+!   Set the Component internal Clock as a copy of the externalClock, but
+!   with a timeStep that is less than or equal to the stabilityTimeStep.
+!   At the same time ensure that the timeStep of the externalClock is
+!   a multiple of the internal Clock's timeStep. If the stabilityTimeStep
+!   argument is not provided then the internal Clock will simply be set
+!   as a copy of the externalClock.
+!EOP
+  !-----------------------------------------------------------------------------
     ! local variables
     type(ESMF_Clock)        :: internalClock
 
@@ -475,22 +544,26 @@ module NUOPC
       file=__FILE__)) &
       return  ! bail out
   end subroutine
-  
   !-----------------------------------------------------------------------------
   
+  !-----------------------------------------------------------------------------
+!BOP
+! !IROUTINE: NUOPC_GridCompCheckSetClock - Check clock compatibility
+! !INTERFACE:
   subroutine NUOPC_GridCompCheckSetClock(comp, externalClock, rc)
+! !ARGUMENTS:
     type(ESMF_GridComp),     intent(inout)         :: comp
     type(ESMF_Clock),        intent(in)            :: externalClock
     integer,                 intent(out), optional :: rc
-    
-    ! Description:
-    ! Compare the externalClock to the Component internal Clock to make sure
-    ! they match in their current Time. Further ensure that the externalClock's
-    ! timeStep is a multiple of the internal Clock's timeStep. If both
-    ! these condition are satisfied then the stopTime of the internal Clock is
-    ! set to be reachable in one timeStep of the external Clock, taking into
-    ! account the direction of the Clock.
-    
+! !DESCRIPTION:
+!   Compare the externalClock to the Component internal Clock to make sure
+!   they match in their current Time. Further ensure that the externalClock's
+!   timeStep is a multiple of the internal Clock's timeStep. If both
+!   these condition are satisfied then the stopTime of the internal Clock is
+!   set to be reachable in one timeStep of the external Clock, taking into
+!   account the direction of the Clock.
+!EOP
+  !-----------------------------------------------------------------------------
     ! local variables    
     type(ESMF_Clock)        :: internalClock
     type(ESMF_Time)         :: externalCurrTime, currTime, stopTime
@@ -553,17 +626,24 @@ module NUOPC
       file=__FILE__)) &
       return  ! bail out
   end subroutine
-  
   !-----------------------------------------------------------------------------
 
+  !-----------------------------------------------------------------------------
+!BOP
+! !IROUTINE: NUOPC_StateBuildStdList - Build a Field list from State according to standardName attribute
+! !INTERFACE:
   subroutine NUOPC_StateBuildStdList(state, stdAttrNameList, stdItemNameList, &
     stdConnectedList, rc)
+! !ARGUMENTS:
     type(ESMF_State),       intent(in)            :: state
     character(ESMF_MAXSTR), pointer               :: stdAttrNameList(:)
     character(ESMF_MAXSTR), pointer, optional     :: stdItemNameList(:)
     character(ESMF_MAXSTR), pointer, optional     :: stdConnectedList(:)
     integer,                intent(out), optional :: rc
-    
+! !DESCRIPTION:
+!EOP
+  !-----------------------------------------------------------------------------
+    ! local variables
     integer           :: item, itemCount, fieldCount, stat
     type(ESMF_Field)  :: field
     character(ESMF_MAXSTR), allocatable   :: itemNameList(:)
@@ -651,14 +731,21 @@ module NUOPC
     endif
     
   end subroutine
-  
   !-----------------------------------------------------------------------------
   
+  !-----------------------------------------------------------------------------
+!BOP
+! !IROUTINE: NUOPC_StateBuildStdList - Build a Field list from State according to standardName attribute
+! !INTERFACE:
   function NUOPC_StateIsAllConnected(state, rc)
+! !ARGUMENTS:
     logical :: NUOPC_StateIsAllConnected
     type(ESMF_State)                          :: state
     integer,            intent(out), optional :: rc
-  
+! !DESCRIPTION:
+!EOP
+  !-----------------------------------------------------------------------------
+    ! local variables
     character(ESMF_MAXSTR), pointer           :: stdAttrNameList(:)
     character(ESMF_MAXSTR), pointer           :: stdConnectedList(:)
     logical                                   :: allConnected
@@ -687,15 +774,21 @@ module NUOPC
     NUOPC_StateIsAllConnected = allConnected
 
   end function
-  
   !-----------------------------------------------------------------------------
   
+  !-----------------------------------------------------------------------------
+!BOP
+! !IROUTINE: NUOPC_StateSetTimestamp - Set timestamp on all fields in a State
+! !INTERFACE:
   subroutine NUOPC_StateSetTimestamp(state, clock, rc)
+! !ARGUMENTS:
     type(ESMF_State),        intent(inout)         :: state
     type(ESMF_Clock),        intent(in)            :: clock
     integer,                 intent(out), optional :: rc
-  
-    ! local variables    
+! !DESCRIPTION:
+!EOP
+  !-----------------------------------------------------------------------------
+    ! local variables
     character(ESMF_MAXSTR), pointer       :: stdAttrNameList(:)
     character(ESMF_MAXSTR), pointer       :: stdItemNameList(:)
     type(ESMF_Field)                      :: field
@@ -745,17 +838,23 @@ module NUOPC
     if (associated(stdItemNameList)) deallocate(stdItemNameList)
     
   end subroutine
-
   !-----------------------------------------------------------------------------
   
+  !-----------------------------------------------------------------------------
+!BOP
+! !IROUTINE: NUOPC_StateAddPotentialField - Set timestamp on all fields in a State
+! !INTERFACE:
   subroutine NUOPC_StateAddPotentialField(state, name, StandardName, Units, rc)
+! !ARGUMENTS:
     type(ESMF_State), intent(inout)         :: state
     character(*),     intent(in)            :: name
     character(*),     intent(in)            :: StandardName
     character(*),     intent(in)            :: Units
     integer,          intent(out), optional :: rc
-  
-    ! local variables    
+! !DESCRIPTION:
+!EOP
+  !-----------------------------------------------------------------------------
+    ! local variables
     type(ESMF_Field)        :: field
     
     if (present(rc)) rc = ESMF_SUCCESS
@@ -778,14 +877,20 @@ module NUOPC
       return  ! bail out
     
   end subroutine
-
   !-----------------------------------------------------------------------------
 
+  !-----------------------------------------------------------------------------
+!BOP
+! !IROUTINE: NUOPC_StateReplaceWRealField - Replace potential with actual fields
+! !INTERFACE:
   subroutine NUOPC_StateReplaceWRealField(state, field, rc)
+! !ARGUMENTS:
     type(ESMF_State), intent(inout)         :: state
     type(ESMF_Field), intent(in)            :: field
     integer,          intent(out), optional :: rc
-  
+! !DESCRIPTION:
+!EOP
+  !-----------------------------------------------------------------------------
     ! local variables
     type(ESMF_Field)        :: potentialField
     character(ESMF_MAXSTR)  :: name
@@ -829,16 +934,22 @@ module NUOPC
       return  ! bail out
     
   end subroutine
-
   !-----------------------------------------------------------------------------
 
+  !-----------------------------------------------------------------------------
+!BOP
+! !IROUTINE: NUOPC_StateIsCurrentTimestamp - Check if fields in state are at current time
+! !INTERFACE:
   function NUOPC_StateIsCurrentTimestamp(state, clock, rc)
+! !ARGUMENTS:
     logical :: NUOPC_StateIsCurrentTimestamp
     type(ESMF_State),        intent(inout)         :: state
     type(ESMF_Clock),        intent(in)            :: clock
     integer,                 intent(out), optional :: rc
-  
-    ! local variables    
+! !DESCRIPTION:
+!EOP
+  !-----------------------------------------------------------------------------
+    ! local variables
     character(ESMF_MAXSTR), pointer       :: stdAttrNameList(:)
     character(ESMF_MAXSTR), pointer       :: stdItemNameList(:)
     type(ESMF_Field)                      :: field
@@ -898,15 +1009,21 @@ module NUOPC
     NUOPC_StateIsCurrentTimestamp = isCurrent
     
   end function
-
   !-----------------------------------------------------------------------------
 
+  !-----------------------------------------------------------------------------
+!BOP
+! !IROUTINE: NUOPC_FieldBundleUpdateTime - Update the time stamp on all fiels in fieldbundle
+! !INTERFACE:
   subroutine NUOPC_FieldBundleUpdateTime(srcFields, dstFields, rc)
+! !ARGUMENTS:
     type(ESMF_FieldBundle),  intent(inout)         :: srcFields
     type(ESMF_FieldBundle),  intent(inout)         :: dstFields
     integer,                 intent(out), optional :: rc
-  
-    ! local variables    
+! !DESCRIPTION:
+!EOP
+  !-----------------------------------------------------------------------------
+    ! local variables
     character(ESMF_MAXSTR), pointer       :: stdAttrNameList(:)
     character(ESMF_MAXSTR), pointer       :: stdItemNameList(:)
     type(ESMF_Field)        :: srcField, dstField
@@ -962,16 +1079,23 @@ module NUOPC
     enddo
     
   end subroutine
-    
   !-----------------------------------------------------------------------------
 
+  !-----------------------------------------------------------------------------
+!BOP
+! !IROUTINE: NUOPC_GridCreateSimpleXY - Create a simple XY cartesian grid
+! !INTERFACE:
   function NUOPC_GridCreateSimpleXY(x_min, y_min, x_max, y_max, &
     i_count, j_count, rc)
+! !ARGUMENTS:
     type(ESMF_Grid):: NUOPC_GridCreateSimpleXY
     real(ESMF_KIND_R8), intent(in)            :: x_min, x_max, y_min, y_max
     integer,            intent(in)            :: i_count, j_count
     integer,            intent(out), optional :: rc
-  
+! !DESCRIPTION:
+!EOP
+  !-----------------------------------------------------------------------------
+    ! local variables
     integer :: i, j, imin_t, imax_t, jmin_t, jmax_t
     real(ESMF_KIND_R8), pointer :: CoordX(:), CoordY(:)
     real(ESMF_KIND_R8):: dx, dy
@@ -1030,6 +1154,7 @@ module NUOPC
     NUOPC_GridCreateSimpleXY = grid
     
   end function
+  !-----------------------------------------------------------------------------
 
 end module
 
