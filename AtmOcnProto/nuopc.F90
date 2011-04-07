@@ -12,6 +12,7 @@ module NUOPC
   
   public NUOPC_FieldAttributeGet
   public NUOPC_FieldAttributeAdd
+  public NUOPC_CplCompAreServicesSet
   public NUOPC_CplCompAttributeGet
   public NUOPC_CplCompAttributeAdd
   public NUOPC_TimePrint
@@ -19,6 +20,7 @@ module NUOPC
   public NUOPC_ClockPrintStartTime
   public NUOPC_ClockPrintStopTime
   public NUOPC_ClockInitialize
+  public NUOPC_GridCompAreServicesSet  
   public NUOPC_GridCompSetClock
   public NUOPC_GridCompCheckSetClock
   public NUOPC_StateBuildStdList
@@ -155,6 +157,40 @@ module NUOPC
   end subroutine
   !-----------------------------------------------------------------------------
   
+  !-----------------------------------------------------------------------------
+!BOP
+! !IROUTINE: NUOPC_CplCompAreServicesSet - Check if SetServices was called
+! !INTERFACE:
+  function NUOPC_CplCompAreServicesSet(comp, rc)
+! !ARGUMENTS:
+    logical :: NUOPC_CplCompAreServicesSet
+    type(ESMF_CplComp), intent(in)            :: comp
+    integer,            intent(out), optional :: rc
+! !DESCRIPTION:
+!   Returns {\tt .true.} if SetServices was called. Otherwise {\tt .false.}.
+!EOP
+  !-----------------------------------------------------------------------------
+    ! local variables
+    type(ESMF_Pointer)      :: vm_info
+    
+    if (present(rc)) rc = ESMF_SUCCESS
+    
+    ! make a copy of the external externalClock
+    call ESMF_CompGet(comp%compp, vm_info=vm_info, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+    if (vm_info == ESMF_NULL_POINTER) then
+      NUOPC_CplCompAreServicesSet = .false.
+    else
+      NUOPC_CplCompAreServicesSet = .true.
+    endif
+      
+  end function
+  !-----------------------------------------------------------------------------
+
   !-----------------------------------------------------------------------------
 !BOP
 ! !IROUTINE: NUOPC_CplCompAttributeGet - Get a NUOPC CplComp Attribute
@@ -297,24 +333,29 @@ module NUOPC
       file=__FILE__)) &
       return  ! bail out
     
-    ! simple linear search of items that match between both lists
-    do i=1, size(importStandardNameList)
-      do j=1, size(exportStandardNameList)
-        if (importStandardNameList(i) == exportStandardNameList(j)) then
-          count = count+1
-          if (count > maxCount) then
-            call ESMF_LogSetError(ESMF_RC_ARG_BAD, &
-              msg="Not enough space in cplList",&
-              line=__LINE__, &
-              file=__FILE__, &
-              rcToReturn=rc)
-              return  ! bail out
+    if (associated(importStandardNameList) .and. &
+      associated(exportStandardNameList)) then
+      
+      ! simple linear search of items that match between both lists
+      do i=1, size(importStandardNameList)
+        do j=1, size(exportStandardNameList)
+          if (importStandardNameList(i) == exportStandardNameList(j)) then
+            count = count+1
+            if (count > maxCount) then
+              call ESMF_LogSetError(ESMF_RC_ARG_BAD, &
+                msg="Not enough space in cplList",&
+                line=__LINE__, &
+                file=__FILE__, &
+                rcToReturn=rc)
+                return  ! bail out
+            endif
+            cplList(count) = importStandardNameList(i)
+            exit
           endif
-          cplList(count) = importStandardNameList(i)
-          exit
-        endif
+        enddo
       enddo
-    enddo
+      
+    endif
       
     if (associated(importStandardNameList)) deallocate(importStandardNameList)
     if (associated(exportStandardNameList)) deallocate(exportStandardNameList)
@@ -504,6 +545,40 @@ module NUOPC
     endif
       
     NUOPC_ClockInitialize = internalClock
+  end function
+  !-----------------------------------------------------------------------------
+
+  !-----------------------------------------------------------------------------
+!BOP
+! !IROUTINE: NUOPC_GridCompAreServicesSet - Check if SetServices was called
+! !INTERFACE:
+  function NUOPC_GridCompAreServicesSet(comp, rc)
+! !ARGUMENTS:
+    logical :: NUOPC_GridCompAreServicesSet
+    type(ESMF_GridComp), intent(in)            :: comp
+    integer,             intent(out), optional :: rc
+! !DESCRIPTION:
+!   Returns {\tt .true.} if SetServices was called. Otherwise {\tt .false.}.
+!EOP
+  !-----------------------------------------------------------------------------
+    ! local variables
+    type(ESMF_Pointer)      :: vm_info
+    
+    if (present(rc)) rc = ESMF_SUCCESS
+    
+    ! make a copy of the external externalClock
+    call ESMF_CompGet(comp%compp, vm_info=vm_info, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+    if (vm_info == ESMF_NULL_POINTER) then
+      NUOPC_GridCompAreServicesSet = .false.
+    else
+      NUOPC_GridCompAreServicesSet = .true.
+    endif
+      
   end function
   !-----------------------------------------------------------------------------
 
@@ -1453,22 +1528,63 @@ module NUOPC_DriverExplicit
   private
   
   public SetServices, InternalState
+  public ConnectorPlacing, connectorPlacingPreModel, connectorPlacingPostModel
+  public ConnectorGrouping, connectorGroupingNone, &
+    connectorGroupingPreModel, connectorGroupingPostModel
+  
+  type ConnectorPlacing
+    integer :: value
+  end type
+  
+  type(ConnectorPlacing), parameter :: &
+    connectorPlacingPreModel   = ConnectorPlacing(1), &
+    connectorPlacingPostModel  = ConnectorPlacing(2)
+    
+  type ConnectorGrouping
+    integer :: value
+  end type
+  
+  type(ConnectorGrouping), parameter :: &
+    connectorGroupingNone      = connectorGrouping(0), &
+    connectorGroupingPreModel  = connectorGrouping(1), &
+    connectorGroupingPostModel = connectorGrouping(2)
   
   type InternalStateStruct
-    integer                       :: modelCount
-    type(ESMF_GridComp), pointer  :: modelComp(:)
-    type(ESMF_State),    pointer  :: modelIS(:), modelES(:)
-    type(ESMF_CplComp),  pointer  :: connectorComp(:,:)
+    integer                         :: modelCount
+    type(ESMF_GridComp), pointer    :: modelComp(:)
+    type(ESMF_State),    pointer    :: modelIS(:), modelES(:)
+    type(ConnectorGrouping)         :: connectorGrouping
+    type(ConnectorPlacing), pointer :: connectorPlacing(:)
+    type(ESMF_CplComp),  pointer    :: connectorComp(:,:)
   end type
 
   type InternalState
     type(InternalStateStruct), pointer :: wrap
   end type
 
+  interface operator (==)
+    module procedure CP_eq
+    module procedure CG_eq
+  end interface
+
   !-----------------------------------------------------------------------------
   contains
   !-----------------------------------------------------------------------------
   
+  function CP_eq(a, b)
+    logical CP_eq
+    type(ConnectorPlacing), intent(in) :: a, b
+    CP_eq = (a%value == b%value)
+  end function
+
+  function CG_eq(a, b)
+    logical CG_eq
+    type(ConnectorGrouping), intent(in) :: a, b
+    CG_eq = (a%value == b%value)
+  end function
+  
+  !-----------------------------------------------------------------------------
+
   subroutine SetServices(gcomp, rc)
     type(ESMF_GridComp)  :: gcomp
     integer, intent(out) :: rc
@@ -1510,7 +1626,7 @@ module NUOPC_DriverExplicit
     type(InternalState)     :: is
     type(ESMF_Clock)        :: internalClock
     integer                 :: i, j
-    character(ESMF_MAXSTR)  :: iString, jString
+    character(ESMF_MAXSTR)  :: iString, jString, compName
 
     rc = ESMF_SUCCESS
     
@@ -1528,6 +1644,9 @@ module NUOPC_DriverExplicit
       file=__FILE__)) &
       return  ! bail out
       
+    ! default setting for connectorGrouping
+    is%wrap%connectorGrouping = connectorGroupingPreModel
+      
     ! SPECIALIZE by calling into attached method to set modelCount
     call ESMF_MethodExecute(gcomp, label="DriverExplicit_SetModelCount", &
       userRc=localrc, rc=rc)
@@ -1544,6 +1663,7 @@ module NUOPC_DriverExplicit
     ! allocate lists inside the internal state according to modelCount
     allocate(is%wrap%modelComp(is%wrap%modelCount), &
       is%wrap%modelIS(is%wrap%modelCount), is%wrap%modelES(is%wrap%modelCount),&
+      is%wrap%connectorPlacing(is%wrap%modelCount), &
       is%wrap%connectorComp(is%wrap%modelCount,is%wrap%modelCount), stat=stat)
     if (ESMF_LogFoundAllocError(statusToCheck=stat, &
       msg="Allocation of internal state memory failed.", &
@@ -1557,14 +1677,14 @@ module NUOPC_DriverExplicit
       !TODO: there should be petList members in the internal State that 
       !TODO: can be specialized and would be used here
       write (iString, *) i
-      is%wrap%modelComp(i) = ESMF_GridCompCreate(name="modelComp "//&
+      is%wrap%modelComp(i) = ESMF_GridCompCreate(name="modelComp "// &
         trim(adjustl(iString)), rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
 
-      is%wrap%modelIS(i) = ESMF_StateCreate(name="modelComp "//&
+      is%wrap%modelIS(i) = ESMF_StateCreate(name="modelComp "// &
         trim(adjustl(iString))//" Import State", &
         statetype=ESMF_STATE_IMPORT, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
@@ -1572,13 +1692,16 @@ module NUOPC_DriverExplicit
         file=__FILE__)) &
         return  ! bail out
 
-      is%wrap%modelES(i) = ESMF_StateCreate(name="modelComp "//&
+      is%wrap%modelES(i) = ESMF_StateCreate(name="modelComp "// &
         trim(adjustl(iString))//" Export State", &
         statetype=ESMF_STATE_EXPORT, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
+        
+      ! default setting for connectorPlacing
+      is%wrap%connectorPlacing(i) = connectorPlacingPreModel
         
       do j=1, is%wrap%modelCount
         if (j==i) cycle ! skip self connection
@@ -1615,21 +1738,29 @@ module NUOPC_DriverExplicit
     ! InitP0: modelComps
     do i=1, is%wrap%modelCount
       write (iString, *) i
-      call ESMF_GridCompInitialize(is%wrap%modelComp(i), &
-        importState=is%wrap%modelIS(i), exportState=is%wrap%modelES(i), &
-        clock=internalClock, phase=0, userRc=localrc, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg="Failed calling phase 0 "// &
-        "Initialize for modelComp "//trim(adjustl(iString)), &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-      if (ESMF_LogFoundError(rcToCheck=localrc, msg="Phase 0 "//&
-        "Initialize for modelComp "//trim(adjustl(iString))//" did not "// &
-        "return ESMF_SUCCESS", &
-        line=__LINE__, &
-        file=__FILE__, &
-        rcToReturn=rc)) &
-        return  ! bail out
+      if (NUOPC_GridCompAreServicesSet(is%wrap%modelComp(i))) then
+        call ESMF_GridCompGet(is%wrap%modelComp(i), name=compName, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+        call ESMF_GridCompInitialize(is%wrap%modelComp(i), &
+          importState=is%wrap%modelIS(i), exportState=is%wrap%modelES(i), &
+          clock=internalClock, phase=0, userRc=localrc, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg="Failed calling phase 0 "// &
+          "Initialize for modelComp "//trim(adjustl(iString))//": "// &
+          trim(compName), &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+        if (ESMF_LogFoundError(rcToCheck=localrc, msg="Phase 0 "// &
+          "Initialize for modelComp "//trim(adjustl(iString))//": "// &
+          trim(compName)//" did not return ESMF_SUCCESS", &
+          line=__LINE__, &
+          file=__FILE__, &
+          rcToReturn=rc)) &
+          return  ! bail out
+      endif
     enddo
     
     ! InitP0: connectorComps
@@ -1638,44 +1769,60 @@ module NUOPC_DriverExplicit
       do j=1, is%wrap%modelCount
         if (j==i) cycle ! skip self connection
         write (jString, *) j
-        call ESMF_CplCompInitialize(is%wrap%connectorComp(i,j), &
-          importState=is%wrap%modelES(i), exportState=is%wrap%modelIS(j), &
-          clock=internalClock, phase=0, userRc=localrc, rc=rc)
-        if (ESMF_LogFoundError(rcToCheck=rc, msg="Failed calling phase 0 "// &
-          "Initialize for connectorComp "// &
-          trim(adjustl(iString))//" -> "//trim(adjustl(jString)), &
-          line=__LINE__, &
-          file=__FILE__)) &
-          return  ! bail out
-        if (ESMF_LogFoundError(rcToCheck=localrc, msg="Phase 0 "//&
-          "Initialize for connectorComp "// &
-          trim(adjustl(iString))//" -> "//trim(adjustl(jString))//" did not "// &
-          "return ESMF_SUCCESS", &
-          line=__LINE__, &
-          file=__FILE__, &
-          rcToReturn=rc)) &
-          return  ! bail out
+        if (NUOPC_CplCompAreServicesSet(is%wrap%connectorComp(i,j))) then
+          call ESMF_CplCompGet(is%wrap%connectorComp(i,j), name=compName, rc=rc)
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+          call ESMF_CplCompInitialize(is%wrap%connectorComp(i,j), &
+            importState=is%wrap%modelES(i), exportState=is%wrap%modelIS(j), &
+            clock=internalClock, phase=0, userRc=localrc, rc=rc)
+          if (ESMF_LogFoundError(rcToCheck=rc, msg="Failed calling phase 0 "// &
+            "Initialize for connectorComp "// &
+            trim(adjustl(iString))//" -> "//trim(adjustl(jString))//": "// &
+            trim(compName), &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+          if (ESMF_LogFoundError(rcToCheck=localrc, msg="Phase 0 "// &
+            "Initialize for connectorComp "// &
+            trim(adjustl(iString))//" -> "//trim(adjustl(jString))//": "// &
+            trim(compName)//" did not return ESMF_SUCCESS", &
+            line=__LINE__, &
+            file=__FILE__, &
+            rcToReturn=rc)) &
+            return  ! bail out
+        endif
       enddo
     enddo
 
     ! InitP1: modelComps
     do i=1, is%wrap%modelCount
       write (iString, *) i
-      call ESMF_GridCompInitialize(is%wrap%modelComp(i), &
-        importState=is%wrap%modelIS(i), exportState=is%wrap%modelES(i), &
-        clock=internalClock, phase=1, userRc=localrc, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg="Failed calling phase 1 "// &
-        "Initialize for modelComp "//trim(adjustl(iString)), &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-      if (ESMF_LogFoundError(rcToCheck=localrc, msg="Phase 1 "//&
-        "Initialize for modelComp "//trim(adjustl(iString))//" did not "// &
-        "return ESMF_SUCCESS", &
-        line=__LINE__, &
-        file=__FILE__, &
-        rcToReturn=rc)) &
-        return  ! bail out
+      if (NUOPC_GridCompAreServicesSet(is%wrap%modelComp(i))) then
+        call ESMF_GridCompGet(is%wrap%modelComp(i), name=compName, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+        call ESMF_GridCompInitialize(is%wrap%modelComp(i), &
+          importState=is%wrap%modelIS(i), exportState=is%wrap%modelES(i), &
+          clock=internalClock, phase=1, userRc=localrc, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg="Failed calling phase 1 "// &
+          "Initialize for modelComp "//trim(adjustl(iString))//": "// &
+          trim(compName), &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+        if (ESMF_LogFoundError(rcToCheck=localrc, msg="Phase 1 "// &
+          "Initialize for modelComp "//trim(adjustl(iString))//": "// &
+          trim(compName)//" did not return ESMF_SUCCESS", &
+          line=__LINE__, &
+          file=__FILE__, &
+          rcToReturn=rc)) &
+          return  ! bail out
+      endif
     enddo
     
     ! InitP1: connectorComps
@@ -1684,63 +1831,88 @@ module NUOPC_DriverExplicit
       do j=1, is%wrap%modelCount
         if (j==i) cycle ! skip self connection
         write (jString, *) j
-        call ESMF_CplCompInitialize(is%wrap%connectorComp(i,j), &
-          importState=is%wrap%modelES(i), exportState=is%wrap%modelIS(j), &
-          clock=internalClock, phase=1, userRc=localrc, rc=rc)
-        if (ESMF_LogFoundError(rcToCheck=rc, msg="Failed calling phase 1 "// &
-          "Initialize for connectorComp "// &
-          trim(adjustl(iString))//" -> "//trim(adjustl(jString)), &
-          line=__LINE__, &
-          file=__FILE__)) &
-          return  ! bail out
-        if (ESMF_LogFoundError(rcToCheck=localrc, msg="Phase 1 "//&
-          "Initialize for connectorComp "// &
-          trim(adjustl(iString))//" -> "//trim(adjustl(jString))//" did not "// &
-          "return ESMF_SUCCESS", &
-          line=__LINE__, &
-          file=__FILE__, &
-          rcToReturn=rc)) &
-          return  ! bail out
+        if (NUOPC_CplCompAreServicesSet(is%wrap%connectorComp(i,j))) then
+          call ESMF_CplCompGet(is%wrap%connectorComp(i,j), name=compName, rc=rc)
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+          call ESMF_CplCompInitialize(is%wrap%connectorComp(i,j), &
+            importState=is%wrap%modelES(i), exportState=is%wrap%modelIS(j), &
+            clock=internalClock, phase=1, userRc=localrc, rc=rc)
+          if (ESMF_LogFoundError(rcToCheck=rc, msg="Failed calling phase 1 "// &
+            "Initialize for connectorComp "// &
+            trim(adjustl(iString))//" -> "//trim(adjustl(jString))//": "// &
+            trim(compName), &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+          if (ESMF_LogFoundError(rcToCheck=localrc, msg="Phase 1 "// &
+            "Initialize for connectorComp "// &
+            trim(adjustl(iString))//" -> "//trim(adjustl(jString))//": "// &
+            trim(compName)//" did not return ESMF_SUCCESS", &
+            line=__LINE__, &
+            file=__FILE__, &
+            rcToReturn=rc)) &
+            return  ! bail out
+        endif
       enddo
     enddo
 
     ! InitP2: modelComps
     do i=1, is%wrap%modelCount
       write (iString, *) i
-      call ESMF_GridCompInitialize(is%wrap%modelComp(i), &
-        importState=is%wrap%modelIS(i), exportState=is%wrap%modelES(i), &
-        clock=internalClock, phase=2, userRc=localrc, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg="Failed calling phase 2 "// &
-        "Initialize for modelComp "//trim(adjustl(iString)), &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-      if (ESMF_LogFoundError(rcToCheck=localrc, msg="Phase 2 "//&
-        "Initialize for modelComp "//trim(adjustl(iString))//" did not "// &
-        "return ESMF_SUCCESS", &
-        line=__LINE__, &
-        file=__FILE__, &
-        rcToReturn=rc)) &
-        return  ! bail out
+      if (NUOPC_GridCompAreServicesSet(is%wrap%modelComp(i))) then
+        call ESMF_GridCompGet(is%wrap%modelComp(i), name=compName, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+        call ESMF_GridCompInitialize(is%wrap%modelComp(i), &
+          importState=is%wrap%modelIS(i), exportState=is%wrap%modelES(i), &
+          clock=internalClock, phase=2, userRc=localrc, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg="Failed calling phase 2 "// &
+          "Initialize for modelComp "//trim(adjustl(iString))//": "// &
+          trim(compName), &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+        if (ESMF_LogFoundError(rcToCheck=localrc, msg="Phase 2 "// &
+          "Initialize for modelComp "//trim(adjustl(iString))//": "// &
+          trim(compName)//" did not return ESMF_SUCCESS", &
+          line=__LINE__, &
+          file=__FILE__, &
+          rcToReturn=rc)) &
+          return  ! bail out
+      endif
     enddo
     
     ! InitP3: modelComps
     do i=1, is%wrap%modelCount
       write (iString, *) i
-      call ESMF_GridCompInitialize(is%wrap%modelComp(i), &
-        importState=is%wrap%modelIS(i), exportState=is%wrap%modelES(i), &
-        clock=internalClock, phase=3, userRc=localrc, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg="Failed calling phase 3 "// &
-        "Initialize for modelComp "//trim(adjustl(iString)), &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-      if (ESMF_LogFoundError(rcToCheck=localrc, msg="Phase 3 "//&
-        "Initialize for modelComp "//trim(adjustl(iString))//" did not "// &
-        "return ESMF_SUCCESS", &
-        file=__FILE__, &
-        rcToReturn=rc)) &
-        return  ! bail out
+      if (NUOPC_GridCompAreServicesSet(is%wrap%modelComp(i))) then
+        call ESMF_GridCompGet(is%wrap%modelComp(i), name=compName, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+        call ESMF_GridCompInitialize(is%wrap%modelComp(i), &
+          importState=is%wrap%modelIS(i), exportState=is%wrap%modelES(i), &
+          clock=internalClock, phase=3, userRc=localrc, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg="Failed calling phase 3 "// &
+          "Initialize for modelComp "//trim(adjustl(iString))//": "// &
+          trim(compName), &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+        if (ESMF_LogFoundError(rcToCheck=localrc, msg="Phase 3 "// &
+          "Initialize for modelComp "//trim(adjustl(iString))//": "// &
+          trim(compName)//" did not return ESMF_SUCCESS", &
+          line=__LINE__, &
+          file=__FILE__, &
+          rcToReturn=rc)) &
+          return  ! bail out
+      endif
     enddo
         
   end subroutine
@@ -1784,52 +1956,140 @@ module NUOPC_DriverExplicit
         file=__FILE__)) &
         return  ! bail out
 
-      ! Run: connectorComps
+      if (is%wrap%connectorGrouping == connectorGroupingPreModel) then
+        ! Run: connectorComps before the model components
+        do i=1, is%wrap%modelCount
+          write (iString, *) i
+          do j=1, is%wrap%modelCount
+            if (j==i) cycle ! skip self connection
+            write (jString, *) j
+            if (NUOPC_CplCompAreServicesSet(is%wrap%connectorComp(i,j))) then
+              call ESMF_CplCompRun(is%wrap%connectorComp(i,j), &
+                importState=is%wrap%modelES(i), exportState=is%wrap%modelIS(j), &
+                clock=internalClock, phase=1, userRc=localrc, rc=rc)
+              if (ESMF_LogFoundError(rcToCheck=rc, &
+                msg="Failed calling phase 1 Run for connectorComp "// &
+                trim(adjustl(iString))//" -> "//trim(adjustl(jString)), &
+                line=__LINE__, &
+                file=__FILE__)) &
+                return  ! bail out
+              if (ESMF_LogFoundError(rcToCheck=localrc, &
+                msg="Phase 1 Run for connectorComp "// &
+                trim(adjustl(iString))//" -> "//trim(adjustl(jString))// &
+                " did not return ESMF_SUCCESS", &
+                line=__LINE__, &
+                file=__FILE__, &
+                rcToReturn=rc)) &
+                return  ! bail out
+            endif
+          enddo
+        enddo
+      endif
+
+      ! Run: modelComps
       do i=1, is%wrap%modelCount
         write (iString, *) i
-        do j=1, is%wrap%modelCount
-          if (j==i) cycle ! skip self connection
-          write (jString, *) j
-          call ESMF_CplCompRun(is%wrap%connectorComp(i,j), &
-            importState=is%wrap%modelES(i), exportState=is%wrap%modelIS(j), &
+        if (is%wrap%connectorGrouping == connectorGroupingNone .and. &
+          is%wrap%connectorPlacing(i) == connectorPlacingPreModel) then
+          do j=1, is%wrap%modelCount
+            if (j==i) cycle ! skip self connection
+            write (jString, *) j
+            if (NUOPC_CplCompAreServicesSet(is%wrap%connectorComp(i,j))) then
+              call ESMF_CplCompRun(is%wrap%connectorComp(j,i), &
+                importState=is%wrap%modelES(j), exportState=is%wrap%modelIS(i), &
+                clock=internalClock, phase=1, userRc=localrc, rc=rc)
+              if (ESMF_LogFoundError(rcToCheck=rc, &
+                msg="Failed calling phase 1 Run for connectorComp "// &
+                trim(adjustl(jString))//" -> "//trim(adjustl(iString)), &
+                line=__LINE__, &
+                file=__FILE__)) &
+                return  ! bail out
+              if (ESMF_LogFoundError(rcToCheck=localrc, &
+                msg="Phase 1 Run for connectorComp "// &
+                trim(adjustl(jString))//" -> "//trim(adjustl(iString))// &
+                " did not return ESMF_SUCCESS", &
+                line=__LINE__, &
+                file=__FILE__, &
+                rcToReturn=rc)) &
+                return  ! bail out
+            endif
+          enddo
+        endif
+        if (NUOPC_GridCompAreServicesSet(is%wrap%modelComp(i))) then
+          call ESMF_GridCompRun(is%wrap%modelComp(i), &
+            importState=is%wrap%modelIS(i), exportState=is%wrap%modelES(i), &
             clock=internalClock, phase=1, userRc=localrc, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg="Failed calling phase 1 "// &
-            "Run for connectorComp "// &
-            trim(adjustl(iString))//" -> "//trim(adjustl(jString)), &
+            "Run for modelComp "//trim(adjustl(iString)), &
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
-          if (ESMF_LogFoundError(rcToCheck=localrc, msg="Phase 1 "//&
-            "Run for connectorComp "// &
-            trim(adjustl(iString))//" -> "//trim(adjustl(jString))//" did not "// &
+          if (ESMF_LogFoundError(rcToCheck=localrc, msg="Phase 1 "// &
+            "Run for modelComp "//trim(adjustl(iString))//" did not "// &
             "return ESMF_SUCCESS", &
             line=__LINE__, &
             file=__FILE__, &
             rcToReturn=rc)) &
             return  ! bail out
-        enddo
-      enddo
-
-      ! Run: modelComps
-      do i=1, is%wrap%modelCount
-        write (iString, *) i
-        call ESMF_GridCompRun(is%wrap%modelComp(i), &
-          importState=is%wrap%modelIS(i), exportState=is%wrap%modelES(i), &
-          clock=internalClock, phase=1, userRc=localrc, rc=rc)
-        if (ESMF_LogFoundError(rcToCheck=rc, msg="Failed calling phase 1 "// &
-          "Run for modelComp "//trim(adjustl(iString)), &
-          line=__LINE__, &
-          file=__FILE__)) &
-          return  ! bail out
-        if (ESMF_LogFoundError(rcToCheck=localrc, msg="Phase 1 "//&
-          "Run for modelComp "//trim(adjustl(iString))//" did not "// &
-          "return ESMF_SUCCESS", &
-          line=__LINE__, &
-          file=__FILE__, &
-          rcToReturn=rc)) &
-          return  ! bail out
+        endif
+        if (is%wrap%connectorGrouping == connectorGroupingNone .and. &
+          is%wrap%connectorPlacing(i) == connectorPlacingPostModel) then
+          do j=1, is%wrap%modelCount
+            if (j==i) cycle ! skip self connection
+            write (jString, *) j
+            if (NUOPC_CplCompAreServicesSet(is%wrap%connectorComp(i,j))) then
+              call ESMF_CplCompRun(is%wrap%connectorComp(i,j), &
+                importState=is%wrap%modelES(i), exportState=is%wrap%modelIS(j), &
+                clock=internalClock, phase=1, userRc=localrc, rc=rc)
+              if (ESMF_LogFoundError(rcToCheck=rc, &
+                msg="Failed calling phase 1 Run for connectorComp "// &
+                trim(adjustl(iString))//" -> "//trim(adjustl(jString)), &
+                line=__LINE__, &
+                file=__FILE__)) &
+                return  ! bail out
+              if (ESMF_LogFoundError(rcToCheck=localrc, &
+                msg="Phase 1 Run for connectorComp "// &
+                trim(adjustl(iString))//" -> "//trim(adjustl(jString))// &
+                " did not return ESMF_SUCCESS", &
+                line=__LINE__, &
+                file=__FILE__, &
+                rcToReturn=rc)) &
+                return  ! bail out
+            endif
+          enddo
+        endif
       enddo
     
+      if (is%wrap%connectorGrouping == connectorGroupingPostModel) then
+        ! Run: connectorComps after the model components
+        do i=1, is%wrap%modelCount
+          write (iString, *) i
+          do j=1, is%wrap%modelCount
+            if (j==i) cycle ! skip self connection
+            write (jString, *) j
+            if (NUOPC_CplCompAreServicesSet(is%wrap%connectorComp(i,j))) then
+              call ESMF_CplCompRun(is%wrap%connectorComp(i,j), &
+                importState=is%wrap%modelES(i), exportState=is%wrap%modelIS(j), &
+                clock=internalClock, phase=1, userRc=localrc, rc=rc)
+              if (ESMF_LogFoundError(rcToCheck=rc, &
+                msg="Failed calling phase 1 Run for connectorComp "// &
+                trim(adjustl(iString))//" -> "//trim(adjustl(jString)), &
+                line=__LINE__, &
+                file=__FILE__)) &
+                return  ! bail out
+              if (ESMF_LogFoundError(rcToCheck=localrc, &
+                msg="Phase 1 Run for connectorComp "// &
+                trim(adjustl(iString))//" -> "//trim(adjustl(jString))// &
+                " did not return ESMF_SUCCESS", &
+                line=__LINE__, &
+                file=__FILE__, &
+                rcToReturn=rc)) &
+                return  ! bail out
+            endif
+          enddo
+        enddo
+      endif
+
       ! advance to next time step
       call ESMF_ClockAdvance(internalClock, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
@@ -1897,44 +2157,48 @@ module NUOPC_DriverExplicit
       do j=1, is%wrap%modelCount
         if (j==i) cycle ! skip self connection
         write (jString, *) j
-        call ESMF_CplCompFinalize(is%wrap%connectorComp(i,j), &
-          importState=is%wrap%modelES(i), exportState=is%wrap%modelIS(j), &
-          clock=internalClock, phase=1, userRc=localrc, rc=rc)
-        if (ESMF_LogFoundError(rcToCheck=rc, msg="Failed calling phase 1 "// &
-          "Finalize for connectorComp "// &
-          trim(adjustl(iString))//" -> "//trim(adjustl(jString)), &
-          line=__LINE__, &
-          file=__FILE__)) &
-          return  ! bail out
-        if (ESMF_LogFoundError(rcToCheck=localrc, msg="Phase 1 "//&
-          "Finalize for connectorComp "// &
-          trim(adjustl(iString))//" -> "//trim(adjustl(jString))//" did not "// &
-          "return ESMF_SUCCESS", &
-          line=__LINE__, &
-          file=__FILE__, &
-          rcToReturn=rc)) &
-          return  ! bail out
+        if (NUOPC_CplCompAreServicesSet(is%wrap%connectorComp(i,j))) then
+          call ESMF_CplCompFinalize(is%wrap%connectorComp(i,j), &
+            importState=is%wrap%modelES(i), exportState=is%wrap%modelIS(j), &
+            clock=internalClock, phase=1, userRc=localrc, rc=rc)
+          if (ESMF_LogFoundError(rcToCheck=rc, msg="Failed calling phase 1 "// &
+            "Finalize for connectorComp "// &
+            trim(adjustl(iString))//" -> "//trim(adjustl(jString)), &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+          if (ESMF_LogFoundError(rcToCheck=localrc, msg="Phase 1 "// &
+            "Finalize for connectorComp "// &
+            trim(adjustl(iString))//" -> "//trim(adjustl(jString))//" did not "// &
+            "return ESMF_SUCCESS", &
+            line=__LINE__, &
+            file=__FILE__, &
+            rcToReturn=rc)) &
+            return  ! bail out
+        endif
       enddo
     enddo
 
     ! Finalize: modelComps
     do i=1, is%wrap%modelCount
       write (iString, *) i
-      call ESMF_GridCompFinalize(is%wrap%modelComp(i), &
-        importState=is%wrap%modelIS(i), exportState=is%wrap%modelES(i), &
-        clock=internalClock, phase=1, userRc=localrc, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg="Failed calling phase 1 "// &
-        "Finalize for modelComp "//trim(adjustl(iString)), &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-      if (ESMF_LogFoundError(rcToCheck=localrc, msg="Phase 1 "//&
-        "Finalize for modelComp "//trim(adjustl(iString))//" did not "// &
-        "return ESMF_SUCCESS", &
-        line=__LINE__, &
-        file=__FILE__, &
-        rcToReturn=rc)) &
-        return  ! bail out
+      if (NUOPC_GridCompAreServicesSet(is%wrap%modelComp(i))) then
+        call ESMF_GridCompFinalize(is%wrap%modelComp(i), &
+          importState=is%wrap%modelIS(i), exportState=is%wrap%modelES(i), &
+          clock=internalClock, phase=1, userRc=localrc, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg="Failed calling phase 1 "// &
+          "Finalize for modelComp "//trim(adjustl(iString)), &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+        if (ESMF_LogFoundError(rcToCheck=localrc, msg="Phase 1 "// &
+          "Finalize for modelComp "//trim(adjustl(iString))//" did not "// &
+          "return ESMF_SUCCESS", &
+          line=__LINE__, &
+          file=__FILE__, &
+          rcToReturn=rc)) &
+          return  ! bail out
+      endif
     enddo
     
     ! destroy modelComps and their import and export States + connectorComps
@@ -1968,7 +2232,7 @@ module NUOPC_DriverExplicit
 
     ! deallocate lists inside the internal state
     deallocate(is%wrap%modelComp, is%wrap%modelIS, is%wrap%modelES, &
-      is%wrap%connectorComp, stat=stat)
+      is%wrap%connectorPlacing, is%wrap%connectorComp, stat=stat)
     if (ESMF_LogFoundDeallocError(statusToCheck=stat, &
       msg="Deallocation of internal state memory failed.", &
       line=__LINE__, &
@@ -2083,7 +2347,7 @@ module NUOPC_DriverExplicitAtmOcn
       
     ! set the modelCount for ATM-OCN pair coupling
     superIS%wrap%modelCount = 2
-      
+    
   end subroutine
   
   !-----------------------------------------------------------------------------
@@ -2116,7 +2380,7 @@ module NUOPC_DriverExplicitAtmOcn
       file=__FILE__, &
       rcToReturn=rc)) &
       return  ! bail out
-    call ESMF_UserCompSetInternalState(gcomp, "DriverExplicitAtmOcn", &
+    call ESMF_UserCompSetInternalState(gcomp, "NUOPC_DriverExplicitAtmOcn", &
       is, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
       line=__LINE__, &
@@ -2199,7 +2463,7 @@ module NUOPC_DriverExplicitAtmOcn
 
     ! query Component for this internal State
     nullify(is%wrap)
-    call ESMF_UserCompGetInternalState(gcomp, "DriverExplicitAtmOcn", is, &
+    call ESMF_UserCompGetInternalState(gcomp, "NUOPC_DriverExplicitAtmOcn", is, &
       rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
       line=__LINE__, &

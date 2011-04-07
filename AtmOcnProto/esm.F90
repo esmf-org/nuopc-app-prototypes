@@ -68,7 +68,7 @@ module ESM
     
     ! query Component for its internal State
     nullify(is%wrap)
-    call ESMF_UserCompGetInternalState(gcomp, "DriverExplicitAtmOcn", is, rc)
+    call ESMF_UserCompGetInternalState(gcomp, "NUOPC_DriverExplicitAtmOcn", is, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -122,7 +122,7 @@ module ESM
       rcToReturn=rc)) &
       return  ! bail out
       
-    ! Set the model clock
+    ! set the model clock
     call ESMF_TimeIntervalSet(timeStep, m=15, rc=rc) ! 15 minute steps
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
       line=__LINE__, &
