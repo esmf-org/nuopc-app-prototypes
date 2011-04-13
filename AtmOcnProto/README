@@ -2,7 +2,8 @@ README for ATM-OCN NUOPC prototype
 ----------------------------------
 
 Dependencies: 
-  - ESMF_5_2_0r_beta_snapshot_03 or later.
+  - ESMF_5_2_0r_beta_snapshot_05 or later. These snapshots contain the generic
+    NUOPC code as ESMF addon.
   
 Build:
   - Set environment variable ESMFMKFILE to point to the esmf.mk of your ESMF
@@ -21,14 +22,6 @@ Output:
 
 Code structure:
   - Makefile    - Makefile that is based on the standard esmf.mk mechanism.
-  - nuopc.F90   - Contains utility functions built from basic ESMF
-                  functionality.
-                - Contains "Generic Component" implementations for
-                  model, driver and connector Components.
-                - The code in this file is likely to end up as ESMF-addon
-                  and will be distributed together with ESMF. As such it will
-                  become available to applications directly through the esmf.mk
-                  mechanism, just like ESMF itself.
   - atm.F90     - The ATM component, specializing generic NUOPC_ModelExplicit.
   - ocn.F90     - The OCN component, specializing generic NUOPC_ModelExplicit.
   - esm.F90     - The Earth System Model (ESM) component, specializing generic

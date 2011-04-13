@@ -43,14 +43,12 @@ include $(ESMFMKFILE)
 
 
 # -----------------------------------------------------------------------------
-esmApp: esmApp.o esm.o atm.o ocn.o nuopc.o
+esmApp: esmApp.o esm.o atm.o ocn.o
 	$(ESMF_F90LINKER) $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS) -o $@ $^ $(ESMF_F90ESMFLINKLIBS)
 
 # module dependencies:
 esmApp.o: esm.o
-esm.o: atm.o ocn.o nuopc.o
-atm.o: nuopc.o
-ocn.o: nuopc.o
+esm.o: atm.o ocn.o
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
