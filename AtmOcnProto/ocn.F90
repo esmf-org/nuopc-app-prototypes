@@ -66,7 +66,12 @@ module OCN
     integer, intent(out) :: rc
     
     rc = ESMF_SUCCESS
-    
+
+    ! Disabling the following macro, e.g. renaming to WITHIMPORTFIELDS_disable,
+    ! will result in a model component that does not advertise any importable
+    ! Fields. Use this if you want to drive the model independently.
+#define WITHIMPORTFIELDS
+#ifdef WITHIMPORTFIELDS
     ! importable field: air_pressure_at_sea_level
     call NUOPC_StateAddPotentialField(importState, name="pmsl", &
       StandardName="air_pressure_at_sea_level", Units="Pa", rc=rc)
@@ -83,7 +88,8 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+#endif
+
     ! exportable field: sea_surface_temperature
     call NUOPC_StateAddPotentialField(exportState, name="sst", &
       StandardName="sea_surface_temperature", Units="K", &
@@ -120,6 +126,7 @@ module OCN
       return  ! bail out
     gridOut = gridIn ! for now out same as in
 
+#ifdef WITHIMPORTFIELDS
     ! importable field: air_pressure_at_sea_level
     field = ESMF_FieldCreate(name="pmsl", grid=gridIn, &
       typekind=ESMF_TYPEKIND_R8, rc=rc)
@@ -145,6 +152,7 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 
     ! exportable field: sea_surface_temperature
     field = ESMF_FieldCreate(name="sst", grid=gridOut, &

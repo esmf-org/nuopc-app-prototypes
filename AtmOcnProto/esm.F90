@@ -99,7 +99,14 @@ module ESM
       file=__FILE__, &
       rcToReturn=rc)) &
       return  ! bail out
-      
+
+    ! Disabling the following macro, e.g. renaming to WITHCONNECTORS_disable,
+    ! will result in a driver that does not call connectors between the model
+    ! components. This mode can be used if all model components are driven 
+    ! as independent models. However, even for independent models the
+    ! connectors can be set here, but will turn into no-ops.
+#define WITHCONNECTORS
+#ifdef WITHCONNECTORS
     ! SetServices for atm2ocm
     call ESMF_CplCompSetServices(is%wrap%atm2ocn, cplSS, userRc=localrc, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
@@ -123,6 +130,7 @@ module ESM
       file=__FILE__, &
       rcToReturn=rc)) &
       return  ! bail out
+#endif
       
     ! set the model clock
     call ESMF_TimeIntervalSet(timeStep, m=15, rc=rc) ! 15 minute steps
