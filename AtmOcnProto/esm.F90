@@ -7,13 +7,15 @@ module ESM
   use ESMF_Mod
   use NUOPC
   use NUOPC_DriverExplicitAtmOcn, only: &
-    DriverExplicitAtmOcn_SS => SetServices, &
-    DriverExplicitAtmOcn_IS => InternalState
+    driver_routine_SS             => routine_SetServices, &
+    driver_type_IS                => type_InternalState, &
+    driver_label_IS               => label_InternalState, &
+    driver_label_SetModelServices => label_SetModelServices
   
   use ATM, only: atmSS => SetServices
   use OCN, only: ocnSS => SetServices
   
-  use NUOPC_Connector, only: cplSS => SetServices
+  use NUOPC_Connector, only: cplSS => routine_SetServices
   
   implicit none
   
@@ -32,14 +34,14 @@ module ESM
     rc = ESMF_SUCCESS
     
     ! NUOPC_DriverExplicitAtmOcn registers the generic methods
-    call DriverExplicitAtmOcn_SS(gcomp, rc=rc)
+    call driver_routine_SS(gcomp, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
       
     ! attach specializing method(s)
-    call ESMF_MethodAdd(gcomp, label="DriverExplicitAtmOcn_SetModelServices", &
+    call ESMF_MethodAdd(gcomp, label=driver_label_SetModelServices, &
       userRoutine=SetModelServices, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
       line=__LINE__, &
@@ -56,7 +58,7 @@ module ESM
     
     ! local variables
     integer                       :: localrc
-    type(DriverExplicitAtmOcn_IS) :: is
+    type(driver_type_IS)          :: is
     type(ESMF_Grid)               :: grid
     type(ESMF_Field)              :: field
     type(ESMF_Time)               :: startTime
@@ -68,7 +70,7 @@ module ESM
     
     ! query Component for its internal State
     nullify(is%wrap)
-    call ESMF_UserCompGetInternalState(gcomp, "NUOPC_DriverExplicitAtmOcn", is, rc)
+    call ESMF_UserCompGetInternalState(gcomp, driver_label_IS, is, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
       line=__LINE__, &
       file=__FILE__)) &

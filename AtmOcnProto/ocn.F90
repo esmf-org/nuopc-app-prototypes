@@ -6,7 +6,9 @@ module OCN
 
   use ESMF_Mod
   use NUOPC
-  use NUOPC_ModelExplicit, only: ModelExplicit_SS => SetServices
+  use NUOPC_ModelExplicit, only: &
+    model_routine_SS    => routine_SetServices, &
+    model_label_Advance => label_Advance
   
   implicit none
   
@@ -25,7 +27,7 @@ module OCN
     rc = ESMF_SUCCESS
     
     ! the NUOPC model component will register the generic methods
-    call ModelExplicit_SS(gcomp, rc=rc)
+    call model_routine_SS(gcomp, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -46,7 +48,7 @@ module OCN
       return  ! bail out
     
     ! attach specializing method(s)
-    call ESMF_MethodAdd(gcomp, label="ModelExplicit_Advance", &
+    call ESMF_MethodAdd(gcomp, label=model_label_Advance, &
       userRoutine=ModelAdvance, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
       line=__LINE__, &
