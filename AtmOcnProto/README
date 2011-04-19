@@ -2,7 +2,7 @@ README for ATM-OCN NUOPC prototype
 ----------------------------------
 
 Dependencies: 
-  - ESMF_5_2_0r_beta_snapshot_05 or later. These snapshots contain the generic
+  - ESMF_5_2_0r_beta_snapshot_06 or later. These snapshots contain the generic
     NUOPC code as ESMF addon.
   
 Build:
