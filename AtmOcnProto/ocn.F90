@@ -7,8 +7,9 @@ module OCN
   use ESMF_Mod
   use NUOPC
   use NUOPC_ModelExplicit, only: &
-    model_routine_SS    => routine_SetServices, &
-    model_label_Advance => label_Advance
+    model_routine_SS      => routine_SetServices, &
+    model_label_SetClock  => label_SetClock, &
+    model_label_Advance   => label_Advance
   
   implicit none
   
@@ -48,13 +49,20 @@ module OCN
       return  ! bail out
     
     ! attach specializing method(s)
+    call ESMF_MethodAdd(gcomp, label=model_label_SetClock, &
+      userRoutine=SetClock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
     call ESMF_MethodAdd(gcomp, label=model_label_Advance, &
       userRoutine=ModelAdvance, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
   end subroutine
   
   !-----------------------------------------------------------------------------
@@ -167,6 +175,27 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
 
+  end subroutine
+  
+  !-----------------------------------------------------------------------------
+
+  subroutine SetClock(gcomp, rc)
+    type(ESMF_GridComp)  :: gcomp
+    integer, intent(out) :: rc
+    
+    ! local variables
+    type(ESMF_Clock)              :: clock
+    type(ESMF_TimeInterval)       :: stabilityTimeStep
+
+    rc = ESMF_SUCCESS
+    
+    ! query the Component for its clock, importState and exportState
+    call ESMF_GridCompGet(gcomp, clock=clock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
     ! initialize internal clock
     ! here: parent Clock and stability timeStep determine actual model timeStep
     !TODO: stabilityTimeStep should be read in from configuation
@@ -183,7 +212,7 @@ module OCN
       return  ! bail out
     
   end subroutine
-  
+
   !-----------------------------------------------------------------------------
 
   subroutine ModelAdvance(gcomp, rc)
@@ -208,7 +237,7 @@ module OCN
 
     ! HERE THE MODEL ADVANCES: currTime -> currTime + timeStep
     
-    ! Because of the way that the internal Clock was set in InitializeP1()
+    ! Because of the way that the internal Clock was set in SetClock(),
     ! its timeStep is likely smaller than the parent timeStep. As a consequence
     ! the time interval covered by a single parent timeStep will result in 
     ! multiple calls to the ModelAdvance() routine. Every time the currTime

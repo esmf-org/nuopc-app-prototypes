@@ -49,7 +49,7 @@ module MED
     
     ! attach specializing method(s)
     call ESMF_MethodAdd(gcomp, label=model_label_Advance, &
-      userRoutine=ModelAdvance, rc=rc)
+      userRoutine=MediatorAdvance, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -137,7 +137,7 @@ module MED
     
     ! create a Grid object for Fields
     gridIn = NUOPC_GridCreateSimpleXY(10._ESMF_KIND_R8, 20._ESMF_KIND_R8, &
-      100._ESMF_KIND_R8, 200._ESMF_KIND_R8, 10, 100, rc)
+      100._ESMF_KIND_R8, 200._ESMF_KIND_R8, 20, 200, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -222,19 +222,11 @@ module MED
       file=__FILE__)) &
       return  ! bail out
 
-    ! initialize internal clock
-    ! here: simply use parent timeStep to driver model
-    call NUOPC_GridCompSetClock(gcomp, clock, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
   end subroutine
   
   !-----------------------------------------------------------------------------
 
-  subroutine ModelAdvance(gcomp, rc)
+  subroutine MediatorAdvance(gcomp, rc)
     type(ESMF_GridComp)  :: gcomp
     integer, intent(out) :: rc
     
@@ -251,35 +243,35 @@ module MED
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-
-    ! HERE THE MODEL ADVANCES: currTime -> currTime + timeStep
+      
+    ! HERE THE MEDIATOR does the mediation of Fields that come in on the
+    ! importState with a timestamp consistent to the currTime of the 
+    ! mediators Clock.
     
-    ! Because of the way that the internal Clock was set in InitializeP1()
-    ! its timeStep is equal to the parent timeStep. As a consequence the
-    ! currTime + timeStep is equal to the stopTime of the internal Clock
-    ! for this call of the ModelAdvance() routine.
+    ! The Mediator uses the data on the import Fields to update the data
+    ! held by Fields in the exportState.
+    
+    ! After this routine returns the generic MediatorExplicit will correctly
+    ! timestamp the export Fields and update the Mediator Clock to:
+    !
+    !       currTime -> currTime + timeStep
+    !
+    ! Where the timeStep is equal to the parent timeStep.
     
     call NUOPC_ClockPrintCurrTime(clock, &
-      "------>Explicitly advancing MED from: ", rc=rc)
+      "-------->MED Advance() mediating for: ", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
     call NUOPC_ClockPrintStopTime(clock, &
-      "--------------------------------> to: ", rc=rc)
+      "----------------> model time step to: ", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
      
-    ! update timestamp on export Fields to current time of mediation
-    call NUOPC_StateSetTimestamp(exportState, clock, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
   end subroutine
 
 end module

@@ -157,14 +157,6 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
-    ! initialize internal clock
-    ! here: simply use parent timeStep to driver model
-    call NUOPC_GridCompSetClock(gcomp, clock, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
   end subroutine
   
   !-----------------------------------------------------------------------------
@@ -189,7 +181,7 @@ module ATM
 
     ! HERE THE MODEL ADVANCES: currTime -> currTime + timeStep
     
-    ! Because of the way that the internal Clock was set in InitializeP1()
+    ! Because of the way that the internal Clock was set by default,
     ! its timeStep is equal to the parent timeStep. As a consequence the
     ! currTime + timeStep is equal to the stopTime of the internal Clock
     ! for this call of the ModelAdvance() routine.
