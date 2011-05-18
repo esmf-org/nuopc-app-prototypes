@@ -81,17 +81,16 @@ module OCN
 #define WITHIMPORTFIELDS
 #ifdef WITHIMPORTFIELDS
     ! importable field: air_pressure_at_sea_level
-    call NUOPC_StateAddPotentialField(importState, name="pmsl", &
-      StandardName="air_pressure_at_sea_level", Units="Pa", rc=rc)
+    call NUOPC_StateAdvertiseField(importState, &
+      StandardName="air_pressure_at_sea_level", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
     ! importable field: isotropic_shortwave_radiance_in_air
-    call NUOPC_StateAddPotentialField(importState, name="risw", &
-      StandardName="isotropic_shortwave_radiance_in_air", Units="W m-2 sr-1", &
-      rc=rc)
+    call NUOPC_StateAdvertiseField(importState, &
+      StandardName="isotropic_shortwave_radiance_in_air", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -99,9 +98,8 @@ module OCN
 #endif
 
     ! exportable field: sea_surface_temperature
-    call NUOPC_StateAddPotentialField(exportState, name="sst", &
-      StandardName="sea_surface_temperature", Units="K", &
-      rc=rc)
+    call NUOPC_StateAdvertiseField(exportState, &
+      StandardName="sea_surface_temperature", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -142,7 +140,7 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_StateReplaceWRealField(importState, field, rc=rc)
+    call NUOPC_StateRealizeField(importState, field=field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -155,7 +153,7 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_StateReplaceWRealField(importState, field, rc=rc)
+    call NUOPC_StateRealizeField(importState, field=field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -169,7 +167,7 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_StateReplaceWRealField(exportState, field, rc=rc)
+    call NUOPC_StateRealizeField(exportState, field=field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
       line=__LINE__, &
       file=__FILE__)) &
