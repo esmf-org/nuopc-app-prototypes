@@ -2,8 +2,7 @@ README for ATM-OCN NUOPC prototype
 ----------------------------------
 
 Dependencies: 
-  - ESMF_5_2_0r_beta_snapshot_10. This snapshot contains the generic NUOPC code
-    as ESMF addon.
+  - ESMF_5_2_0r. This version contains the generic NUOPC code as ESMF addon.
   
 Build:
   - Set environment variable ESMFMKFILE to point to the esmf.mk of your ESMF

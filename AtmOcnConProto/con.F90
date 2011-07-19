@@ -4,7 +4,7 @@ module CON
   ! Connector Component.
   !-----------------------------------------------------------------------------
 
-  use ESMF_Mod
+  use ESMF
   use NUOPC
   use NUOPC_Connector, only: &
     con_routine_SS      => routine_SetServices, &
@@ -30,7 +30,7 @@ module CON
     
     ! the NUOPC connector component will register the generic methods
     call con_routine_SS(cplcomp, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
@@ -38,7 +38,7 @@ module CON
     ! attach specializing method to compute the connection RouteHandle
     call ESMF_MethodAdd(cplcomp, label=con_label_ComputeRH, &
       userRoutine=ComputeRH, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
@@ -60,7 +60,7 @@ module CON
     ! query Component for its internal State
     nullify(is%wrap)
     call ESMF_UserCompGetInternalState(cplcomp, con_label_IS, is, rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
@@ -68,7 +68,7 @@ module CON
     ! specialize with Redist, instead of the default Regrid
     call ESMF_FieldBundleRedistStore(is%wrap%srcFields, is%wrap%dstFields, &
       routehandle=is%wrap%rh, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOG_ERRMSG, &
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
