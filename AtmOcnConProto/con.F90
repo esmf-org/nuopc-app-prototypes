@@ -236,7 +236,7 @@ module CON
       return  ! bail out
     ! apply rh2
     call ESMF_FieldBundleRedist(interDstFields, is%wrap%dstFields, &
-      routehandle=rh1, rc=rc)
+      routehandle=rh2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
