@@ -92,9 +92,9 @@ module ESM
     enddo
       
     ! set petList for OCN -> second half of PETs
-    allocate(is%wrap%ocnPetList(petCount/2))
-    do i=1, petCount/2
-      is%wrap%ocnPetList(i) = petCount/2 + i-1 ! PET labeling goes from 0 to petCount-1
+    allocate(is%wrap%ocnPetList(petCount-petCount/2))
+    do i=petCount/2+1, petCount
+      is%wrap%ocnPetList(i-petCount/2) = i-1 ! PET labeling goes from 0 to petCount-1
     enddo
 
   end subroutine
