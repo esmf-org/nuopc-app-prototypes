@@ -6,7 +6,7 @@ module ESM
 
   use ESMF
   use NUOPC
-  use NUOPC_Driver, only: &
+  use NUOPC_Driver, only: &   ! TODO: use AtmOcn specific driver once available
     driver_routine_SS             => routine_SetServices, &
     driver_type_IS                => type_InternalState, &
     driver_label_IS               => label_InternalState, &
@@ -76,9 +76,6 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
       
-    
-    !TODO: change the following to ATM-OCN-LND-ICE once done with that!!!
-    
     ! set the modelCount for ATM-OCN pair coupling
     is%wrap%modelCount = 2
     
@@ -214,19 +211,13 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    ! atm2ocn in runSeq(1)
-    call NUOPC_RunElementAdd(is%wrap%runSeq(1), i=1, j=2, phase=1, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
     ! ocn2atm in runSeq(1)
     call NUOPC_RunElementAdd(is%wrap%runSeq(1), i=2, j=1, phase=1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    ! LINK in runSeq(1) to runSeq(2)
+    ! LINK to runSeq(2) in runSeq(1)
     call NUOPC_RunElementAdd(is%wrap%runSeq(1), i=-2, j=0, phase=1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -251,14 +242,32 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    ! atm2ocn in runSeq(2)
+    call NUOPC_RunElementAdd(is%wrap%runSeq(2), i=1, j=2, phase=1, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
     ! ocn fast processes in runSeq(2)
     call NUOPC_RunElementAdd(is%wrap%runSeq(2), i=2, j=0, phase=2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    ! ocn2atm in runSeq(2)
+    call NUOPC_RunElementAdd(is%wrap%runSeq(2), i=2, j=1, phase=1, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
     ! atm up sweep in runSeq(2)
     call NUOPC_RunElementAdd(is%wrap%runSeq(2), i=1, j=0, phase=3, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! atm2ocn in runSeq(1)
+    call NUOPC_RunElementAdd(is%wrap%runSeq(1), i=1, j=2, phase=1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
