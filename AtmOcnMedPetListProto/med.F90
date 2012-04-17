@@ -6,7 +6,7 @@ module MED
 
   use ESMF
   use NUOPC
-  use NUOPC_MediatorExplicit, only: &
+  use NUOPC_Mediator, only: &
     model_routine_SS    => routine_SetServices, &
     model_label_Advance => label_Advance
   
@@ -248,7 +248,7 @@ module MED
     ! The Mediator uses the data on the import Fields to update the data
     ! held by Fields in the exportState.
     
-    ! After this routine returns the generic MediatorExplicit will correctly
+    ! After this routine returns the generic Mediator will correctly
     ! timestamp the export Fields and update the Mediator Clock to:
     !
     !       currTime -> currTime + timeStep

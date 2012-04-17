@@ -6,7 +6,7 @@ module OCN
 
   use ESMF
   use NUOPC
-  use NUOPC_ModelExplicit, only: &
+  use NUOPC_Model, only: &
     model_routine_SS      => routine_SetServices, &
     model_label_SetClock  => label_SetClock, &
     model_label_Advance   => label_Advance
@@ -235,7 +235,7 @@ module OCN
     ! stopTime of the internal Clock has been reached.
     
     call NUOPC_ClockPrintCurrTime(clock, &
-      "------>Explicitly advancing OCN from: ", rc=rc)
+      "------>Advancing OCN from: ", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

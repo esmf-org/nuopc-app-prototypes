@@ -6,7 +6,7 @@ module ATM
 
   use ESMF
   use NUOPC
-  use NUOPC_ModelExplicit, only: &
+  use NUOPC_Model, only: &
     model_routine_SS    => routine_SetServices, &
     model_label_Advance => label_Advance
   
@@ -186,7 +186,7 @@ module ATM
     ! for this call of the ModelAdvance() routine.
     
     call NUOPC_ClockPrintCurrTime(clock, &
-      "------>Explicitly advancing ATM from: ", rc=rc)
+      "------>Advancing ATM from: ", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

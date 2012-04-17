@@ -15,7 +15,7 @@ module ATM
 
   use ESMF
   use NUOPC
-  use NUOPC_ModelExplicit, only: &
+  use NUOPC_Model, only: &
     model_routine_SS        => routine_SetServices, &
     model_routine_Run       => routine_Run, &
     model_type_IS           => type_InternalState, &
