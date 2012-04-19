@@ -2,7 +2,7 @@ README for ATM-OCN NUOPC prototype
 ----------------------------------
 
 Dependencies: 
-  - ESMF_5_2_0r. This version contains the generic NUOPC code as ESMF addon.
+  - ESMF v5.3.0
   
 Build:
   - Set environment variable ESMFMKFILE to point to the esmf.mk of your ESMF
@@ -26,11 +26,3 @@ Code structure:
   - esm.F90     - The Earth System Model (ESM) component, specializing generic
                   NUOPC_DriverExplicitAtmOcn
   - esmApp.F90  - ESM driver application.
-  
-  
-TODO:
-  - Develop a standard way of documenting "Generic Components", that:
-    1. shows how the generic Components relate to each other (hierarchy),
-    2. shows how to specialize them, and
-    3. shows the scenarious they are intented to be used in.
-  

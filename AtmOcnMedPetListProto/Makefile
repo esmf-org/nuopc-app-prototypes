@@ -52,9 +52,12 @@ esm.o: atm.o ocn.o med.o
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-.PHONY: dust clean distclean
+.PHONY: dust clean distclean edit
 dust:
 	rm -f PET*.ESMF_LogFile
 clean:
 	rm -f esmApp *.o *.mod
 distclean: dust clean
+
+edit:
+	nedit esmApp.F90 esm.F90 atm.F90 ocn.F90 med.F90 &

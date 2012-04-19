@@ -2,7 +2,7 @@ README for ATM-OCN-MED with petList NUOPC prototype
 ---------------------------------------------------
 
 Dependencies: 
-  - ESMF_5_3_0_NUOPC_snapshot_03 or later.
+  - ESMF v5.3.0
   
 Build:
   - Set environment variable ESMFMKFILE to point to the esmf.mk of your ESMF

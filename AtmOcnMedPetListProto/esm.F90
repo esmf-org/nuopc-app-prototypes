@@ -6,7 +6,7 @@ module ESM
 
   use ESMF
   use NUOPC
-  use NUOPC_DriverExplicitAtmOcnMed, only: &
+  use NUOPC_DriverAtmOcnMed, only: &
     driver_routine_SS             => routine_SetServices, &
     driver_type_IS                => type_InternalState, &
     driver_label_IS               => label_InternalState, &

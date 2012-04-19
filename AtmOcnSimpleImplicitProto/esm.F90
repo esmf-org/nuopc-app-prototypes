@@ -6,11 +6,10 @@ module ESM
 
   use ESMF
   use NUOPC
-  use NUOPC_Driver, only: &
+  use NUOPC_DriverAtmOcn, only: &
     driver_routine_SS             => routine_SetServices, &
     driver_type_IS                => type_InternalState, &
     driver_label_IS               => label_InternalState, &
-    driver_label_SetModelCount    => label_SetModelCount, &
     driver_label_SetModelServices => label_SetModelServices
   
   use ATM, only: atmSS => SetServices
@@ -42,12 +41,6 @@ module ESM
       return  ! bail out
       
     ! attach specializing method(s)
-    call ESMF_MethodAdd(gcomp, label=driver_label_SetModelCount, &
-      userRoutine=SetModelCount, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
     call ESMF_MethodAdd(gcomp, label=driver_label_SetModelServices, &
       userRoutine=SetModelServices, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -59,33 +52,6 @@ module ESM
 
   !-----------------------------------------------------------------------------
 
-  subroutine SetModelCount(gcomp, rc)
-    type(ESMF_GridComp)  :: gcomp
-    integer, intent(out) :: rc
-    
-    ! local variables
-    type(driver_type_IS)          :: is
-
-    rc = ESMF_SUCCESS
-    
-    ! query Component for its internal State
-    nullify(is%wrap)
-    call ESMF_UserCompGetInternalState(gcomp, driver_label_IS, is, rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-      
-    
-    !TODO: change the following to ATM-OCN-LND-ICE once done with that!!!
-    
-    ! set the modelCount for ATM-OCN pair coupling
-    is%wrap%modelCount = 2
-    
-  end subroutine
-  
-  !-----------------------------------------------------------------------------
-  
   subroutine SetModelServices(gcomp, rc)
     type(ESMF_GridComp)  :: gcomp
     integer, intent(out) :: rc
@@ -111,8 +77,7 @@ module ESM
       return  ! bail out
       
     ! SetServices for ATM
-    call ESMF_GridCompSetServices(is%wrap%modelComp(1), atmSS, &
-      userRc=localrc, rc=rc)
+    call ESMF_GridCompSetServices(is%wrap%atm, atmSS, userRc=localrc, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -124,8 +89,7 @@ module ESM
       return  ! bail out
       
     ! SetServices for OCN
-    call ESMF_GridCompSetServices(is%wrap%modelComp(2), ocnSS, &
-      userRc=localrc, rc=rc)
+    call ESMF_GridCompSetServices(is%wrap%ocn, ocnSS, userRc=localrc, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -144,8 +108,7 @@ module ESM
 #define WITHCONNECTORS
 #ifdef WITHCONNECTORS
     ! SetServices for atm2ocn
-    call ESMF_CplCompSetServices(is%wrap%connectorComp(1,2), cplSS, &
-      userRc=localrc, rc=rc)
+    call ESMF_CplCompSetServices(is%wrap%atm2ocn, cplSS, userRc=localrc, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -157,8 +120,7 @@ module ESM
       return  ! bail out
       
     ! SetServices for ocn2atm
-    call ESMF_CplCompSetServices(is%wrap%connectorComp(2,1), cplSS, &
-      userRc=localrc, rc=rc)
+    call ESMF_CplCompSetServices(is%wrap%ocn2atm, cplSS, userRc=localrc, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -208,7 +170,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    ! add a single run sequence elements
+    ! add a single run sequence element
     call NUOPC_RunSequenceAdd(is%wrap%runSeq, 1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
