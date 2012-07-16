@@ -21,8 +21,8 @@ Output:
 
 Code structure:
   - Makefile    - Makefile that is based on the standard esmf.mk mechanism.
-  - atm.F90     - The ATM component, specializing generic NUOPC_ModelExplicit.
-  - ocn.F90     - The OCN component, specializing generic NUOPC_ModelExplicit.
+  - atm.F90     - The ATM component, specializing generic NUOPC_Model.
+  - ocn.F90     - The OCN component, specializing generic NUOPC_Model.
   - esm.F90     - The Earth System Model (ESM) component, specializing generic
-                  NUOPC_DriverExplicitAtmOcn
+                  NUOPC_DriverAtmOcn
   - esmApp.F90  - ESM driver application.
