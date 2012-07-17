@@ -154,7 +154,7 @@ module ESM
     ! connectors can be set here, but will turn into no-ops.
 #define WITHCONNECTORS
 #ifdef WITHCONNECTORS
-    ! SetServices for atm2ocm
+    ! SetServices for atm2ocn
     call ESMF_CplCompSetServices(is%wrap%connectorComp(1,2), cplSS, &
       userRc=localrc, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &

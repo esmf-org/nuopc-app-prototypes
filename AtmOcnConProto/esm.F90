@@ -163,7 +163,7 @@ module ESM
       rcToReturn=rc)) &
       return  ! bail out
 
-    ! SetServices for atm2ocm
+    ! SetServices for atm2ocn
     call ESMF_CplCompSetServices(is%wrap%atm2ocn, cplSS, userRc=localrc, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
