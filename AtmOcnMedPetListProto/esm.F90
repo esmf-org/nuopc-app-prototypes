@@ -98,8 +98,13 @@ module ESM
       is%wrap%ocnPetList(i) = petCount/2 + i-1 ! PET labeling goes from 0 to petCount-1
     enddo
 
-    ! set petList for MED -> first PET of each ATM and OCN and the two missed PETs 
-    ! -> kind of strange, but hey this is just a feature demo
+    ! set petList for MED
+    ! There are no restrictions that NUOPC places on the mediator petList,
+    ! neither in size, nor the PETs that are included.
+    ! In this example the petList for MED is set to some crazy combination,
+    ! just to show that it can basically be set to anything:
+    !   -> first PET of each ATM and OCN and the two missed PETs 
+    !   -> kind of strange, but hey this is just a feature demo
     allocate(is%wrap%medPetList(4)) ! makes 4 total PETs in the petList
     is%wrap%medPetList(1) = is%wrap%atmPetList(1)
     is%wrap%medPetList(2) = is%wrap%ocnPetList(1)
