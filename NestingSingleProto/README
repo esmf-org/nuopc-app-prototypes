@@ -1,5 +1,5 @@
-README for ATM-OCN NUOPC prototype
-----------------------------------
+README for Nesting NUOPC prototype with a single nestling
+---------------------------------------------------------
 
 Dependencies: 
   - ESMF_6_1_0_beta_snapshot_04
