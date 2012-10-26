@@ -2,7 +2,7 @@ README for ATM-OCN-LND NUOPC prototype
 --------------------------------------
 
 Dependencies: 
-  - ESMF v5.3.0
+  - ESMF_6_1_0_beta_snapshot_05
   
 Build:
   - Set environment variable ESMFMKFILE to point to the esmf.mk of your ESMF
