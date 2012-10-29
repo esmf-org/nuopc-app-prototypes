@@ -169,6 +169,14 @@ module driverParentComp
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    call ESMF_AttributeSet(is%wrap%modelComp(1), &
+      name="Verbosity", value="high", &
+      convention="NUOPC", purpose="General", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
      
     ! set the model clock
     

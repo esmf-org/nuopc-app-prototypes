@@ -202,7 +202,7 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     ! atm down sweep in runSeq(2)
-    call NUOPC_RunElementAdd(is%wrap%runSeq(2), i=1, j=0, phase=2, rc=rc)
+    call NUOPC_RunElementAdd(is%wrap%runSeq(2), i=1, j=-1, phase=2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -214,7 +214,7 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     ! ocn fast processes in runSeq(2)
-    call NUOPC_RunElementAdd(is%wrap%runSeq(2), i=2, j=0, phase=2, rc=rc)
+    call NUOPC_RunElementAdd(is%wrap%runSeq(2), i=2, j=-1, phase=2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -226,7 +226,7 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     ! atm up sweep in runSeq(2)
-    call NUOPC_RunElementAdd(is%wrap%runSeq(2), i=1, j=0, phase=3, rc=rc)
+    call NUOPC_RunElementAdd(is%wrap%runSeq(2), i=1, j=-1, phase=3, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -238,7 +238,7 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     ! ocn slow processes in runSeq(1)
-    call NUOPC_RunElementAdd(is%wrap%runSeq(1), i=2, j=0, phase=3, rc=rc)
+    call NUOPC_RunElementAdd(is%wrap%runSeq(1), i=2, j=-1, phase=3, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
