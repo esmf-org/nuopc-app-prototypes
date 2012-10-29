@@ -1,8 +1,8 @@
-README for Nesting NUOPC prototype with a single nestling
----------------------------------------------------------
+README for Driver-in-Driver NUOPC prototype
+-------------------------------------------
 
 Dependencies: 
-  - ESMF_6_1_0_beta_snapshot_05
+  - ESMF_6_1_0_beta_snapshot_??
   
 Build:
   - Set environment variable ESMFMKFILE to point to the esmf.mk of your ESMF
@@ -20,10 +20,9 @@ Output:
 
 
 Code structure:
-  - Makefile            - Makefile that is based on the standard esmf.mk 
-                          mechanism.
-  - advectDiffComp.F90  - Advection-Diffusion model that is nested, 
-                          specializing the generic NUOPC_Model.
-  - driverComp.F90      - Driver component that sets up nesting, 
-                          specializing generic the generic NUOPC_Driver.
-  - mainApp.F90         - Main application.
+  - Makefile              - Makefile that is based on the standard esmf.mk 
+                            mechanism.
+  - driverChildComp.F90   - Driver child component run from within parent driver.
+  - driverParentComp.F90  - Driver parent component, driving the driver child
+                            component.
+  - mainApp.F90           - Main application.
