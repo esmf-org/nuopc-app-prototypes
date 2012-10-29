@@ -34,13 +34,16 @@ module ATM
       return  ! bail out
     
     ! set entry point for methods that require specific implementation
+#define USEIPD01
+#ifdef USEIPD01
+    ! -> overwrite the default IPD00 with IPD01
     call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
       userRoutine=InitializeP0, phase=0, rc=rc)
-      ! -> overwrite the default IPD00 with IPD01
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
       userRoutine=InitializeP1, phase=1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -78,8 +81,7 @@ module ATM
     rc = ESMF_SUCCESS
 
     initPhases(1) = "IPDv01p1=1"
-    ! skip over IPDv01p2, because this component is really implemented IPD00,
-    ! but is showing that IPD00 also can be expressed in IPD01.
+    ! skip over IPDv01p2, which isn't needed here
     initPhases(2) = "IPDv01p3=2"
     initPhases(3) = "IPDv01p4=3"
     initPhases(4) = "IPDv01p5=4"
