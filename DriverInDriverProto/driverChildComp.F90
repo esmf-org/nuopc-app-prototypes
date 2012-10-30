@@ -157,6 +157,34 @@ module driverChildComp
       file=__FILE__)) &
       return  ! bail out
 
+    ! SetServices for ATM2driver
+    call ESMF_CplCompSetServices(is%wrap%connectorComp(1,0), cplSS, &
+      userRc=localrc, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__, &
+      rcToReturn=rc)) &
+      return  ! bail out
+    ! nice to see the name in the Log output
+    call ESMF_CplCompSet(is%wrap%connectorComp(1,0), name="ATM2driver", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__, &
+      rcToReturn=rc)) &
+      return  ! bail out
+    ! useful to generate extra Log output during development
+    call ESMF_AttributeSet(is%wrap%connectorComp(1,0), &
+      name="Verbosity", value="high", &
+      convention="NUOPC", purpose="General", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
   end subroutine
 
 end module
