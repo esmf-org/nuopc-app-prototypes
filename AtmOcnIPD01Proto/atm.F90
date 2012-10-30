@@ -158,17 +158,7 @@ module ATM
     gridOut = gridIn ! for now out same as in
 
     ! importable field: sea_surface_temperature
-    call ESMF_StateGet(importState, field=field, itemName="sst", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_FieldAttributeGet(field, name="Connected", value=value, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    if (trim(value)=="true") then
+    if (NUOPC_StateIsFieldConnected(importState, fieldName="sst", rc=rc)) then
       ! -> NUOPC IPD01 supports selective realization based on "Connected"
       field = ESMF_FieldCreate(name="sst", grid=gridIn, &
         typekind=ESMF_TYPEKIND_R8, rc=rc)
@@ -184,17 +174,7 @@ module ATM
     endif
 
     ! exportable field: air_pressure_at_sea_level
-    call ESMF_StateGet(exportState, field=field, itemName="pmsl", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_FieldAttributeGet(field, name="Connected", value=value, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    if (trim(value)=="true") then
+    if (NUOPC_StateIsFieldConnected(exportState, fieldName="pmsl", rc=rc)) then
       ! -> NUOPC IPD01 supports selective realization based on "Connected"
       field = ESMF_FieldCreate(name="pmsl", grid=gridOut, &
         typekind=ESMF_TYPEKIND_R8, rc=rc)
@@ -210,17 +190,7 @@ module ATM
     endif
 
     ! exportable field: isotropic_shortwave_radiance_in_air
-    call ESMF_StateGet(exportState, field=field, itemName="risw", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_FieldAttributeGet(field, name="Connected", value=value, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    if (trim(value)=="true") then
+    if (NUOPC_StateIsFieldConnected(exportState, fieldName="risw", rc=rc)) then
       ! -> NUOPC IPD01 supports selective realization based on "Connected"
       field = ESMF_FieldCreate(name="risw", grid=gridOut, &
         typekind=ESMF_TYPEKIND_R8, rc=rc)
