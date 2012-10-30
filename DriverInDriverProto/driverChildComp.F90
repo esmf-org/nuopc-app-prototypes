@@ -14,6 +14,10 @@ module driverChildComp
     driver_label_SetModelPetLists => label_SetModelPetLists, &    
     driver_label_SetModelServices => label_SetModelServices
   
+  use ATM, only: atmSS => SetServices
+
+  use NUOPC_Connector, only: cplSS => routine_SetServices
+
   implicit none
   
   private
@@ -44,6 +48,12 @@ module driverChildComp
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    call ESMF_MethodAdd(gcomp, label=driver_label_SetModelServices, &
+      userRoutine=SetModelServices, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 
   end subroutine
 
@@ -66,9 +76,87 @@ module driverChildComp
       file=__FILE__)) &
       return  ! bail out
      
-    ! set the modelCount for driving nothing
-    is%wrap%modelCount = 0
+    ! set the modelCount for driving only a single model
+    is%wrap%modelCount = 1
     
   end subroutine
   
+  !-----------------------------------------------------------------------------
+
+  subroutine SetModelServices(gcomp, rc)
+    type(ESMF_GridComp)  :: gcomp
+    integer, intent(out) :: rc
+    
+    ! local variables
+    integer                       :: localrc
+    type(driver_type_IS)          :: is
+
+    rc = ESMF_SUCCESS
+    
+    ! query Component for its internal State
+    nullify(is%wrap)
+    call ESMF_UserCompGetInternalState(gcomp, driver_label_IS, is, rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+    ! SetServices for ATM
+    call ESMF_GridCompSetServices(is%wrap%modelComp(1), atmSS, &
+      userRc=localrc, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__, &
+      rcToReturn=rc)) &
+      return  ! bail out
+    ! nice to see the name in the Log output
+    call ESMF_GridCompSet(is%wrap%modelComp(1), name="ATM", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__, &
+      rcToReturn=rc)) &
+      return  ! bail out
+    ! useful to generate extra Log output during development
+    call ESMF_AttributeSet(is%wrap%modelComp(1), &
+      name="Verbosity", value="high", &
+      convention="NUOPC", purpose="General", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+    ! SetServices for driver2ATM
+    call ESMF_CplCompSetServices(is%wrap%connectorComp(0,1), cplSS, &
+      userRc=localrc, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__, &
+      rcToReturn=rc)) &
+      return  ! bail out
+    ! nice to see the name in the Log output
+    call ESMF_CplCompSet(is%wrap%connectorComp(0,1), name="driver2ATM", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__, &
+      rcToReturn=rc)) &
+      return  ! bail out
+    ! useful to generate extra Log output during development
+    call ESMF_AttributeSet(is%wrap%connectorComp(0,1), &
+      name="Verbosity", value="high", &
+      convention="NUOPC", purpose="General", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+  end subroutine
+
 end module

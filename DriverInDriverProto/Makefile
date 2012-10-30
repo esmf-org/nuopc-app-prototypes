@@ -43,12 +43,13 @@ include $(ESMFMKFILE)
 
 
 # -----------------------------------------------------------------------------
-mainApp: mainApp.o driverParentComp.o driverChildComp.o
+mainApp: mainApp.o driverParentComp.o driverChildComp.o atm.o
 	$(ESMF_F90LINKER) $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS) -o $@ $^ $(ESMF_F90ESMFLINKLIBS)
 
 # module dependencies:
 mainApp.o: driverParentComp.o
 driverParentComp.o: driverChildComp.o
+driverChildComp.o: atm.o
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -60,4 +61,4 @@ clean:
 distclean: dust clean
 
 edit:
-	nedit mainApp.F90 driverParentComp.F90 driverChildComp.F90 &
+	nedit mainApp.F90 driverParentComp.F90 driverChildComp.F90 atm.F90 &
