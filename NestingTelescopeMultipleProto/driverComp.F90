@@ -384,7 +384,7 @@ module driverComp
       file=__FILE__)) &
       return  ! bail out
     ! parent in runSeq(1)
-    call NUOPC_RunElementAdd(is%wrap%runSeq(1), i=1, j=0, phase=1, rc=rc)
+    call NUOPC_RunElementAdd(is%wrap%runSeq(1), i=1, j=-1, phase=1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -416,19 +416,19 @@ module driverComp
       file=__FILE__)) &
       return  ! bail out
     ! gen1nestling0 in runSeq(2)
-    call NUOPC_RunElementAdd(is%wrap%runSeq(2), i=2, j=0, phase=1, rc=rc)
+    call NUOPC_RunElementAdd(is%wrap%runSeq(2), i=2, j=-1, phase=1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     ! gen2nestling0 in runSeq(2)
-    call NUOPC_RunElementAdd(is%wrap%runSeq(2), i=4, j=0, phase=1, rc=rc)
+    call NUOPC_RunElementAdd(is%wrap%runSeq(2), i=4, j=-1, phase=1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     ! gen1nestling1 in runSeq(1)
-    call NUOPC_RunElementAdd(is%wrap%runSeq(1), i=3, j=0, phase=1, rc=rc)
+    call NUOPC_RunElementAdd(is%wrap%runSeq(1), i=3, j=-1, phase=1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

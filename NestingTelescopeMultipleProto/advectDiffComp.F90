@@ -58,7 +58,7 @@ module advectDiffComp
   contains
   !-----------------------------------------------------------------------------
   
-  recursive subroutine SetServices(gcomp, rc)
+  subroutine SetServices(gcomp, rc)
     type(ESMF_GridComp)  :: gcomp
     integer, intent(out) :: rc
     
@@ -72,16 +72,16 @@ module advectDiffComp
       return  ! bail out
     
     ! set entry point for methods that require specific implementation
-    ! -> required InitPhase0
+    ! -> required InitPhase1
     call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
-      userRoutine=InitializeP0, phase=0, rc=rc)
+      userRoutine=InitializeP1, phase=1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    ! -> required InitPhase1
+    ! -> required InitPhase2
     call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
-      userRoutine=InitializeP1, phase=1, rc=rc)
+      userRoutine=InitializeP2, phase=2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -119,7 +119,7 @@ module advectDiffComp
   !-----------------------------------------------------------------------------
   !-----------------------------------------------------------------------------
 
-  recursive subroutine InitializeP0(gcomp, importState, exportState, clock, rc)
+  subroutine InitializeP1(gcomp, importState, exportState, clock, rc)
     type(ESMF_GridComp)  :: gcomp
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
@@ -160,7 +160,7 @@ module advectDiffComp
     
   !-----------------------------------------------------------------------------
 
-  recursive subroutine InitializeP1(gcomp, importState, exportState, clock, rc)
+  subroutine InitializeP2(gcomp, importState, exportState, clock, rc)
     type(ESMF_GridComp)  :: gcomp
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
@@ -549,7 +549,7 @@ module advectDiffComp
 
   !-----------------------------------------------------------------------------
 
-  recursive subroutine Finalize(gcomp, importState, exportState, clock, rc)
+  subroutine Finalize(gcomp, importState, exportState, clock, rc)
     type(ESMF_GridComp)  :: gcomp
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
@@ -737,7 +737,7 @@ module advectDiffComp
 
   !-----------------------------------------------------------------------------
 
-  recursive subroutine ModelAdvance(gcomp, rc)
+  subroutine ModelAdvance(gcomp, rc)
     type(ESMF_GridComp)  :: gcomp
     integer, intent(out) :: rc
     
@@ -908,7 +908,7 @@ module advectDiffComp
   
   !-----------------------------------------------------------------------------
 
-  recursive subroutine CheckImport(gcomp, rc)
+  subroutine CheckImport(gcomp, rc)
     type(ESMF_GridComp)   :: gcomp
     integer, intent(out)  :: rc
     
