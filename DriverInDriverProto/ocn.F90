@@ -1,14 +1,15 @@
-module ATM
+module OCN
 
   !-----------------------------------------------------------------------------
-  ! ATM Component.
+  ! OCN Component.
   !-----------------------------------------------------------------------------
 
   use ESMF
   use NUOPC
   use NUOPC_Model, only: &
-    model_routine_SS    => routine_SetServices, &
-    model_label_Advance => label_Advance
+    model_routine_SS      => routine_SetServices, &
+    model_label_SetClock  => label_SetClock, &
+    model_label_Advance   => label_Advance
   
   implicit none
   
@@ -48,13 +49,20 @@ module ATM
       return  ! bail out
     
     ! attach specializing method(s)
+    call ESMF_MethodAdd(gcomp, label=model_label_SetClock, &
+      userRoutine=SetClock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
     call ESMF_MethodAdd(gcomp, label=model_label_Advance, &
       userRoutine=ModelAdvance, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
   end subroutine
   
   !-----------------------------------------------------------------------------
@@ -66,39 +74,36 @@ module ATM
     integer, intent(out) :: rc
     
     rc = ESMF_SUCCESS
-    
+
     ! Disabling the following macro, e.g. renaming to WITHIMPORTFIELDS_disable,
     ! will result in a model component that does not advertise any importable
     ! Fields. Use this if you want to drive the model independently.
 #define WITHIMPORTFIELDS
 #ifdef WITHIMPORTFIELDS
-    ! importable field: sea_surface_temperature
+    ! importable field: air_pressure_at_sea_level
     call NUOPC_StateAdvertiseField(importState, &
-      StandardName="sea_surface_temperature", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-#endif
-    
-#define WITHEXPORTFIELDS
-#ifdef WITHEXPORTFIELDS
-    ! exportable field: air_pressure_at_sea_level
-    call NUOPC_StateAdvertiseField(exportState, &
       StandardName="air_pressure_at_sea_level", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
-    ! exportable field: isotropic_shortwave_radiance_in_air
-    call NUOPC_StateAdvertiseField(exportState, &
+    ! importable field: isotropic_shortwave_radiance_in_air
+    call NUOPC_StateAdvertiseField(importState, &
       StandardName="isotropic_shortwave_radiance_in_air", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 #endif
+
+    ! exportable field: sea_surface_temperature
+    call NUOPC_StateAdvertiseField(exportState, &
+      StandardName="sea_surface_temperature", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 
   end subroutine
   
@@ -111,6 +116,7 @@ module ATM
     integer, intent(out) :: rc
     
     ! local variables    
+    type(ESMF_TimeInterval) :: stabilityTimeStep
     type(ESMF_Field)        :: field
     type(ESMF_Grid)         :: gridIn
     type(ESMF_Grid)         :: gridOut
@@ -119,7 +125,7 @@ module ATM
     
     ! create a Grid object for Fields
     gridIn = NUOPC_GridCreateSimpleXY(10._ESMF_KIND_R8, 20._ESMF_KIND_R8, &
-      100._ESMF_KIND_R8, 200._ESMF_KIND_R8, 10, 100, rc)
+      100._ESMF_KIND_R8, 200._ESMF_KIND_R8, 100, 10, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -127,8 +133,21 @@ module ATM
     gridOut = gridIn ! for now out same as in
 
 #ifdef WITHIMPORTFIELDS
-    ! importable field: sea_surface_temperature
-    field = ESMF_FieldCreate(name="sst", grid=gridIn, &
+    ! importable field: air_pressure_at_sea_level
+    field = ESMF_FieldCreate(name="pmsl", grid=gridIn, &
+      typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_StateRealizeField(importState, field=field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    ! importable field: isotropic_shortwave_radiance_in_air
+    field = ESMF_FieldCreate(name="risw", grid=gridIn, &
       typekind=ESMF_TYPEKIND_R8, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -141,9 +160,8 @@ module ATM
       return  ! bail out
 #endif
 
-#ifdef WITHEXPORTFIELDS
-    ! exportable field: air_pressure_at_sea_level
-    field = ESMF_FieldCreate(name="pmsl", grid=gridOut, &
+    ! exportable field: sea_surface_temperature
+    field = ESMF_FieldCreate(name="sst", grid=gridOut, &
       typekind=ESMF_TYPEKIND_R8, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -154,23 +172,45 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-
-    ! exportable field: isotropic_shortwave_radiance_in_air
-    field = ESMF_FieldCreate(name="risw", grid=gridOut, &
-      typekind=ESMF_TYPEKIND_R8, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_StateRealizeField(exportState, field=field, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-#endif
 
   end subroutine
   
+  !-----------------------------------------------------------------------------
+
+  subroutine SetClock(gcomp, rc)
+    type(ESMF_GridComp)  :: gcomp
+    integer, intent(out) :: rc
+    
+    ! local variables
+    type(ESMF_Clock)              :: clock
+    type(ESMF_TimeInterval)       :: stabilityTimeStep
+
+    rc = ESMF_SUCCESS
+    
+    ! query the Component for its clock, importState and exportState
+    call ESMF_GridCompGet(gcomp, clock=clock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+    ! initialize internal clock
+    ! here: parent Clock and stability timeStep determine actual model timeStep
+    !TODO: stabilityTimeStep should be read in from configuation
+    !TODO: or computed from internal Grid information
+    call ESMF_TimeIntervalSet(stabilityTimeStep, m=5, rc=rc) ! 5 minute steps
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_GridCompSetClock(gcomp, clock, stabilityTimeStep, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+  end subroutine
+
   !-----------------------------------------------------------------------------
 
   subroutine ModelAdvance(gcomp, rc)
@@ -180,6 +220,8 @@ module ATM
     ! local variables
     type(ESMF_Clock)              :: clock
     type(ESMF_State)              :: importState, exportState
+    type(ESMF_Time)               :: currTime
+    type(ESMF_TimeInterval)       :: timeStep
 
     rc = ESMF_SUCCESS
     
@@ -193,19 +235,27 @@ module ATM
 
     ! HERE THE MODEL ADVANCES: currTime -> currTime + timeStep
     
-    ! Because of the way that the internal Clock was set by default,
-    ! its timeStep is equal to the parent timeStep. As a consequence the
-    ! currTime + timeStep is equal to the stopTime of the internal Clock
-    ! for this call of the ModelAdvance() routine.
+    ! Because of the way that the internal Clock was set in SetClock(),
+    ! its timeStep is likely smaller than the parent timeStep. As a consequence
+    ! the time interval covered by a single parent timeStep will result in 
+    ! multiple calls to the ModelAdvance() routine. Every time the currTime
+    ! will come in by one internal timeStep advanced. This goes until the
+    ! stopTime of the internal Clock has been reached.
     
     call NUOPC_ClockPrintCurrTime(clock, &
-      "------>Advancing ATM from: ", rc=rc)
+      "------>Advancing OCN from: ", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
-    call NUOPC_ClockPrintStopTime(clock, &
+    call ESMF_ClockGet(clock, currTime=currTime, timeStep=timeStep, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    call NUOPC_TimePrint(currTime + timeStep, &
       "--------------------------------> to: ", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &

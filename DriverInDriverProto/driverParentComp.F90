@@ -16,7 +16,10 @@ module driverParentComp
   
   use driverChildComp, only: &
     driver_SS => SetServices
+  use OCN, only: ocnSS => SetServices
   
+  use NUOPC_Connector, only: cplSS => routine_SetServices
+
   implicit none
   
   private
@@ -86,8 +89,8 @@ module driverParentComp
       file=__FILE__)) &
       return  ! bail out
      
-    ! set the modelCount for a single child component
-    is%wrap%modelCount = 1
+    ! set the modelCount for a 2 children
+    is%wrap%modelCount = 2
     
   end subroutine
   
@@ -118,7 +121,7 @@ module driverParentComp
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    ! set petList for the child component
+    ! set petList for the first child component
     allocate(is%wrap%modelPetLists(1)%petList(petCount/2))
     do i=1, petCount/2
       is%wrap%modelPetLists(1)%petList(i) = i-1 ! PET labeling goes from 0 to petCount-1
@@ -152,7 +155,7 @@ module driverParentComp
       file=__FILE__)) &
       return  ! bail out
       
-    ! SetServices for the child driver as modelComp(1)
+    ! SetServices for the child driver as modelComp(1), acting as ATM
     call ESMF_GridCompSetServices(is%wrap%modelComp(1), driver_SS, &
       userRc=localrc, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -177,6 +180,88 @@ module driverParentComp
       file=__FILE__)) &
       return  ! bail out
       
+    ! SetServices for the OCN as modelComp(2)
+    call ESMF_GridCompSetServices(is%wrap%modelComp(2), ocnSS, &
+      userRc=localrc, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__, &
+      rcToReturn=rc)) &
+      return  ! bail out
+    call ESMF_GridCompSet(is%wrap%modelComp(2), name="OCN", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_AttributeSet(is%wrap%modelComp(2), &
+      name="Verbosity", value="high", &
+      convention="NUOPC", purpose="General", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+    ! SetServices for OCN2ATM
+    call ESMF_CplCompSetServices(is%wrap%connectorComp(2,1), cplSS, &
+      userRc=localrc, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__, &
+      rcToReturn=rc)) &
+      return  ! bail out
+    ! nice to see the name in the Log output
+    call ESMF_CplCompSet(is%wrap%connectorComp(2,1), name="OCN2ATM(driver)", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__, &
+      rcToReturn=rc)) &
+      return  ! bail out
+    ! useful to generate extra Log output during development
+    call ESMF_AttributeSet(is%wrap%connectorComp(2,1), &
+      name="Verbosity", value="high", &
+      convention="NUOPC", purpose="General", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! SetServices for ATM2OCN
+    call ESMF_CplCompSetServices(is%wrap%connectorComp(1,2), cplSS, &
+      userRc=localrc, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__, &
+      rcToReturn=rc)) &
+      return  ! bail out
+    ! nice to see the name in the Log output
+    call ESMF_CplCompSet(is%wrap%connectorComp(1,2), name="(driver)ATM2OCN", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__, &
+      rcToReturn=rc)) &
+      return  ! bail out
+    ! useful to generate extra Log output during development
+    call ESMF_AttributeSet(is%wrap%connectorComp(1,2), &
+      name="Verbosity", value="high", &
+      convention="NUOPC", purpose="General", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+     
      
     ! set the model clock
     

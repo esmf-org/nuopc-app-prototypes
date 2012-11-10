@@ -55,6 +55,26 @@ module driverChildComp
       file=__FILE__)) &
       return  ! bail out
 
+    ! set entry points for internally used component methods
+    call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
+      userRoutine=InternalInitializeP1, phase=2, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
+      userRoutine=InternalInitializeP2, phase=3, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
+      userRoutine=InternalInitializeP4, phase=4, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
   end subroutine
 
   !-----------------------------------------------------------------------------
@@ -90,6 +110,7 @@ module driverChildComp
     ! local variables
     integer                       :: localrc
     type(driver_type_IS)          :: is
+    character(len=NUOPC_PhaseMapStringLength) :: initPhases(3)
 
     rc = ESMF_SUCCESS
     
@@ -184,7 +205,162 @@ module driverChildComp
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-
+    
+    ! set the InternalInitializePhaseMap
+    initPhases(1) = "IPDv00p1=2"
+    initPhases(2) = "IPDv00p2=3"
+    initPhases(3) = "IPDv00p4=4"
+    
+    call ESMF_AttributeSet(gcomp, &
+      name="InternalInitializePhaseMap", valueList=initPhases, &
+      convention="NUOPC", purpose="General", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
   end subroutine
 
+  !-----------------------------------------------------------------------------
+
+  subroutine InternalInitializeP1(gcomp, importState, exportState, clock, rc)
+    type(ESMF_GridComp)  :: gcomp
+    type(ESMF_State)     :: importState, exportState
+    type(ESMF_Clock)     :: clock
+    integer, intent(out) :: rc
+    
+    rc = ESMF_SUCCESS
+    
+    ! Disabling the following macro, e.g. renaming to WITHIMPORTFIELDS_disable,
+    ! will result in a model component that does not advertise any importable
+    ! Fields. Use this if you want to drive the model independently.
+#define WITHIMPORTFIELDS
+#ifdef WITHIMPORTFIELDS
+    ! importable field: sea_surface_temperature
+    call NUOPC_StateAdvertiseField(importState, &
+      StandardName="sea_surface_temperature", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+    
+#define WITHEXPORTFIELDS
+#ifdef WITHEXPORTFIELDS
+    ! exportable field: air_pressure_at_sea_level
+    call NUOPC_StateAdvertiseField(exportState, &
+      StandardName="air_pressure_at_sea_level", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    ! exportable field: isotropic_shortwave_radiance_in_air
+    call NUOPC_StateAdvertiseField(exportState, &
+      StandardName="isotropic_shortwave_radiance_in_air", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
+  end subroutine
+  
+  !-----------------------------------------------------------------------------
+
+  subroutine InternalInitializeP2(gcomp, importState, exportState, clock, rc)
+    type(ESMF_GridComp)  :: gcomp
+    type(ESMF_State)     :: importState, exportState
+    type(ESMF_Clock)     :: clock
+    integer, intent(out) :: rc
+    
+    ! local variables    
+    type(ESMF_Field)        :: field
+    type(ESMF_Grid)         :: gridIn
+    type(ESMF_Grid)         :: gridOut
+    
+    rc = ESMF_SUCCESS
+    
+    ! create a Grid object for Fields
+    gridIn = NUOPC_GridCreateSimpleXY(10._ESMF_KIND_R8, 20._ESMF_KIND_R8, &
+      100._ESMF_KIND_R8, 200._ESMF_KIND_R8, 10, 100, rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    gridOut = gridIn ! for now out same as in
+
+#ifdef WITHIMPORTFIELDS
+    ! importable field: sea_surface_temperature
+    field = ESMF_FieldCreate(name="sst", grid=gridIn, &
+      typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_StateRealizeField(importState, field=field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
+#ifdef WITHEXPORTFIELDS
+    ! exportable field: air_pressure_at_sea_level
+    field = ESMF_FieldCreate(name="pmsl", grid=gridOut, &
+      typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_StateRealizeField(exportState, field=field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! exportable field: isotropic_shortwave_radiance_in_air
+    field = ESMF_FieldCreate(name="risw", grid=gridOut, &
+      typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_StateRealizeField(exportState, field=field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
+  end subroutine
+  
+  !-----------------------------------------------------------------------------
+
+  subroutine InternalInitializeP4(gcomp, importState, exportState, clock, rc)
+    type(ESMF_GridComp)  :: gcomp
+    type(ESMF_State)     :: importState, exportState
+    type(ESMF_Clock)     :: clock
+    integer, intent(out) :: rc
+    
+    ! local variables    
+    integer               :: localrc
+    type(ESMF_Clock)      :: internalClock
+    
+    rc = ESMF_SUCCESS
+    
+    ! update timestamp on export Fields
+    call ESMF_GridCompGet(gcomp, clock=internalClock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_StateSetTimestamp(exportState, internalClock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+  end subroutine
+  
 end module

@@ -1,8 +1,8 @@
-README for Driver-in-Driver NUOPC prototype
--------------------------------------------
+README for Driver-in-Driver NUOPC prototype of a coupled ATM-OCN through Driver
+-------------------------------------------------------------------------------
 
 Dependencies: 
-  - ESMF_6_1_0_beta_snapshot_??
+  - ESMF_6_1_0_beta_snapshot_08
   
 Build:
   - Set environment variable ESMFMKFILE to point to the esmf.mk of your ESMF
@@ -22,7 +22,10 @@ Output:
 Code structure:
   - Makefile              - Makefile that is based on the standard esmf.mk 
                             mechanism.
-  - driverChildComp.F90   - Driver child component run from within parent driver.
+  - driverChildComp.F90   - Driver child component run from within parent 
+                            driver, and looking like an ATM to the outside.
+  - atm.F90               - the ATM component driven by driverChildComp.F90
   - driverParentComp.F90  - Driver parent component, driving the driver child
                             component.
+  - ocn.F90               - the OCN component driven by driverParentComp.F90
   - mainApp.F90           - Main application.
