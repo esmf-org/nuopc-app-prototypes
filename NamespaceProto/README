@@ -2,7 +2,7 @@ README for Namespace NUOPC prototype
 ------------------------------------
 
 Dependencies: 
-  - ESMF_6_1_0_beta_snapshot_08
+  - ESMF_6_1_1
   
 Build:
   - Set environment variable ESMFMKFILE to point to the esmf.mk of your ESMF
@@ -11,7 +11,7 @@ Build:
   
 Execution:
   - Optionally set environment variable ESMF_RUNTIME_COMPLIANCECHECK to ON.
-  - mpirun -np X ./esmApp (where X is the total number of PETs)
+  - mpirun -np X ./mainApp (where X is the total number of PETs)
   
 Output:
   - PET*.Log files containing compliance checker output if turned on.
