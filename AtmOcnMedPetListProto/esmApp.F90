@@ -20,6 +20,8 @@ program esmApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
   
+call ESMF_LogSet(flush=.true.)
+
   call ESMF_LogWrite("esmApp STARTING", ESMF_LOGMSG_INFO, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &

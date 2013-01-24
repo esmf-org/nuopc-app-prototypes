@@ -52,12 +52,19 @@ esm.o: driverAtmOcnLnd.o atm.o ocn.o lnd.o
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-.PHONY: dust clean distclean edit
+.PHONY: dust clean distclean info edit
 dust:
 	rm -f PET*.ESMF_LogFile
 clean:
 	rm -f esmApp *.o *.mod
 distclean: dust clean
+
+info:
+	@echo ==================================================================
+	@echo ESMFMKFILE=$(ESMFMKFILE)
+	@echo ==================================================================
+	@cat $(ESMFMKFILE)
+	@echo ==================================================================
 
 edit:
 	nedit esmApp.F90 esm.F90 driverAtmOcnLnd.F90 atm.F90 ocn.F90 lnd.F90 &

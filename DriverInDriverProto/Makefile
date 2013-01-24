@@ -53,12 +53,19 @@ driverChildComp.o: atm.o
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-.PHONY: dust clean distclean edit
+.PHONY: dust clean distclean info edit
 dust:
 	rm -f PET*.ESMF_LogFile *.nc
 clean:
 	rm -f mainApp *.o *.mod
 distclean: dust clean
+
+info:
+	@echo ==================================================================
+	@echo ESMFMKFILE=$(ESMFMKFILE)
+	@echo ==================================================================
+	@cat $(ESMFMKFILE)
+	@echo ==================================================================
 
 edit:
 	nedit mainApp.F90 driverParentComp.F90 driverChildComp.F90 atm.F90 ocn.F90 &
