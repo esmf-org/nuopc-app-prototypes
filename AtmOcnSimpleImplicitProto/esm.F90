@@ -88,6 +88,13 @@ module ESM
       rcToReturn=rc)) &
       return  ! bail out
       
+    call ESMF_AttributeSet(is%wrap%atm, name="Verbosity", value="high", &
+      convention="NUOPC", purpose="General", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! SetServices for OCN
     call ESMF_GridCompSetServices(is%wrap%ocn, ocnSS, userRc=localrc, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -98,6 +105,13 @@ module ESM
       line=__LINE__, &
       file=__FILE__, &
       rcToReturn=rc)) &
+      return  ! bail out
+
+    call ESMF_AttributeSet(is%wrap%ocn, name="Verbosity", value="high", &
+      convention="NUOPC", purpose="General", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
       return  ! bail out
 
     ! Disabling the following macro, e.g. renaming to WITHCONNECTORS_disable,
@@ -119,6 +133,13 @@ module ESM
       rcToReturn=rc)) &
       return  ! bail out
       
+    call ESMF_AttributeSet(is%wrap%atm2ocn, name="Verbosity", value="high", &
+      convention="NUOPC", purpose="General", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! SetServices for ocn2atm
     call ESMF_CplCompSetServices(is%wrap%ocn2atm, cplSS, userRc=localrc, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -129,6 +150,13 @@ module ESM
       line=__LINE__, &
       file=__FILE__, &
       rcToReturn=rc)) &
+      return  ! bail out
+      
+    call ESMF_AttributeSet(is%wrap%ocn2atm, name="Verbosity", value="high", &
+      convention="NUOPC", purpose="General", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
       return  ! bail out
 #endif
       
