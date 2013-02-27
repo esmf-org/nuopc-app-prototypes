@@ -52,12 +52,19 @@ driverComp.o: advectDiffComp.o
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-.PHONY: dust clean distclean edit
+.PHONY: dust clean distclean info edit
 dust:
 	rm -f PET*.ESMF_LogFile *.nc
 clean:
 	rm -f mainApp *.o *.mod
 distclean: dust clean
+
+info:
+	@echo ==================================================================
+	@echo ESMFMKFILE=$(ESMFMKFILE)
+	@echo ==================================================================
+	@cat $(ESMFMKFILE)
+	@echo ==================================================================
 
 edit:
 	nedit mainApp.F90 driverComp.F90 advectDiffComp.F90 &
