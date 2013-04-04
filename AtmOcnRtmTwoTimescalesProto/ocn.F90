@@ -8,6 +8,8 @@ module OCN
   use NUOPC
   use NUOPC_Model, only: &
     model_routine_SS        => routine_SetServices, &
+    model_type_IS           => type_InternalState, &
+    model_label_IS          => label_InternalState, &
     model_label_SetClock    => label_SetClock, &
     model_label_CheckImport => label_CheckImport, &
     model_label_Advance     => label_Advance
@@ -286,6 +288,7 @@ module OCN
     ! This is the routine that enforces correct time stamps on import Fields
     
     ! local variables
+    type(model_type_IS)     :: is
     type(ESMF_Clock)        :: clock
     type(ESMF_Time)         :: startTime, currTime
     type(ESMF_State)        :: importState
@@ -294,20 +297,29 @@ module OCN
 
     rc = ESMF_SUCCESS
     
-    ! query the Component for its clock and importState
-    call ESMF_GridCompGet(gcomp, clock=clock, importState=importState, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    ! get the start time and current time out of the clock
-    call ESMF_ClockGet(clock, startTime=startTime, currTime=currTime, rc=rc)
+    ! query Component for its internal State
+    nullify(is%wrap)
+    call ESMF_UserCompGetInternalState(gcomp, model_label_IS, is, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
+    ! get the start time and current time out of the clock
+    call ESMF_ClockGet(is%wrap%driverClock, startTime=startTime, &
+      currTime=currTime, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    ! query the Component for its clock and importState
+    call ESMF_GridCompGet(gcomp, importState=importState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! check timestamp on "air_pressure_at_sea_level" == current time
     call ESMF_StateGet(importState, itemName="pmsl", field=field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
