@@ -122,9 +122,9 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
     
-    ! exportable field: isotropic_shortwave_radiance_in_air
+    ! exportable field: surface_net_downward_shortwave_flux
     call NUOPC_StateAdvertiseField(exportState, &
-      StandardName="isotropic_shortwave_radiance_in_air", rc=rc)
+      StandardName="surface_net_downward_shortwave_flux", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -189,10 +189,10 @@ module ATM
         return  ! bail out
     endif
 
-    ! exportable field: isotropic_shortwave_radiance_in_air
+    ! exportable field: surface_net_downward_shortwave_flux
     if (NUOPC_StateIsFieldConnected(exportState, fieldName="risw", rc=rc)) then
       ! -> NUOPC IPD01 supports selective realization based on "Connected"
-      field = ESMF_FieldCreate(name="risw", grid=gridOut, &
+      field = ESMF_FieldCreate(name="rsns", grid=gridOut, &
         typekind=ESMF_TYPEKIND_R8, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &

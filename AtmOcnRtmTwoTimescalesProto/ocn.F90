@@ -91,9 +91,9 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
     
-    ! importable field: isotropic_shortwave_radiance_in_air
+    ! importable field: surface_net_downward_shortwave_flux
     call NUOPC_StateAdvertiseField(importState, &
-      StandardName="isotropic_shortwave_radiance_in_air", rc=rc)
+      StandardName="surface_net_downward_shortwave_flux", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -155,8 +155,8 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
     
-    ! importable field: isotropic_shortwave_radiance_in_air
-    field = ESMF_FieldCreate(name="risw", grid=gridIn, &
+    ! importable field: surface_net_downward_shortwave_flux
+    field = ESMF_FieldCreate(name="rsns", grid=gridIn, &
       typekind=ESMF_TYPEKIND_R8, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -341,8 +341,8 @@ module OCN
       return  ! bail out
     endif
     
-    ! check timestamp on "isotropic_shortwave_radiance_in_air" == current time
-    call ESMF_StateGet(importState, itemName="risw", field=field, rc=rc)
+    ! check timestamp on "surface_net_downward_shortwave_flux" == current time
+    call ESMF_StateGet(importState, itemName="rsns", field=field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
