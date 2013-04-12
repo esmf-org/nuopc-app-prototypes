@@ -190,7 +190,7 @@ module ATM
     endif
 
     ! exportable field: surface_net_downward_shortwave_flux
-    if (NUOPC_StateIsFieldConnected(exportState, fieldName="risw", rc=rc)) then
+    if (NUOPC_StateIsFieldConnected(exportState, fieldName="rsns", rc=rc)) then
       ! -> NUOPC IPD01 supports selective realization based on "Connected"
       field = ESMF_FieldCreate(name="rsns", grid=gridOut, &
         typekind=ESMF_TYPEKIND_R8, rc=rc)

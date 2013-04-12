@@ -168,7 +168,7 @@ module MED
       return  ! bail out
     
     ! importable field: surface_net_downward_shortwave_flux
-    field = ESMF_FieldCreate(name="nsns", grid=gridIn, &
+    field = ESMF_FieldCreate(name="rsns", grid=gridIn, &
       typekind=ESMF_TYPEKIND_R8, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
