@@ -55,8 +55,8 @@ Explanation:
     compile-time.
     
     This prototype code demonstrates that there is generally no need for 
-  component wrappers in codes that use the NUOPC Layer. Instead the flexibility
-  to select actual component instantiation either during compile-time and/or
-  run-time is best implemented using standard constructs within the driver
-  layer. The prototype shows a robust implementation that catches configuration
-  conflicts at the earliest stage.
+  component wrappers or stubs in codes that use the NUOPC Layer. Instead the
+  flexibility to select actual component instantiation either during 
+  compile-time and/or run-time is best implemented using standard constructs
+  within the driver layer. The prototype shows a robust implementation that
+  catches configuration conflicts at the earliest stage.
