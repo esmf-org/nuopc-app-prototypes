@@ -42,17 +42,19 @@ include $(ESMFMKFILE)
 	$(ESMF_CXXCOMPILER) -c $(ESMF_CXXCOMPILEOPTS) $(ESMF_CXXCOMPILEPATHSLOCAL) $(ESMF_CXXCOMPILEPATHS) $(ESMF_CXXCOMPILECPPFLAGS) $<
 
 .PRECIOUS: %.o
-
 %.mk : %.o
 	@echo "# ESMF self-describing build dependency makefile fragment" > $@
 	@echo >> $@
-	@echo "ESMF_DEP_FRONT     = atmA"       >> $@
-	@echo "ESMF_DEP_INCPATH   = `pwd`"      >> $@
-	@echo "ESMF_DEP_CMPL_OBJS = `pwd`/"$<   >> $@
-	@echo "ESMF_DEP_LINK_OBJS = `pwd`/"$<   >> $@
+	@echo "ESMF_DEP_FRONT     = OceanCommon"                      >> $@
+	@echo "ESMF_DEP_INCPATH   = `pwd`"                            >> $@
+	@echo "ESMF_DEP_CMPL_OBJS = `pwd`/"$<                         >> $@
+	@echo "ESMF_DEP_LINK_OBJS = "$(addprefix `pwd`/, $< $(OBJS))  >> $@
 
 # -----------------------------------------------------------------------------
-atmA.mk:
+ocnCommon.mk:
+
+OBJS = subModule1.o subModule2.o
+ocnCommon.o: $(OBJS)
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -71,4 +73,4 @@ info:
 	@echo ==================================================================
 
 edit:
-	nedit atmA.F90 &
+	nedit ocnCommon.F90 subModule1.F90 subModule2.F90 &

@@ -11,6 +11,8 @@ module ocnA
     model_label_SetClock  => label_SetClock, &
     model_label_Advance   => label_Advance
   
+  use FRONT_OCNCOMMON
+  
   implicit none
   
   private
@@ -101,6 +103,13 @@ module ocnA
 
     ! set Component name so it becomes identifiable
     call ESMF_GridCompSet(gcomp, name="ocnA", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+    ! call into procedure from FRONT_OCNCOMMON module
+    call procedure_ocnCommon(rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

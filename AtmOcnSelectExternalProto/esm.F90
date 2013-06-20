@@ -17,16 +17,16 @@ module ESM
     driver_label_SetModelServices => label_SetModelServices
   
 #if (defined WITH_ATM_A && !defined WITH_ATM_B)
-  use atmA, only: atmSS => SetServices
+  use FRONT_ATMA, only: atmSS => SetServices
 #elif (!defined WITH_ATM_A && defined WITH_ATM_B)
-  use atmB, only: atmSS => SetServices
+  use FRONT_ATMB, only: atmSS => SetServices
 #endif
 
 #ifdef WITH_OCN_A
-  use ocnA, only: ocnA_SS => SetServices
+  use FRONT_OCNA, only: ocnA_SS => SetServices
 #endif
 #ifdef WITH_OCN_B
-  use ocnB, only: ocnB_SS => SetServices
+  use FRONT_OCNB, only: ocnB_SS => SetServices
 #endif
   
   use NUOPC_Connector, only: cplSS => routine_SetServices

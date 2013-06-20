@@ -46,13 +46,13 @@ include $(ESMFMKFILE)
 %.mk : %.o
 	@echo "# ESMF self-describing build dependency makefile fragment" > $@
 	@echo >> $@
-	@echo "ESMF_DEP_FRONT     = atmA"       >> $@
+	@echo "ESMF_DEP_FRONT     = ocnSub"     >> $@
 	@echo "ESMF_DEP_INCPATH   = `pwd`"      >> $@
 	@echo "ESMF_DEP_CMPL_OBJS = `pwd`/"$<   >> $@
 	@echo "ESMF_DEP_LINK_OBJS = `pwd`/"$<   >> $@
 
 # -----------------------------------------------------------------------------
-atmA.mk:
+ocnSub.mk:
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -71,4 +71,4 @@ info:
 	@echo ==================================================================
 
 edit:
-	nedit atmA.F90 &
+	nedit ocnSub.F90 &

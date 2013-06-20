@@ -25,12 +25,31 @@ endif
 include $(ESMFMKFILE)
 
 ################################################################################
+# Include self-describing dependencies and accumulate into local variables
 
-# Include external component dependencies
 include ATM-A/atmA.mk
+DEP_FRONTS    := $(DEP_FRONTS) -DFRONT_ATMA=$(ESMF_DEP_FRONT)
+DEP_INCS      := $(DEP_INCS) -I$(ESMF_DEP_INCPATH)
+DEP_CMPL_OBJS := $(DEP_CMPL_OBJS) $(ESMF_DEP_CMPL_OBJS)
+DEP_LINK_OBJS := $(DEP_LINK_OBJS) $(ESMF_DEP_LINK_OBJS)
+
 include ATM-B/atmB.mk
+DEP_FRONTS    := $(DEP_FRONTS) -DFRONT_ATMB=$(ESMF_DEP_FRONT)
+DEP_INCS      := $(DEP_INCS) -I$(ESMF_DEP_INCPATH)
+DEP_CMPL_OBJS := $(DEP_CMPL_OBJS) $(ESMF_DEP_CMPL_OBJS)
+DEP_LINK_OBJS := $(DEP_LINK_OBJS) $(ESMF_DEP_LINK_OBJS)
+
 include OcnModelA/ocn.mk
+DEP_FRONTS    := $(DEP_FRONTS) -DFRONT_OCNA=$(ESMF_DEP_FRONT)
+DEP_INCS      := $(DEP_INCS) -I$(ESMF_DEP_INCPATH)
+DEP_CMPL_OBJS := $(DEP_CMPL_OBJS) $(ESMF_DEP_CMPL_OBJS)
+DEP_LINK_OBJS := $(DEP_LINK_OBJS) $(ESMF_DEP_LINK_OBJS)
+
 include OcnModelB/ocn.mk
+DEP_FRONTS    := $(DEP_FRONTS) -DFRONT_OCNB=$(ESMF_DEP_FRONT)
+DEP_INCS      := $(DEP_INCS) -I$(ESMF_DEP_INCPATH)
+DEP_CMPL_OBJS := $(DEP_CMPL_OBJS) $(ESMF_DEP_CMPL_OBJS)
+DEP_LINK_OBJS := $(DEP_LINK_OBJS) $(ESMF_DEP_LINK_OBJS)
 
 ################################################################################
 ################################################################################
@@ -38,25 +57,25 @@ include OcnModelB/ocn.mk
 .SUFFIXES: .f90 .F90 .c .C
 
 %.o : %.f90
-	$(ESMF_F90COMPILER) -c $(ESMF_EXTERNAL_COMP_INCS) $(ESMF_F90COMPILEOPTS) $(ESMF_F90COMPILEPATHS) $(ESMF_F90COMPILEFREENOCPP) $<
+	$(ESMF_F90COMPILER) -c $(DEP_FRONTS) $(DEP_INCS) $(ESMF_F90COMPILEOPTS) $(ESMF_F90COMPILEPATHS) $(ESMF_F90COMPILEFREENOCPP) $<
 
 %.o : %.F90
-	$(ESMF_F90COMPILER) -c $(ESMF_EXTERNAL_COMP_INCS) $(ESMF_F90COMPILEOPTS) $(ESMF_F90COMPILEPATHS) $(ESMF_F90COMPILEFREECPP) $(ESMF_F90COMPILECPPFLAGS) $<
+	$(ESMF_F90COMPILER) -c $(DEP_FRONTS) $(DEP_INCS) $(ESMF_F90COMPILEOPTS) $(ESMF_F90COMPILEPATHS) $(ESMF_F90COMPILEFREECPP) $(ESMF_F90COMPILECPPFLAGS) $<
         
 %.o : %.c
-	$(ESMF_CXXCOMPILER) -c $(ESMF_EXTERNAL_COMP_INCS) $(ESMF_CXXCOMPILEOPTS) $(ESMF_CXXCOMPILEPATHSLOCAL) $(ESMF_CXXCOMPILEPATHS) $(ESMF_CXXCOMPILECPPFLAGS) $<
+	$(ESMF_CXXCOMPILER) -c $(DEP_FRONTS) $(DEP_INCS) $(ESMF_CXXCOMPILEOPTS) $(ESMF_CXXCOMPILEPATHSLOCAL) $(ESMF_CXXCOMPILEPATHS) $(ESMF_CXXCOMPILECPPFLAGS) $<
 
 % : %.C
-	$(ESMF_CXXCOMPILER) -c $(ESMF_EXTERNAL_COMP_INCS) $(ESMF_CXXCOMPILEOPTS) $(ESMF_CXXCOMPILEPATHSLOCAL) $(ESMF_CXXCOMPILEPATHS) $(ESMF_CXXCOMPILECPPFLAGS) $<
+	$(ESMF_CXXCOMPILER) -c $(DEP_FRONTS) $(DEP_INCS) $(ESMF_CXXCOMPILEOPTS) $(ESMF_CXXCOMPILEPATHSLOCAL) $(ESMF_CXXCOMPILEPATHS) $(ESMF_CXXCOMPILECPPFLAGS) $<
 
 
 # -----------------------------------------------------------------------------
-esmApp: esmApp.o esm.o $(ESMF_EXTERNAL_COMP_OBJS)
+esmApp: esmApp.o esm.o $(DEP_LINK_OBJS)
 	$(ESMF_F90LINKER) $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS) -o $@ $^ $(ESMF_F90ESMFLINKLIBS)
 
 # module dependencies:
 esmApp.o: esm.o
-esm.o: $(ESMF_EXTERNAL_COMP_OBJS)
+esm.o: $(DEP_CMPL_OBJS)
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------

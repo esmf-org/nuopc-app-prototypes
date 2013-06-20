@@ -43,13 +43,15 @@ include $(ESMFMKFILE)
 
 .PRECIOUS: %.o
 %.mk : %.o
-	@echo "# ESMF external component makefile fragment" > $@
+	@echo "# ESMF self-describing build dependency makefile fragment" > $@
 	@echo >> $@
-	@echo "ESMF_EXTERNAL_COMP_INCS += -I`pwd`" >> $@
-	@echo "ESMF_EXTERNAL_COMP_OBJS += `pwd`/"$< >> $@
+	@echo "ESMF_DEP_FRONT     = atmB"       >> $@
+	@echo "ESMF_DEP_INCPATH   = `pwd`"      >> $@
+	@echo "ESMF_DEP_CMPL_OBJS = `pwd`/"$<   >> $@
+	@echo "ESMF_DEP_LINK_OBJS = `pwd`/"$< `pwd`/procedure.o >> $@
 
 # -----------------------------------------------------------------------------
-atmB.mk:
+atmB.mk: procedure.o
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -68,4 +70,4 @@ info:
 	@echo ==================================================================
 
 edit:
-	nedit atmB.F90 &
+	nedit atmB.F90 procedure.F90 &

@@ -97,6 +97,9 @@ module atmB
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+      
+    ! call into a procedure F77 style, i.e. without explicit interface
+    call procedure_f77style()
 
   end subroutine
   

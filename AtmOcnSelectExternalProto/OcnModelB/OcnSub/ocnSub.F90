@@ -1,7 +1,7 @@
-module ocnB
+module ocnSub
 
   !-----------------------------------------------------------------------------
-  ! OCN Component.
+  ! OCN SUB Component.
   !-----------------------------------------------------------------------------
 
   use ESMF
@@ -10,9 +10,6 @@ module ocnB
     model_routine_SS      => routine_SetServices, &
     model_label_SetClock  => label_SetClock, &
     model_label_Advance   => label_Advance
-  
-  use FRONT_OCNCOMMON
-  use FRONT_OCNSUB, only: sub_SS => SetServices
   
   implicit none
   
@@ -103,14 +100,7 @@ module ocnB
       return  ! bail out
 
     ! set Component name so it becomes identifiable
-    call ESMF_GridCompSet(gcomp, name="ocnB", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-      
-    ! call into procedure from FRONT_OCNCOMMON module
-    call procedure_ocnCommon(rc=rc)
+    call ESMF_GridCompSet(gcomp, name="ocnSub", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
