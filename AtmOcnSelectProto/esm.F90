@@ -1,7 +1,3 @@
-#define WITH_ATM_B
-#define WITH_OCN_A
-#define WITH_OCN_B
-
 module ESM
 
   !-----------------------------------------------------------------------------
@@ -20,6 +16,8 @@ module ESM
   use atmA, only: atmSS => SetServices
 #elif (!defined WITH_ATM_A && defined WITH_ATM_B)
   use atmB, only: atmSS => SetServices
+#else
+#error "Exactly one valid ATM option must be specified!"
 #endif
 
 #ifdef WITH_OCN_A

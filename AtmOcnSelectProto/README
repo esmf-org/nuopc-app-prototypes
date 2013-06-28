@@ -54,6 +54,11 @@ Explanation:
     available at run-time, e.g. because it was not built into the code during
     compile-time.
     
+  * The Makefile contains code that sets the WITH_ATM_A, WITH_ATM_B, WITH_OCN_A,
+    and WITH_OCN_B macros by analyzing the ATM and OCN variables passed into 
+    make. So for instance building with "gmake ATM=A OCN=A,B" will build an
+    executable that has ATM-A, OCN-A and OCN-B compiled in.
+
     This prototype code demonstrates that there is generally no need for 
   component wrappers or stubs in codes that use the NUOPC Layer. Instead the
   flexibility to select actual component instantiation either during 
