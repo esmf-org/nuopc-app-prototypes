@@ -12,18 +12,20 @@ module ESM
     driver_label_IS               => label_InternalState, &
     driver_label_SetModelServices => label_SetModelServices
   
-#if (defined WITH_ATM_A && !defined WITH_ATM_B)
+#if (defined FRONT_ATMA && !defined FRONT_ATMB && !defined FRONT_ATMC)
   use FRONT_ATMA, only: atmSS => SetServices
-#elif (!defined WITH_ATM_A && defined WITH_ATM_B)
+#elif (!defined FRONT_ATMA && defined FRONT_ATMB && !defined FRONT_ATMC)
   use FRONT_ATMB, only: atmSS => SetServices
+#elif (!defined FRONT_ATMA && !defined FRONT_ATMB && defined FRONT_ATMC)
+  use FRONT_ATMC, only: atmSS => SetServices
 #else
 #error "Exactly one valid ATM option must be specified!"
 #endif
 
-#ifdef WITH_OCN_A
+#ifdef FRONT_OCNA
   use FRONT_OCNA, only: ocnA_SS => SetServices
 #endif
-#ifdef WITH_OCN_B
+#ifdef FRONT_OCNB
   use FRONT_OCNB, only: ocnB_SS => SetServices
 #endif
   
@@ -135,7 +137,7 @@ module ESM
       
     ! SetServices for OCN
     if (.false.) then
-#ifdef WITH_OCN_A
+#ifdef FRONT_OCNA
     elseif (ocn_select=="A") then
       call ESMF_GridCompSetServices(is%wrap%ocn, ocnA_SS, userRc=localrc, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -148,7 +150,7 @@ module ESM
         rcToReturn=rc)) &
         return  ! bail out
 #endif
-#ifdef WITH_OCN_B
+#ifdef FRONT_OCNB
     elseif (ocn_select=="B") then
       call ESMF_GridCompSetServices(is%wrap%ocn, ocnB_SS, userRc=localrc, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
