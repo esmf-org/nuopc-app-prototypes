@@ -25,9 +25,8 @@ endif
 include $(ESMFMKFILE)
 
 ################################################################################
-# Convert specified options in to macros
-# - and -
-# Include self-describing dependencies and accumulate into local variables
+# Use specified ATM and OCN variables to determine which self-describing
+# component dependency files to include.
 ifneq (,$(findstring A,$(ATM)))
   include ATM-A/atmA.mk
   DEP_FRONTS    := $(DEP_FRONTS) -DFRONT_ATMA=$(ESMF_DEP_FRONT)
