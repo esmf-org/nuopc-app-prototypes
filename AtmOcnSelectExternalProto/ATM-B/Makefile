@@ -48,7 +48,7 @@ include $(ESMFMKFILE)
 	@echo "ESMF_DEP_FRONT     = atmB"       >> $@
 	@echo "ESMF_DEP_INCPATH   = `pwd`"      >> $@
 	@echo "ESMF_DEP_CMPL_OBJS = `pwd`/"$<   >> $@
-	@echo "ESMF_DEP_LINK_OBJS = `pwd`/"$< `pwd`/procedure.o >> $@
+	@echo "ESMF_DEP_LINK_OBJS = "$(addprefix `pwd`/, $< procedure.o)  >> $@
 
 # -----------------------------------------------------------------------------
 atmB.mk: procedure.o
