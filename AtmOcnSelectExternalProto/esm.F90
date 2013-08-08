@@ -96,7 +96,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call ESMF_ConfigGetAttribute(config, value=ocn_select, label="OCN_SELECT", &
+    call ESMF_ConfigGetAttribute(config, value=ocn_select, label="OCN_SELECT:",&
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
