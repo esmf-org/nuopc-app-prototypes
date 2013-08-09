@@ -25,6 +25,10 @@ endif
 include $(ESMFMKFILE)
 
 ################################################################################
+# Need a variable that contains only a comma for some of the operations below
+COMMA := ,
+
+################################################################################
 # Use specified ATM and OCN variables to determine which self-describing
 # component dependency files to include.
 ifneq (,$(findstring A,$(ATM)))
@@ -33,6 +37,8 @@ ifneq (,$(findstring A,$(ATM)))
   DEP_INCS      := $(DEP_INCS) -I$(ESMF_DEP_INCPATH)
   DEP_CMPL_OBJS := $(DEP_CMPL_OBJS) $(ESMF_DEP_CMPL_OBJS)
   DEP_LINK_OBJS := $(DEP_LINK_OBJS) $(ESMF_DEP_LINK_OBJS)
+  DEP_SHRD_PATH := $(DEP_SHRD_PATH) $(addprefix -L, $(ESMF_DEP_SHRD_PATH)) $(addprefix -Wl$(COMMA)-rpath$(COMMA), $(ESMF_DEP_SHRD_PATH))
+  DEP_SHRD_LIBS := $(DEP_SHRD_LIBS) $(addprefix -l, $(ESMF_DEP_SHRD_LIBS))
 endif
 ifneq (,$(findstring B,$(ATM)))
   include ATM-B/atmB.mk
@@ -40,6 +46,8 @@ ifneq (,$(findstring B,$(ATM)))
   DEP_INCS      := $(DEP_INCS) -I$(ESMF_DEP_INCPATH)
   DEP_CMPL_OBJS := $(DEP_CMPL_OBJS) $(ESMF_DEP_CMPL_OBJS)
   DEP_LINK_OBJS := $(DEP_LINK_OBJS) $(ESMF_DEP_LINK_OBJS)
+  DEP_SHRD_PATH := $(DEP_SHRD_PATH) $(addprefix -L, $(ESMF_DEP_SHRD_PATH)) $(addprefix -Wl$(COMMA)-rpath$(COMMA), $(ESMF_DEP_SHRD_PATH))
+  DEP_SHRD_LIBS := $(DEP_SHRD_LIBS) $(addprefix -l, $(ESMF_DEP_SHRD_LIBS))
 endif
 ifneq (,$(findstring C,$(ATM)))
   include ATM-C/atmC.mk
@@ -47,6 +55,17 @@ ifneq (,$(findstring C,$(ATM)))
   DEP_INCS      := $(DEP_INCS) -I$(ESMF_DEP_INCPATH)
   DEP_CMPL_OBJS := $(DEP_CMPL_OBJS) $(ESMF_DEP_CMPL_OBJS)
   DEP_LINK_OBJS := $(DEP_LINK_OBJS) $(ESMF_DEP_LINK_OBJS)
+  DEP_SHRD_PATH := $(DEP_SHRD_PATH) $(addprefix -L, $(ESMF_DEP_SHRD_PATH)) $(addprefix -Wl$(COMMA)-rpath$(COMMA), $(ESMF_DEP_SHRD_PATH))
+  DEP_SHRD_LIBS := $(DEP_SHRD_LIBS) $(addprefix -l, $(ESMF_DEP_SHRD_LIBS))
+endif
+ifneq (,$(findstring D,$(ATM)))
+  include ATM-D/atmD.mk
+  DEP_FRONTS    := $(DEP_FRONTS) -DFRONT_ATMD=$(ESMF_DEP_FRONT)
+  DEP_INCS      := $(DEP_INCS) -I$(ESMF_DEP_INCPATH)
+  DEP_CMPL_OBJS := $(DEP_CMPL_OBJS) $(ESMF_DEP_CMPL_OBJS)
+  DEP_LINK_OBJS := $(DEP_LINK_OBJS) $(ESMF_DEP_LINK_OBJS)
+  DEP_SHRD_PATH := $(DEP_SHRD_PATH) $(addprefix -L, $(ESMF_DEP_SHRD_PATH)) $(addprefix -Wl$(COMMA)-rpath$(COMMA), $(ESMF_DEP_SHRD_PATH))
+  DEP_SHRD_LIBS := $(DEP_SHRD_LIBS) $(addprefix -l, $(ESMF_DEP_SHRD_LIBS))
 endif
 ifneq (,$(findstring A,$(OCN)))
   include OcnModelA/ocn.mk
@@ -54,6 +73,8 @@ ifneq (,$(findstring A,$(OCN)))
   DEP_INCS      := $(DEP_INCS) -I$(ESMF_DEP_INCPATH)
   DEP_CMPL_OBJS := $(DEP_CMPL_OBJS) $(ESMF_DEP_CMPL_OBJS)
   DEP_LINK_OBJS := $(DEP_LINK_OBJS) $(ESMF_DEP_LINK_OBJS)
+  DEP_SHRD_PATH := $(DEP_SHRD_PATH) $(addprefix -L, $(ESMF_DEP_SHRD_PATH)) $(addprefix -Wl$(COMMA)-rpath$(COMMA), $(ESMF_DEP_SHRD_PATH))
+  DEP_SHRD_LIBS := $(DEP_SHRD_LIBS) $(addprefix -l, $(ESMF_DEP_SHRD_LIBS))
 endif
 ifneq (,$(findstring B,$(OCN)))
   include OcnModelB/ocn.mk
@@ -61,6 +82,8 @@ ifneq (,$(findstring B,$(OCN)))
   DEP_INCS      := $(DEP_INCS) -I$(ESMF_DEP_INCPATH)
   DEP_CMPL_OBJS := $(DEP_CMPL_OBJS) $(ESMF_DEP_CMPL_OBJS)
   DEP_LINK_OBJS := $(DEP_LINK_OBJS) $(ESMF_DEP_LINK_OBJS)
+  DEP_SHRD_PATH := $(DEP_SHRD_PATH) $(addprefix -L, $(ESMF_DEP_SHRD_PATH)) $(addprefix -Wl$(COMMA)-rpath$(COMMA), $(ESMF_DEP_SHRD_PATH))
+  DEP_SHRD_LIBS := $(DEP_SHRD_LIBS) $(addprefix -l, $(ESMF_DEP_SHRD_LIBS))
 endif
 
 ################################################################################
@@ -83,7 +106,7 @@ endif
 
 # -----------------------------------------------------------------------------
 esmApp: esmApp.o esm.o $(DEP_LINK_OBJS)
-	$(ESMF_F90LINKER) $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS) -o $@ $^ $(ESMF_F90ESMFLINKLIBS)
+	$(ESMF_F90LINKER) $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS) -o $@ $^ $(DEP_SHRD_PATH) $(DEP_SHRD_LIBS) $(ESMF_F90ESMFLINKLIBS)
 
 # module dependencies:
 esmApp.o: esm.o

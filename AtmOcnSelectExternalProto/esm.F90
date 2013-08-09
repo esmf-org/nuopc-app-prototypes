@@ -12,12 +12,14 @@ module ESM
     driver_label_IS               => label_InternalState, &
     driver_label_SetModelServices => label_SetModelServices
   
-#if (defined FRONT_ATMA && !defined FRONT_ATMB && !defined FRONT_ATMC)
+#if (defined FRONT_ATMA && !defined FRONT_ATMB && !defined FRONT_ATMC && !defined FRONT_ATMD)
   use FRONT_ATMA, only: atmSS => SetServices
-#elif (!defined FRONT_ATMA && defined FRONT_ATMB && !defined FRONT_ATMC)
+#elif (!defined FRONT_ATMA && defined FRONT_ATMB && !defined FRONT_ATMC && !defined FRONT_ATMD)
   use FRONT_ATMB, only: atmSS => SetServices
-#elif (!defined FRONT_ATMA && !defined FRONT_ATMB && defined FRONT_ATMC)
+#elif (!defined FRONT_ATMA && !defined FRONT_ATMB && defined FRONT_ATMC && !defined FRONT_ATMD)
   use FRONT_ATMC, only: atmSS => SetServices
+#elif (!defined FRONT_ATMA && !defined FRONT_ATMB && !defined FRONT_ATMC && defined FRONT_ATMD)
+  use FRONT_ATMD, only: atmSS => SetServices
 #else
 #error "Exactly one valid ATM option must be specified!"
 #endif

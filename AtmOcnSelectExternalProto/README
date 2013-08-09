@@ -29,6 +29,9 @@ Code structure:
                   on two source files, both of which are provided as objects.
   --> ATM-C     - subdirectory containing same external ATM model as ATM-B, but
                   this time the objects are provided as a single static archive.
+  --> ATM-D     - subdirectory containing an external ATM model, only depending
+                  on a single source file. Supplies this object as in form of a
+                  shared library.
   --> OcnModelA - subdirectory containing an external OCN model which depends
                   on some common files in another subdir.
   --> OcnModelB - subdirectory containing another external OCN model which 

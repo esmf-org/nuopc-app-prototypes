@@ -64,6 +64,8 @@ DEP_LINK_OBJS := $(DEP_LINK_OBJS) $(ESMF_DEP_LINK_OBJS)
 	@echo "ESMF_DEP_INCPATH   = `pwd`"                      >> $@
 	@echo "ESMF_DEP_CMPL_OBJS = `pwd`/"$<                   >> $@
 	@echo "ESMF_DEP_LINK_OBJS = `pwd`/"$< $(DEP_LINK_OBJS)  >> $@
+	@echo "ESMF_DEP_SHRD_PATH = "                           >> $@
+	@echo "ESMF_DEP_SHRD_LIBS = "                           >> $@
 
 # -----------------------------------------------------------------------------
 ocn.mk:

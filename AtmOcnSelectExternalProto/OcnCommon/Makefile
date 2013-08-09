@@ -49,6 +49,8 @@ include $(ESMFMKFILE)
 	@echo "ESMF_DEP_INCPATH   = `pwd`"                            >> $@
 	@echo "ESMF_DEP_CMPL_OBJS = `pwd`/"$<                         >> $@
 	@echo "ESMF_DEP_LINK_OBJS = "$(addprefix `pwd`/, $< $(OBJS))  >> $@
+	@echo "ESMF_DEP_SHRD_PATH = "                                 >> $@
+	@echo "ESMF_DEP_SHRD_LIBS = "                                 >> $@
 
 # -----------------------------------------------------------------------------
 ocnCommon.mk:

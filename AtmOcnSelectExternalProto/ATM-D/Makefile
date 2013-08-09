@@ -41,22 +41,25 @@ include $(ESMFMKFILE)
 %.o : %.C
 	$(ESMF_CXXCOMPILER) -c $(ESMF_CXXCOMPILEOPTS) $(ESMF_CXXCOMPILEPATHSLOCAL) $(ESMF_CXXCOMPILEPATHS) $(ESMF_CXXCOMPILECPPFLAGS) $<
 
-.PRECIOUS: %.o
-%.mk : %.o
+.PRECIOUS: %.so
+
+%.mk : %.so
 	@echo "# ESMF self-describing build dependency makefile fragment" > $@
 	@echo >> $@
-	@echo "ESMF_DEP_FRONT     = atmC"             >> $@
-	@echo "ESMF_DEP_INCPATH   = `pwd`"            >> $@
-	@echo "ESMF_DEP_CMPL_OBJS = `pwd`/"$<         >> $@
-	@echo "ESMF_DEP_LINK_OBJS = `pwd`/"libatmC.a  >> $@
-	@echo "ESMF_DEP_SHRD_PATH = "                 >> $@
-	@echo "ESMF_DEP_SHRD_LIBS = "                 >> $@
+	@echo "ESMF_DEP_FRONT     = atmD"         >> $@
+	@echo "ESMF_DEP_INCPATH   = `pwd`"        >> $@
+	@echo "ESMF_DEP_CMPL_OBJS = `pwd`/lib"$<  >> $@
+	@echo "ESMF_DEP_LINK_OBJS = "             >> $@
+	@echo "ESMF_DEP_SHRD_PATH = `pwd`"        >> $@
+	@echo "ESMF_DEP_SHRD_LIBS = "$*           >> $@
 
 # -----------------------------------------------------------------------------
-atmC.mk: libatmC.a
+atmD.mk:
 
-libatmC.a: atmC.o procedure.o
-	ar cr $@ $^
+atmD.so: atmD.o
+	$(ESMF_CXXLINKER) -shared -o $@ $<
+	mv $@ lib$@
+	rm -f $<
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -64,7 +67,7 @@ libatmC.a: atmC.o procedure.o
 dust:
 	rm -f PET*.ESMF_LogFile
 clean:
-	rm -f *.o *.mod *.a *.mk
+	rm -f *.o *.so *.mod *.mk
 distclean: dust clean
 
 info:
@@ -75,4 +78,4 @@ info:
 	@echo ==================================================================
 
 edit:
-	nedit atmC.F90 procedure.F90 &
+	nedit atmD.F90 &
