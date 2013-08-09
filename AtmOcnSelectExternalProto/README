@@ -7,6 +7,11 @@ Dependencies:
 Build:
   - Set environment variable ESMFMKFILE to point to the esmf.mk of your ESMF
     installation.
+  - Manually change into each subdirectory and execute "gmake" to build the 
+    local component. Alternatively the "buildSubs.csh" script can be used
+    to build all of the external components. This script is only supplied for 
+    convenience, not inteded as a template in real-world applications where the
+    external components are under their own build mechanism.
   - gmake ATM=B OCN=A,B (or other ATM, OCN settings, see description below)
   
 Execution:
