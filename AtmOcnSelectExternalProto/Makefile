@@ -34,7 +34,7 @@ COMMA := ,
 ifneq (,$(findstring A,$(ATM)))
   include ATM-A/atmA.mk
   DEP_FRONTS    := $(DEP_FRONTS) -DFRONT_ATMA=$(ESMF_DEP_FRONT)
-  DEP_INCS      := $(DEP_INCS) -I$(ESMF_DEP_INCPATH)
+  DEP_INCS      := $(DEP_INCS) $(addprefix -I, $(ESMF_DEP_INCPATH))
   DEP_CMPL_OBJS := $(DEP_CMPL_OBJS) $(ESMF_DEP_CMPL_OBJS)
   DEP_LINK_OBJS := $(DEP_LINK_OBJS) $(ESMF_DEP_LINK_OBJS)
   DEP_SHRD_PATH := $(DEP_SHRD_PATH) $(addprefix -L, $(ESMF_DEP_SHRD_PATH)) $(addprefix -Wl$(COMMA)-rpath$(COMMA), $(ESMF_DEP_SHRD_PATH))
@@ -43,7 +43,7 @@ endif
 ifneq (,$(findstring B,$(ATM)))
   include ATM-B/atmB.mk
   DEP_FRONTS    := $(DEP_FRONTS) -DFRONT_ATMB=$(ESMF_DEP_FRONT)
-  DEP_INCS      := $(DEP_INCS) -I$(ESMF_DEP_INCPATH)
+  DEP_INCS      := $(DEP_INCS) $(addprefix -I, $(ESMF_DEP_INCPATH))
   DEP_CMPL_OBJS := $(DEP_CMPL_OBJS) $(ESMF_DEP_CMPL_OBJS)
   DEP_LINK_OBJS := $(DEP_LINK_OBJS) $(ESMF_DEP_LINK_OBJS)
   DEP_SHRD_PATH := $(DEP_SHRD_PATH) $(addprefix -L, $(ESMF_DEP_SHRD_PATH)) $(addprefix -Wl$(COMMA)-rpath$(COMMA), $(ESMF_DEP_SHRD_PATH))
@@ -52,7 +52,7 @@ endif
 ifneq (,$(findstring C,$(ATM)))
   include ATM-C/atmC.mk
   DEP_FRONTS    := $(DEP_FRONTS) -DFRONT_ATMC=$(ESMF_DEP_FRONT)
-  DEP_INCS      := $(DEP_INCS) -I$(ESMF_DEP_INCPATH)
+  DEP_INCS      := $(DEP_INCS) $(addprefix -I, $(ESMF_DEP_INCPATH))
   DEP_CMPL_OBJS := $(DEP_CMPL_OBJS) $(ESMF_DEP_CMPL_OBJS)
   DEP_LINK_OBJS := $(DEP_LINK_OBJS) $(ESMF_DEP_LINK_OBJS)
   DEP_SHRD_PATH := $(DEP_SHRD_PATH) $(addprefix -L, $(ESMF_DEP_SHRD_PATH)) $(addprefix -Wl$(COMMA)-rpath$(COMMA), $(ESMF_DEP_SHRD_PATH))
@@ -61,7 +61,35 @@ endif
 ifneq (,$(findstring D,$(ATM)))
   include ATM-D/atmD.mk
   DEP_FRONTS    := $(DEP_FRONTS) -DFRONT_ATMD=$(ESMF_DEP_FRONT)
-  DEP_INCS      := $(DEP_INCS) -I$(ESMF_DEP_INCPATH)
+  DEP_INCS      := $(DEP_INCS) $(addprefix -I, $(ESMF_DEP_INCPATH))
+  DEP_CMPL_OBJS := $(DEP_CMPL_OBJS) $(ESMF_DEP_CMPL_OBJS)
+  DEP_LINK_OBJS := $(DEP_LINK_OBJS) $(ESMF_DEP_LINK_OBJS)
+  DEP_SHRD_PATH := $(DEP_SHRD_PATH) $(addprefix -L, $(ESMF_DEP_SHRD_PATH)) $(addprefix -Wl$(COMMA)-rpath$(COMMA), $(ESMF_DEP_SHRD_PATH))
+  DEP_SHRD_LIBS := $(DEP_SHRD_LIBS) $(addprefix -l, $(ESMF_DEP_SHRD_LIBS))
+endif
+ifneq (,$(findstring E,$(ATM)))
+  include ATM-E/atmE.mk
+  ifneq (,$(findstring .so,$(ESMF_DEP_FRONT)))
+  DEP_FRONTS    := $(DEP_FRONTS) -DFRONT_SO_ATME=\"$(ESMF_DEP_FRONT)\"
+  else
+  DEP_FRONTS    := $(DEP_FRONTS) -DFRONT_ATME=$(ESMF_DEP_FRONT)
+  endif
+  DEP_INCS      := $(DEP_INCS) $(addprefix -I, $(ESMF_DEP_INCPATH))
+  DEP_CMPL_OBJS := $(DEP_CMPL_OBJS) $(ESMF_DEP_CMPL_OBJS)
+  DEP_LINK_OBJS := $(DEP_LINK_OBJS) $(ESMF_DEP_LINK_OBJS)
+  DEP_SHRD_PATH := $(DEP_SHRD_PATH) $(addprefix -L, $(ESMF_DEP_SHRD_PATH)) $(addprefix -Wl$(COMMA)-rpath$(COMMA), $(ESMF_DEP_SHRD_PATH))
+  DEP_SHRD_LIBS := $(DEP_SHRD_LIBS) $(addprefix -l, $(ESMF_DEP_SHRD_LIBS))
+endif
+ifneq (,$(findstring F,$(ATM)))
+  include ATM-F/atmF.mk
+  ifneq (,$(findstring .h,$(ESMF_DEP_FRONT)))
+  DEP_FRONTS    := $(DEP_FRONTS) -DFRONT_H_ATMF=\"$(ESMF_DEP_FRONT)\" -DFRONT_H_ATMF_SS=SetServices_$(subst .h,,$(ESMF_DEP_FRONT))
+  else ifneq (,$(findstring .so,$(ESMF_DEP_FRONT)))
+  DEP_FRONTS    := $(DEP_FRONTS) -DFRONT_SO_ATMF=\"$(ESMF_DEP_FRONT)\"
+  else
+  DEP_FRONTS    := $(DEP_FRONTS) -DFRONT_ATMF=$(ESMF_DEP_FRONT)
+  endif
+  DEP_INCS      := $(DEP_INCS) $(addprefix -I, $(ESMF_DEP_INCPATH))
   DEP_CMPL_OBJS := $(DEP_CMPL_OBJS) $(ESMF_DEP_CMPL_OBJS)
   DEP_LINK_OBJS := $(DEP_LINK_OBJS) $(ESMF_DEP_LINK_OBJS)
   DEP_SHRD_PATH := $(DEP_SHRD_PATH) $(addprefix -L, $(ESMF_DEP_SHRD_PATH)) $(addprefix -Wl$(COMMA)-rpath$(COMMA), $(ESMF_DEP_SHRD_PATH))
@@ -70,7 +98,7 @@ endif
 ifneq (,$(findstring A,$(OCN)))
   include OcnModelA/ocn.mk
   DEP_FRONTS    := $(DEP_FRONTS) -DFRONT_OCNA=$(ESMF_DEP_FRONT)
-  DEP_INCS      := $(DEP_INCS) -I$(ESMF_DEP_INCPATH)
+  DEP_INCS      := $(DEP_INCS) $(addprefix -I, $(ESMF_DEP_INCPATH))
   DEP_CMPL_OBJS := $(DEP_CMPL_OBJS) $(ESMF_DEP_CMPL_OBJS)
   DEP_LINK_OBJS := $(DEP_LINK_OBJS) $(ESMF_DEP_LINK_OBJS)
   DEP_SHRD_PATH := $(DEP_SHRD_PATH) $(addprefix -L, $(ESMF_DEP_SHRD_PATH)) $(addprefix -Wl$(COMMA)-rpath$(COMMA), $(ESMF_DEP_SHRD_PATH))
@@ -79,7 +107,16 @@ endif
 ifneq (,$(findstring B,$(OCN)))
   include OcnModelB/ocn.mk
   DEP_FRONTS    := $(DEP_FRONTS) -DFRONT_OCNB=$(ESMF_DEP_FRONT)
-  DEP_INCS      := $(DEP_INCS) -I$(ESMF_DEP_INCPATH)
+  DEP_INCS      := $(DEP_INCS) $(addprefix -I, $(ESMF_DEP_INCPATH))
+  DEP_CMPL_OBJS := $(DEP_CMPL_OBJS) $(ESMF_DEP_CMPL_OBJS)
+  DEP_LINK_OBJS := $(DEP_LINK_OBJS) $(ESMF_DEP_LINK_OBJS)
+  DEP_SHRD_PATH := $(DEP_SHRD_PATH) $(addprefix -L, $(ESMF_DEP_SHRD_PATH)) $(addprefix -Wl$(COMMA)-rpath$(COMMA), $(ESMF_DEP_SHRD_PATH))
+  DEP_SHRD_LIBS := $(DEP_SHRD_LIBS) $(addprefix -l, $(ESMF_DEP_SHRD_LIBS))
+endif
+ifneq (,$(findstring C,$(OCN)))
+  include OcnModelC/ocn.mk
+  DEP_FRONTS    := $(DEP_FRONTS) -DFRONT_SO_OCNC=\"$(ESMF_DEP_FRONT)\"
+  DEP_INCS      := $(DEP_INCS) $(addprefix -I, $(ESMF_DEP_INCPATH))
   DEP_CMPL_OBJS := $(DEP_CMPL_OBJS) $(ESMF_DEP_CMPL_OBJS)
   DEP_LINK_OBJS := $(DEP_LINK_OBJS) $(ESMF_DEP_LINK_OBJS)
   DEP_SHRD_PATH := $(DEP_SHRD_PATH) $(addprefix -L, $(ESMF_DEP_SHRD_PATH)) $(addprefix -Wl$(COMMA)-rpath$(COMMA), $(ESMF_DEP_SHRD_PATH))
@@ -120,6 +157,7 @@ dust:
 clean:
 	rm -f esmApp *.o *.mod
 distclean: dust clean
+	rm -f *.so
 
 info:
 	@echo ==================================================================

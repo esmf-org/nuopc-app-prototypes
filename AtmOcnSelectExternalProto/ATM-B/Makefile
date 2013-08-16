@@ -41,6 +41,9 @@ include $(ESMFMKFILE)
 %.o : %.C
 	$(ESMF_CXXCOMPILER) -c $(ESMF_CXXCOMPILEOPTS) $(ESMF_CXXCOMPILEPATHSLOCAL) $(ESMF_CXXCOMPILEPATHS) $(ESMF_CXXCOMPILECPPFLAGS) $<
 
+OBJS = atmB.o procedure.o
+
+
 .PRECIOUS: %.o
 %.mk : %.o
 	@echo "# ESMF self-describing build dependency makefile fragment" > $@
@@ -48,12 +51,13 @@ include $(ESMFMKFILE)
 	@echo "ESMF_DEP_FRONT     = atmB"       >> $@
 	@echo "ESMF_DEP_INCPATH   = `pwd`"      >> $@
 	@echo "ESMF_DEP_CMPL_OBJS = `pwd`/"$<   >> $@
-	@echo "ESMF_DEP_LINK_OBJS = "$(addprefix `pwd`/, $< procedure.o)  >> $@
+	@echo "ESMF_DEP_LINK_OBJS = "$(addprefix `pwd`/, $(OBJS))  >> $@
 	@echo "ESMF_DEP_SHRD_PATH = "           >> $@
 	@echo "ESMF_DEP_SHRD_LIBS = "           >> $@
 
 # -----------------------------------------------------------------------------
-atmB.mk: procedure.o
+
+atmB.mk: $(OBJS)
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------

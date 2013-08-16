@@ -1,3 +1,11 @@
+!- conditional module blocks that support modules maybe being supplied in C
+#ifdef FRONT_H_ATMF
+module atmF
+#include FRONT_H_ATMF
+end module
+#endif
+!--------------------------------------------------------------------------
+
 module ESM
 
   !-----------------------------------------------------------------------------
@@ -11,19 +19,29 @@ module ESM
     driver_type_IS                => type_InternalState, &
     driver_label_IS               => label_InternalState, &
     driver_label_SetModelServices => label_SetModelServices
-  
-#if (defined FRONT_ATMA && !defined FRONT_ATMB && !defined FRONT_ATMC && !defined FRONT_ATMD)
+
+  !- select exactly one ATM component 
+#if (defined FRONT_ATMA && !defined FRONT_ATMB && !defined FRONT_ATMC && !defined FRONT_ATMD && !defined FRONT_ATME && !defined FRONT_SO_ATME && !defined FRONT_ATMF && !defined FRONT_H_ATMF )
   use FRONT_ATMA, only: atmSS => SetServices
-#elif (!defined FRONT_ATMA && defined FRONT_ATMB && !defined FRONT_ATMC && !defined FRONT_ATMD)
+#elif (!defined FRONT_ATMA && defined FRONT_ATMB && !defined FRONT_ATMC && !defined FRONT_ATMD && !defined FRONT_ATME && !defined FRONT_SO_ATME && !defined FRONT_ATMF && !defined FRONT_H_ATMF )
   use FRONT_ATMB, only: atmSS => SetServices
-#elif (!defined FRONT_ATMA && !defined FRONT_ATMB && defined FRONT_ATMC && !defined FRONT_ATMD)
+#elif (!defined FRONT_ATMA && !defined FRONT_ATMB && defined FRONT_ATMC && !defined FRONT_ATMD && !defined FRONT_ATME && !defined FRONT_SO_ATME && !defined FRONT_ATMF && !defined FRONT_H_ATMF )
   use FRONT_ATMC, only: atmSS => SetServices
-#elif (!defined FRONT_ATMA && !defined FRONT_ATMB && !defined FRONT_ATMC && defined FRONT_ATMD)
+#elif (!defined FRONT_ATMA && !defined FRONT_ATMB && !defined FRONT_ATMC && defined FRONT_ATMD && !defined FRONT_ATME && !defined FRONT_SO_ATME && !defined FRONT_ATMF && !defined FRONT_H_ATMF )
   use FRONT_ATMD, only: atmSS => SetServices
+#elif (!defined FRONT_ATMA && !defined FRONT_ATMB && !defined FRONT_ATMC && !defined FRONT_ATMD && defined FRONT_ATME && !defined FRONT_SO_ATME && !defined FRONT_ATMF && !defined FRONT_H_ATMF )
+  use FRONT_ATME, only: atmSS => SetServices
+#elif (!defined FRONT_ATMA && !defined FRONT_ATMB && !defined FRONT_ATMC && !defined FRONT_ATMD && !defined FRONT_ATME && defined FRONT_SO_ATME && !defined FRONT_ATMF && !defined FRONT_H_ATMF )
+#define ATM_FRONT_SO FRONT_SO_ATME
+#elif (!defined FRONT_ATMA && !defined FRONT_ATMB && !defined FRONT_ATMC && !defined FRONT_ATMD && !defined FRONT_ATME && !defined FRONT_SO_ATME && defined FRONT_ATMF && !defined FRONT_H_ATMF )
+  use FRONT_ATMF, only: atmSS => SetServices
+#elif (!defined FRONT_ATMA && !defined FRONT_ATMB && !defined FRONT_ATMC && !defined FRONT_ATMD && !defined FRONT_ATME && !defined FRONT_SO_ATME && !defined FRONT_ATMF && defined FRONT_H_ATMF )
+  use atmF, only: atmSS => FRONT_H_ATMF_SS
 #else
 #error "Exactly one valid ATM option must be specified!"
 #endif
 
+  !- select as many OCN components as specified
 #ifdef FRONT_OCNA
   use FRONT_OCNA, only: ocnA_SS => SetServices
 #endif
@@ -119,6 +137,7 @@ module ESM
       return  ! bail out
     
     ! SetServices for ATM
+#ifndef ATM_FRONT_SO
     call ESMF_GridCompSetServices(is%wrap%atm, atmSS, userRc=localrc, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -129,7 +148,20 @@ module ESM
       file=__FILE__, &
       rcToReturn=rc)) &
       return  ! bail out
-      
+#else
+    call NUOPC_GridCompSetServices(is%wrap%atm, sharedObj="./"//ATM_FRONT_SO, &
+      userRc=localrc, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__, &
+      rcToReturn=rc)) &
+      return  ! bail out
+#endif
+
     call ESMF_AttributeSet(is%wrap%atm, name="Verbosity", value="high", &
       convention="NUOPC", purpose="General", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -155,6 +187,20 @@ module ESM
 #ifdef FRONT_OCNB
     elseif (ocn_select=="B") then
       call ESMF_GridCompSetServices(is%wrap%ocn, ocnB_SS, userRc=localrc, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__, &
+        rcToReturn=rc)) &
+        return  ! bail out
+#endif
+#ifdef FRONT_SO_OCNC
+    elseif (ocn_select=="C") then
+      call NUOPC_GridCompSetServices(is%wrap%ocn, sharedObj="./"//FRONT_SO_OCNC, &
+        userRc=localrc, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &

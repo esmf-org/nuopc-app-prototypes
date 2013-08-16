@@ -25,6 +25,10 @@ endif
 include $(ESMFMKFILE)
 
 ################################################################################
+# Need a variable that contains only a comma for some of the operations below
+COMMA := ,
+
+################################################################################
 # Include self-describing dependencies and accumulate into local variables
 
 include ../OcnCommon/ocnCommon.mk
@@ -32,8 +36,16 @@ DEP_FRONTS    := $(DEP_FRONTS) -DFRONT_OCNCOMMON=$(ESMF_DEP_FRONT)
 DEP_INCS      := $(DEP_INCS) $(addprefix -I, $(ESMF_DEP_INCPATH))
 DEP_CMPL_OBJS := $(DEP_CMPL_OBJS) $(ESMF_DEP_CMPL_OBJS)
 DEP_LINK_OBJS := $(DEP_LINK_OBJS) $(ESMF_DEP_LINK_OBJS)
-DEP_SHRD_PATH := $(DEP_SHRD_PATH) $(ESMF_DEP_SHRD_PATH)
-DEP_SHRD_LIBS := $(DEP_SHRD_LIBS) $(ESMF_DEP_SHRD_LIBS)
+DEP_SHRD_PATH := $(DEP_SHRD_PATH) $(addprefix -L, $(ESMF_DEP_SHRD_PATH)) $(addprefix -Wl$(COMMA)-rpath$(COMMA), $(ESMF_DEP_SHRD_PATH))
+DEP_SHRD_LIBS := $(DEP_SHRD_LIBS) $(addprefix -l, $(ESMF_DEP_SHRD_LIBS))
+
+include OcnSub/ocnSub.mk
+DEP_FRONTS    := $(DEP_FRONTS) -DFRONT_OCNSUB=$(ESMF_DEP_FRONT)
+DEP_INCS      := $(DEP_INCS) $(addprefix -I, $(ESMF_DEP_INCPATH))
+DEP_CMPL_OBJS := $(DEP_CMPL_OBJS) $(ESMF_DEP_CMPL_OBJS)
+DEP_LINK_OBJS := $(DEP_LINK_OBJS) $(ESMF_DEP_LINK_OBJS)
+DEP_SHRD_PATH := $(DEP_SHRD_PATH) $(addprefix -L, $(ESMF_DEP_SHRD_PATH)) $(addprefix -Wl$(COMMA)-rpath$(COMMA), $(ESMF_DEP_SHRD_PATH))
+DEP_SHRD_LIBS := $(DEP_SHRD_LIBS) $(addprefix -l, $(ESMF_DEP_SHRD_LIBS))
 
 ################################################################################
 ################################################################################
@@ -52,21 +64,24 @@ DEP_SHRD_LIBS := $(DEP_SHRD_LIBS) $(ESMF_DEP_SHRD_LIBS)
 %.o : %.C
 	$(ESMF_CXXCOMPILER) -c $(DEP_FRONTS) $(DEP_INCS) $(ESMF_CXXCOMPILEOPTS) $(ESMF_CXXCOMPILEPATHSLOCAL) $(ESMF_CXXCOMPILEPATHS) $(ESMF_CXXCOMPILECPPFLAGS) $<
 
-.PRECIOUS: %.o
-%.mk : %.o
+.PRECIOUS: %.so
+%.mk : %.so
 	@echo "# ESMF self-describing build dependency makefile fragment" > $@
 	@echo >> $@
-	@echo "ESMF_DEP_FRONT     = ocnA"                       >> $@
-	@echo "ESMF_DEP_INCPATH   = `pwd`"                      >> $@
-	@echo "ESMF_DEP_CMPL_OBJS = `pwd`/"$<                   >> $@
-	@echo "ESMF_DEP_LINK_OBJS = `pwd`/"$< $(DEP_LINK_OBJS)  >> $@
-	@echo "ESMF_DEP_SHRD_PATH = " $(DEP_SHRD_PATH)          >> $@
-	@echo "ESMF_DEP_SHRD_LIBS = " $(DEP_SHRD_LIBS)          >> $@
+	@echo "ESMF_DEP_FRONT     = "$<           >> $@
+	@echo "ESMF_DEP_INCPATH   = "             >> $@
+	@echo "ESMF_DEP_CMPL_OBJS = "             >> $@
+	@echo "ESMF_DEP_LINK_OBJS = "             >> $@
+	@echo "ESMF_DEP_SHRD_PATH = "             >> $@
+	@echo "ESMF_DEP_SHRD_LIBS = "             >> $@
 
 # -----------------------------------------------------------------------------
 ocn.mk:
 
-ocn.o: $(DEP_CMPL_OBJS)
+# - build everything (including dependencies) into a single shared object
+ocn.so: ocn.o $(DEP_CMPL_OBJS)
+	$(ESMF_CXXLINKER) -shared -o $@ $< $(DEP_LINK_OBJS) $(DEP_SHRD_PATH) $(DEP_SHRD_LIBS)
+	rm -f $<
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -74,7 +89,7 @@ ocn.o: $(DEP_CMPL_OBJS)
 dust:
 	rm -f PET*.ESMF_LogFile
 clean:
-	rm -f *.o *.mod *.mk
+	rm -f *.o *.so *.mod *.mk
 distclean: dust clean
 
 info:

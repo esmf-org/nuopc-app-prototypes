@@ -25,48 +25,36 @@ endif
 include $(ESMFMKFILE)
 
 ################################################################################
-# Include self-describing dependencies and accumulate into local variables
-
-include ../OcnCommon/ocnCommon.mk
-DEP_FRONTS    := $(DEP_FRONTS) -DFRONT_OCNCOMMON=$(ESMF_DEP_FRONT)
-DEP_INCS      := $(DEP_INCS) $(addprefix -I, $(ESMF_DEP_INCPATH))
-DEP_CMPL_OBJS := $(DEP_CMPL_OBJS) $(ESMF_DEP_CMPL_OBJS)
-DEP_LINK_OBJS := $(DEP_LINK_OBJS) $(ESMF_DEP_LINK_OBJS)
-DEP_SHRD_PATH := $(DEP_SHRD_PATH) $(ESMF_DEP_SHRD_PATH)
-DEP_SHRD_LIBS := $(DEP_SHRD_LIBS) $(ESMF_DEP_SHRD_LIBS)
-
-################################################################################
 ################################################################################
 
 .SUFFIXES: .f90 .F90 .c .C
 
 %.o : %.f90
-	$(ESMF_F90COMPILER) -c $(DEP_FRONTS) $(DEP_INCS) $(ESMF_F90COMPILEOPTS) $(ESMF_F90COMPILEPATHS) $(ESMF_F90COMPILEFREENOCPP) $<
+	$(ESMF_F90COMPILER) -c $(ESMF_F90COMPILEOPTS) $(ESMF_F90COMPILEPATHS) $(ESMF_F90COMPILEFREENOCPP) $<
 
 %.o : %.F90
-	$(ESMF_F90COMPILER) -c $(DEP_FRONTS) $(DEP_INCS) $(ESMF_F90COMPILEOPTS) $(ESMF_F90COMPILEPATHS) $(ESMF_F90COMPILEFREECPP) $(ESMF_F90COMPILECPPFLAGS) $<
+	$(ESMF_F90COMPILER) -c $(ESMF_F90COMPILEOPTS) $(ESMF_F90COMPILEPATHS) $(ESMF_F90COMPILEFREECPP) $(ESMF_F90COMPILECPPFLAGS) $<
         
 %.o : %.c
-	$(ESMF_CXXCOMPILER) -c $(DEP_FRONTS) $(DEP_INCS) $(ESMF_CXXCOMPILEOPTS) $(ESMF_CXXCOMPILEPATHSLOCAL) $(ESMF_CXXCOMPILEPATHS) $(ESMF_CXXCOMPILECPPFLAGS) $<
+	$(ESMF_CXXCOMPILER) -c $(ESMF_CXXCOMPILEOPTS) $(ESMF_CXXCOMPILEPATHSLOCAL) $(ESMF_CXXCOMPILEPATHS) $(ESMF_CXXCOMPILECPPFLAGS) $<
 
-%.o : %.C
-	$(ESMF_CXXCOMPILER) -c $(DEP_FRONTS) $(DEP_INCS) $(ESMF_CXXCOMPILEOPTS) $(ESMF_CXXCOMPILEPATHSLOCAL) $(ESMF_CXXCOMPILEPATHS) $(ESMF_CXXCOMPILECPPFLAGS) $<
+% : %.C
+	$(ESMF_CXXCOMPILER) -c $(ESMF_CXXCOMPILEOPTS) $(ESMF_CXXCOMPILEPATHSLOCAL) $(ESMF_CXXCOMPILEPATHS) $(ESMF_CXXCOMPILECPPFLAGS) $<
 
 .PRECIOUS: %.o
+
 %.mk : %.o
 	@echo "# ESMF self-describing build dependency makefile fragment" > $@
 	@echo >> $@
-	@echo "ESMF_DEP_FRONT     = ocnA"                       >> $@
-	@echo "ESMF_DEP_INCPATH   = `pwd`"                      >> $@
-	@echo "ESMF_DEP_CMPL_OBJS = `pwd`/"$<                   >> $@
-	@echo "ESMF_DEP_LINK_OBJS = `pwd`/"$< $(DEP_LINK_OBJS)  >> $@
-	@echo "ESMF_DEP_SHRD_PATH = " $(DEP_SHRD_PATH)          >> $@
-	@echo "ESMF_DEP_SHRD_LIBS = " $(DEP_SHRD_LIBS)          >> $@
+	@echo "ESMF_DEP_FRONT     = ocnSub"     >> $@
+	@echo "ESMF_DEP_INCPATH   = `pwd`"      >> $@
+	@echo "ESMF_DEP_CMPL_OBJS = `pwd`/"$<   >> $@
+	@echo "ESMF_DEP_LINK_OBJS = `pwd`/"$<   >> $@
+	@echo "ESMF_DEP_SHRD_PATH = "           >> $@
+	@echo "ESMF_DEP_SHRD_LIBS = "           >> $@
 
 # -----------------------------------------------------------------------------
-ocn.mk:
-
-ocn.o: $(DEP_CMPL_OBJS)
+ocnSub.mk:
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -85,4 +73,4 @@ info:
 	@echo ==================================================================
 
 edit:
-	nedit ocn.F90 &
+	nedit ocnSub.F90 &

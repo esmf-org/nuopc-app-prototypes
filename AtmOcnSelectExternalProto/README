@@ -35,13 +35,22 @@ Code structure:
   --> ATM-C     - subdirectory containing same external ATM model as ATM-B, but
                   this time the objects are provided as a single static archive.
   --> ATM-D     - subdirectory containing an external ATM model, only depending
-                  on a single source file. Supplies this object as in form of a
+                  on a single source file. Supply this component in form of a
                   shared library.
+  --> ATM-E     - subdirectory containing an external ATM model, only depending
+                  on a single source file. Supply this component in form of a
+                  shared object.
+  --> ATM-F     - subdirectory containing an external ATM model, only depending
+                  on a single source file written in C.
   --> OcnModelA - subdirectory containing an external OCN model which depends
                   on some common files in another subdir.
   --> OcnModelB - subdirectory containing another external OCN model which 
                   also depends on the same common files in another subdir but
                   has additional subdir dependencies.
+  --> OcnModelC - subdirectory containing another external OCN model which 
+                  also depends on the same common files in another subdir but
+                  has additional subdir dependencies. Supply this component in
+                  form of a shared object with all dependencies linked in.
 
 Explanation:
 

@@ -48,7 +48,7 @@ include $(ESMFMKFILE)
 	@echo >> $@
 	@echo "ESMF_DEP_FRONT     = atmD"         >> $@
 	@echo "ESMF_DEP_INCPATH   = `pwd`"        >> $@
-	@echo "ESMF_DEP_CMPL_OBJS = `pwd`/lib"$<  >> $@
+	@echo "ESMF_DEP_CMPL_OBJS = "             >> $@
 	@echo "ESMF_DEP_LINK_OBJS = "             >> $@
 	@echo "ESMF_DEP_SHRD_PATH = `pwd`"        >> $@
 	@echo "ESMF_DEP_SHRD_LIBS = "$*           >> $@
