@@ -10,7 +10,7 @@ program explorerApp
   implicit none
 
   integer                 :: rc, urc
-  type(ESMF_GridComp)     :: explorerDriver
+  type(ESMF_GridComp)     :: driver
   type(ESMF_VM)           :: vm
   integer                 :: localPet
   
@@ -40,14 +40,14 @@ program explorerApp
   endif
 
   ! Create the earth system Component
-  explorerDriver = ESMF_GridCompCreate(name="explorerDriver", rc=rc)
+  driver = ESMF_GridCompCreate(name="explorerDriver", rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
     
   ! SetServices
-  call ESMF_GridCompSetServices(explorerDriver, explorerDriverSS, userRc=urc, &
+  call ESMF_GridCompSetServices(driver, explorerDriverSS, userRc=urc, &
     rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
@@ -59,7 +59,7 @@ program explorerApp
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
     
   ! Call Initialize
-  call ESMF_GridCompInitialize(explorerDriver, userRc=urc, rc=rc)
+  call ESMF_GridCompInitialize(driver, userRc=urc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
@@ -70,7 +70,7 @@ program explorerApp
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
     
   ! Call 2nd phase Initialize (special case here)
-  call ESMF_GridCompInitialize(explorerDriver, phase=2, userRc=urc, rc=rc)
+  call ESMF_GridCompInitialize(driver, phase=2, userRc=urc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
@@ -82,7 +82,7 @@ program explorerApp
     
 # if 0  
   ! Call Run  for earth the system Component
-  call ESMF_GridCompRun(explorerDriver, userRc=urc, rc=rc)
+  call ESMF_GridCompRun(driver, userRc=urc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
@@ -93,7 +93,7 @@ program explorerApp
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
   
   ! Call Finalize
-  call ESMF_GridCompFinalize(explorerDriver, userRc=urc, rc=rc)
+  call ESMF_GridCompFinalize(driver, userRc=urc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
@@ -105,7 +105,7 @@ program explorerApp
 #endif
 
   ! Destroy the earth system Component
-  call ESMF_GridCompDestroy(explorerDriver, rc=rc)
+  call ESMF_GridCompDestroy(driver, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
