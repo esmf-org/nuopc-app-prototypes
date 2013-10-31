@@ -2,7 +2,7 @@ README for ATM-OCN with simple implicit coupling NUOPC prototype
 ----------------------------------------------------------------
 
 Dependencies: 
-  - ESMF v.6.2.0
+  - ESMF v.6.3.0 beta snapshot
   
 Build:
   - Set environment variable ESMFMKFILE to point to the esmf.mk of your ESMF

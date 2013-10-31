@@ -1,3 +1,6 @@
+#define WITHPETLISTS_on
+! Defining WITHPETLISTS_on will have ATM and OCN run on disjoint sets of PETs.
+
 module ESM
 
   !-----------------------------------------------------------------------------
@@ -10,6 +13,9 @@ module ESM
     driver_routine_SS             => routine_SetServices, &
     driver_type_IS                => type_InternalState, &
     driver_label_IS               => label_InternalState, &
+#ifdef WITHPETLISTS_on
+    driver_label_SetModelPetLists => label_SetModelPetLists, &
+#endif
     driver_label_SetModelServices => label_SetModelServices
   
   use ATM, only: atmSS => SetServices
@@ -41,6 +47,14 @@ module ESM
       return  ! bail out
       
     ! attach specializing method(s)
+#ifdef WITHPETLISTS_on
+    call ESMF_MethodAdd(gcomp, label=driver_label_SetModelPetLists, &
+      userRoutine=SetModelPetLists, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
     call ESMF_MethodAdd(gcomp, label=driver_label_SetModelServices, &
       userRoutine=SetModelServices, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -48,6 +62,48 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     
+  end subroutine
+
+  !-----------------------------------------------------------------------------
+
+  subroutine SetModelPetLists(gcomp, rc)
+    type(ESMF_GridComp)  :: gcomp
+    integer, intent(out) :: rc
+    
+    ! local variables
+    integer                       :: localrc
+    type(driver_type_IS)          :: is
+    integer                       :: petCount, i
+
+    rc = ESMF_SUCCESS
+
+    ! query Component for its internal State
+    nullify(is%wrap)
+    call ESMF_UserCompGetInternalState(gcomp, driver_label_IS, is, rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+    ! get the petCount
+    call ESMF_GridCompGet(gcomp, petCount=petCount, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    ! set petList for ATM -> first half of PETs
+    allocate(is%wrap%atmPetList(petCount/2))
+    do i=1, petCount/2
+      is%wrap%atmPetList(i) = i-1 ! PET labeling goes from 0 to petCount-1
+    enddo
+      
+    ! set petList for OCN -> second half of PETs
+    allocate(is%wrap%ocnPetList(petCount-petCount/2))
+    do i=petCount/2+1, petCount
+      is%wrap%ocnPetList(i-petCount/2) = i-1 ! PET labeling goes from 0 to petCount-1
+    enddo
+
   end subroutine
 
   !-----------------------------------------------------------------------------
