@@ -321,23 +321,7 @@ module OCN
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-#if 0
-! If full initialization is equal to all Fields setting their "Updated"
-! Attribute to "true", then IPDv02p5 will automatically set the 
-! "InitializeDataComplete" Component Attribute correctly. 
-! However, if full initialization is not equal to all Fields setting
-! their "Updated" Attribute to "true", then it requires that Component
-! Attribute "InitializeDataComplete"  is explicitly set here.
-      ! -> set InitializeDataComplete Component Attribute to "true", indicating
-      ! to the driver that this Component has fully initialized its data
-      call ESMF_AttributeSet(gcomp, &
-        name="InitializeDataComplete", value="true", &
-        convention="NUOPC", purpose="General", rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-#endif
+      
       ! -> set Updated Field Attribute to "true", indicating to the IPDv02p5
       ! generic code to set the timestamp for this Field
       call ESMF_StateGet(exportState, field=field, itemName="sst", rc=rc)
@@ -352,6 +336,20 @@ module OCN
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
+        
+      ! Since setting the "sst" field was the only thing to be done on the OCN
+      ! side, the component needs to indicate that it is fully done with 
+      ! initializing its data:
+      ! -> set InitializeDataComplete Component Attribute to "true", indicating
+      ! to the driver that this Component has fully initialized its data
+      call ESMF_AttributeSet(gcomp, &
+        name="InitializeDataComplete", value="true", &
+        convention="NUOPC", purpose="General", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
     endif
     
   end subroutine

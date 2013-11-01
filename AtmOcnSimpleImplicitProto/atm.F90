@@ -316,6 +316,20 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
     
+    ! check whether all Fields in the exportState are "Updated"
+    if (NUOPC_StateIsUpdated(exportState)) then
+      ! This simple ATM component is only concerned with marking Fields in
+      ! the exportState as "Updated". Once that is done, it is considered
+      ! fully data initialized:
+      call ESMF_AttributeSet(gcomp, &
+        name="InitializeDataComplete", value="true", &
+        convention="NUOPC", purpose="General", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    endif
+    
   end subroutine
 #endif
 
