@@ -248,43 +248,42 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
       
-    ! replace the default run sequence with a more complicated implicit scheme
+    ! replace the default run sequence with a leap-frog scheme
     call NUOPC_RunSequenceDeallocate(is%wrap%runSeq, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    ! add a single run sequence element
+    ! add a single run sequence slot
     call NUOPC_RunSequenceAdd(is%wrap%runSeq, 1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    ! ocn2atm in runSeq(1)
-    call NUOPC_RunElementAdd(is%wrap%runSeq(1), i=2, j=1, phase=1, rc=rc)
+    ! ocn2atm into runSeq(1)
+    call NUOPC_RunElementAddComp(is%wrap%runSeq(1), i=2, j=1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    ! atm in runSeq(1)
-    call NUOPC_RunElementAdd(is%wrap%runSeq(1), i=1, j=-1, phase=1, rc=rc)
+    ! atm into runSeq(1)
+    call NUOPC_RunElementAddComp(is%wrap%runSeq(1), i=1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    ! atm2ocn in runSeq(1)
-    call NUOPC_RunElementAdd(is%wrap%runSeq(1), i=1, j=2, phase=1, rc=rc)
+    ! atm2ocn into runSeq(1)
+    call NUOPC_RunElementAddComp(is%wrap%runSeq(1), i=1, j=2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    ! ocn in runSeq(1)
-    call NUOPC_RunElementAdd(is%wrap%runSeq(1), i=2, j=-1, phase=1, rc=rc)
+    ! ocn into runSeq(1)
+    call NUOPC_RunElementAddComp(is%wrap%runSeq(1), i=2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-
       
   end subroutine
 
