@@ -58,13 +58,13 @@ DEP_SHRD_LIBS := $(DEP_SHRD_LIBS) $(addprefix -l, $(ESMF_DEP_SHRD_LIBS))
 
 
 # -----------------------------------------------------------------------------
-explorerApp: explorerApp.o explorerDriver.o $(DEP_LINK_OBJS)
+nuopcExplorerApp: nuopcExplorerApp.o nuopcExplorerDriver.o $(DEP_LINK_OBJS)
 	$(ESMF_F90LINKER) $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS) -o $@ $^ $(DEP_SHRD_PATH) $(DEP_SHRD_LIBS) $(ESMF_F90ESMFLINKLIBS)
 	rm -f *.o
 
 # module dependencies:
-explorerApp.o: explorerDriver.o
-explorerDriver.o: $(DEP_CMPL_OBJS)
+nuopcExplorerApp.o: nuopcExplorerDriver.o
+nuopcExplorerDriver.o: $(DEP_CMPL_OBJS)
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -72,7 +72,7 @@ explorerDriver.o: $(DEP_CMPL_OBJS)
 dust:
 	rm -f PET*.ESMF_LogFile
 clean:
-	rm -f explorerApp *.o *.mod
+	rm -f nuopcExplorerApp *.o *.mod
 distclean: dust clean
 
 info:

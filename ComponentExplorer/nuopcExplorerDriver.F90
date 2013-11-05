@@ -6,7 +6,7 @@ end module
 #endif
 !--------------------------------------------------------------------------
 
-module explorerDriver
+module nuopcExplorerDriver
 
   !-----------------------------------------------------------------------------
   ! Code that specializes generic NUOPC_Driver
@@ -292,7 +292,10 @@ module explorerDriver
     ! local variables
     type(driver_type_IS)          :: is
     integer                       :: i, j, k
+    character(len=80)             :: iString
+    character(len=ESMF_MAXSTR)    :: name
     integer                       :: phaseCount
+    integer                       :: localPet
     character(len=NUOPC_PhaseMapStringLength), allocatable :: phaseMap(:)
     character(len=NUOPC_PhaseMapStringLength) :: initPhase(1)
 
@@ -306,8 +309,16 @@ module explorerDriver
       file=__FILE__)) &
       return  ! bail out
     
+    ! query Component for localPet
+    call ESMF_GridCompGet(gcomp, localPet=localPet, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! remove the InitializePhaseMap Attribute
     do i=0, is%wrap%modelCount
+      write(iString, *) i
       ! Models
       if (i > 0) then
         if (NUOPC_GridCompAreServicesSet(is%wrap%modelComp(i))) then
@@ -323,6 +334,10 @@ module explorerDriver
             return  ! bail out
           ! step2: allocate phaseMap array and obtain it from InitializePhaseMap
           allocate(phaseMap(phaseCount))
+          if (localPet == 0) then
+            print *, "Model component # "//trim(adjustl(iString))// &
+              " InitializePhaseMap:"
+          endif
           if (phaseCount > 0) then
             call ESMF_AttributeGet(is%wrap%modelComp(i), &
               name="InitializePhaseMap", &
@@ -332,6 +347,15 @@ module explorerDriver
               line=__LINE__, &
               file=__FILE__)) &
               return  ! bail out
+            if (localPet == 0) then
+              do k=1, phaseCount
+                print *, "  "//trim(phaseMap(k))
+              enddo
+            endif
+          else
+            if (localPet == 0) then
+              print *, "  << unavailable >>"
+            endif            
           endif
           ! step3: set the initPhase variable to only include the p1 phase map
           initPhase(1) = ""   ! initialize empty in case no p1 mapping is found
@@ -433,7 +457,7 @@ module explorerDriver
       file=__FILE__)) &
       return  ! bail out
       
-    ! query Componen for localPet
+    ! query Component for localPet
     call ESMF_GridCompGet(gcomp, localPet=localPet, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &

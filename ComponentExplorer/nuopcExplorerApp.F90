@@ -5,7 +5,7 @@ program explorerApp
   !-----------------------------------------------------------------------------
 
   use ESMF
-  use explorerDriver, only: explorerDriverSS => SetServices
+  use nuopcExplorerDriver, only: explorerDriverSS => SetServices
 
   implicit none
 

@@ -10,7 +10,7 @@ echo "------------------------"
 # - high level error checking
 
 if [ $# != 1 ]; then
-  echo "Usage: nuopcExplorer <path/component-mk-file>"
+  echo "Usage: nuopcExplorerScript <path/component-mk-file>"
   echo "Exiting with error."
   echo
   exit 1
@@ -52,7 +52,7 @@ echo
 # - build explorer application
 
 echo "-- Building the explorer application using the component in the .mk file ..."
-gmake COMP=$1 explorerApp 
+gmake COMP=$1 nuopcExplorerApp
 echo
 
 
