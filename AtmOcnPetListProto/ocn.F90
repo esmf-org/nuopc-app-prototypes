@@ -75,12 +75,6 @@ module OCN
     
     rc = ESMF_SUCCESS
 
-    call ESMF_LogWrite("OCN - InitializeP0", ESMF_LOGMSG_INFO, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
     ! Disabling the following macro, e.g. renaming to WITHIMPORTFIELDS_disable,
     ! will result in a model component that does not advertise any importable
     ! Fields. Use this if you want to drive the model independently.
