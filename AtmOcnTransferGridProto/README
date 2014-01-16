@@ -1,5 +1,5 @@
-README for ATM-OCN with synchronized Grids between ATM and OCN Components
--------------------------------------------------------------------------
+README for ATM-OCN with transferred Grids between ATM and OCN Components
+------------------------------------------------------------------------
 
 Dependencies: 
   - ESMF v.6.3.0r

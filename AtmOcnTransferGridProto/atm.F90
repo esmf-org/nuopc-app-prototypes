@@ -129,7 +129,7 @@ module ATM
     ! importable field: sea_surface_temperature
     call NUOPC_StateAdvertiseField(importState, &
       StandardName="sea_surface_temperature", &
-      SyncOfferGeomObject="can provide", rc=rc)
+      TransferOfferGeomObject="can provide", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -138,7 +138,7 @@ module ATM
     ! exportable field: air_pressure_at_sea_level
     call NUOPC_StateAdvertiseField(exportState, &
       StandardName="air_pressure_at_sea_level", &
-      SyncOfferGeomObject="cannot provide", rc=rc)
+      TransferOfferGeomObject="cannot provide", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -167,7 +167,7 @@ module ATM
     type(ESMF_Grid)                   :: gridIn, gridOut
     integer                           :: i, j
     real(kind=ESMF_KIND_R8),  pointer :: lonPtr(:,:), latPtr(:,:)
-    character(ESMF_MAXSTR)            :: syncAction
+    character(ESMF_MAXSTR)            :: transferAction
     
     rc = ESMF_SUCCESS
     
@@ -203,21 +203,21 @@ module ATM
     gridOut = gridIn ! for now out same as in
 
     ! importable field: sea_surface_temperature
-    ! This Field was marked with SyncOfferGeomObject="can provide", so here
-    ! we need to see what SyncActionGeomObject the Connector determined for
+    ! This Field was marked with TransferOfferGeomObject="can provide", so here
+    ! we need to see what TransferActionGeomObject the Connector determined for
     ! this Field:
     call ESMF_StateGet(importState, field=field, itemName="sst", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_FieldAttributeGet(field, name="SyncActionGeomObject", &
-      value=syncAction, rc=rc)
+    call NUOPC_FieldAttributeGet(field, name="TransferActionGeomObject", &
+      value=transferAction, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    if (trim(syncAction)=="provide") then
+    if (trim(transferAction)=="provide") then
       ! the Connector instructed the ATM to provide the Grid object for "sst"
       call ESMF_LogWrite("ATM is providing Grid for Field 'sst'.", &
         ESMF_LOGMSG_INFO, rc=rc)
@@ -236,7 +236,7 @@ module ATM
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-    else  ! syncAction=="accept"
+    else  ! transferAction=="accept"
       ! the Connector instructed the ATM to accept the Grid from OCN for "sst"
       call ESMF_LogWrite("ATM is accepting Grid for Field 'sst'.", &
         ESMF_LOGMSG_INFO, rc=rc)
@@ -247,7 +247,7 @@ module ATM
     endif
 
     !NOTE: The air_pressure_at_sea_level (pmsl) Field is not realized here
-    !NOTE: because it was marked with SyncOfferGeomObject="cannot provide".
+    !NOTE: because it was marked with TransferOfferGeomObject="cannot provide".
     !NOTE: It is expected that the Connector will fill in a Grid object for it.
 
     ! exportable field: surface_net_downward_shortwave_flux
