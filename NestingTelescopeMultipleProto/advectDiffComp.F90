@@ -172,6 +172,7 @@ module advectDiffComp
     real(ESMF_KIND_R8)            :: dx
     integer                       :: i, j, stat
     integer                       :: nestingGeneration, nestling
+    character(len=80)             :: name
 
     rc = ESMF_SUCCESS
 
@@ -535,14 +536,22 @@ module advectDiffComp
         file=__FILE__)) &
         return  ! bail out
     endif
+
+    call ESMF_GridCompGet(gcomp, name=name, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return
 #if (ESMF_VERSION_MAJOR >= 6)
-!gjt: Commented out until ESMF v6 has functioning I/O again.
-!    call ESMF_FieldWrite(is%wrap%field, file=trim(name)//"_field.nc", &
-!      status=ESMF_FILESTATUS_REPLACE, timeslice=1, rc=rc)
-!    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!      line=__LINE__, &
-!      file=__FILE__)) &
-!      return
+    if (ESMF_IO_PIO_PRESENT .and. &
+      (ESMF_IO_NETCDF_PRESENT .or. ESMF_IO_PNETCDF_PRESENT)) then
+      call ESMF_FieldWrite(is%wrap%field, file=trim(name)//"_field.nc", &
+        status=ESMF_FILESTATUS_REPLACE, timeslice=1, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return
+    endif
 #endif
     
   end subroutine
@@ -888,12 +897,14 @@ module advectDiffComp
         file=__FILE__)) &
         return
 #if (ESMF_VERSION_MAJOR >= 6)
-!gjt: Commented out until ESMF v6 has functioning I/O again.
-!      call ESMF_FieldWrite(is%wrap%field, file=trim(name)//"_field.nc", rc=rc)
-!      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!        line=__LINE__, &
-!        file=__FILE__)) &
-!        return
+      if (ESMF_IO_PIO_PRESENT .and. &
+        (ESMF_IO_NETCDF_PRESENT .or. ESMF_IO_PNETCDF_PRESENT)) then
+        call ESMF_FieldWrite(is%wrap%field, file=trim(name)//"_field.nc", rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return
+      endif
 #else
       call ESMF_FieldWrite(is%wrap%field, file=trim(name)//"_field.nc", &
         timeslice=1, rc=rc)
