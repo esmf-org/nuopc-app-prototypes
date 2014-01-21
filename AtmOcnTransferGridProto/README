@@ -1,8 +1,8 @@
 README for ATM-OCN with transferred Grids between ATM and OCN Components
 ------------------------------------------------------------------------
 
-Dependencies: 
-  - ESMF v.6.3.0r
+Dependencies:
+  - ESMF v6.3.0r
   
 Build:
   - Set environment variable ESMFMKFILE to point to the esmf.mk of your ESMF

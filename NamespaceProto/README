@@ -1,8 +1,8 @@
 README for Namespace NUOPC prototype
 ------------------------------------
 
-Dependencies: 
-  - ESMF v.6.2.0
+Dependencies:
+  - ESMF v6.3.0r
   
 Build:
   - Set environment variable ESMFMKFILE to point to the esmf.mk of your ESMF

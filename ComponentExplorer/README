@@ -2,8 +2,7 @@ README for the NUOPC Component Explorer
 ---------------------------------------
 
 Dependencies:
-
-  - ESMF v6.3.0 beta snapshot
+  - ESMF v6.3.0r
   
 Description:
 
