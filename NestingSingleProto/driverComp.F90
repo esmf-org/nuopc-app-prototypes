@@ -24,7 +24,7 @@ module driverComp
   private
   
   ! private module data --> ONLY PARAMETERS
-  integer, parameter            :: stepCount = 5000
+  integer, parameter            :: stepCount = 4000
   real(ESMF_KIND_R8), parameter :: stepTime  = 30.D0  ! step time [s]
                                                       ! should be parent step
   
