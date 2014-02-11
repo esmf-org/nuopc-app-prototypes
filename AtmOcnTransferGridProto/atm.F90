@@ -279,6 +279,13 @@ module ATM
     integer                       :: localDeCount
     character(160)                :: msgString
 
+    type(ESMF_DistGrid)           :: distgrid
+    integer                       :: dimCount, tileCount, petCount
+    integer                       :: deCountPTile, extraDEs
+    integer, allocatable          :: minIndexPTile(:,:), maxIndexPTile(:,:)
+    integer, allocatable          :: regDecompPTile(:,:)
+    integer                       :: i, j
+    
     rc = ESMF_SUCCESS
     
     !NOTE: The air_pressure_at_sea_level (pmsl) Field should now have the
@@ -303,7 +310,7 @@ module ATM
       return  ! bail out
       
     ! access localDeCount to show this is a real Grid
-    call ESMF_GridGet(grid, localDeCount=localDeCount, rc=rc)
+    call ESMF_GridGet(grid, localDeCount=localDeCount, distgrid=distgrid, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -315,7 +322,104 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    
+    ! Create a custom DistGrid, based on the minIndex, maxIndex of the 
+    ! accepted DistGrid, but with a default regDecomp for the current VM
+    ! that leads to 1DE/PET.
+    
+    ! get dimCount and tileCount
+    call ESMF_DistGridGet(distgrid, dimCount=dimCount, tileCount=tileCount, &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    ! allocate minIndexPTile and maxIndexPTile accord. to dimCount and tileCount
+    allocate(minIndexPTile(dimCount, tileCount), &
+      maxIndexPTile(dimCount, tileCount))
+    
+    ! get minIndex and maxIndex arrays
+    call ESMF_DistGridGet(distgrid, minIndexPTile=minIndexPTile, &
+      maxIndexPTile=maxIndexPTile, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
       
+    ! construct a default regDecompPTile -> TODO: move this into ESMF as default
+    call ESMF_GridCompGet(gcomp, petCount=petCount, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    allocate(regDecompPTile(dimCount, tileCount))
+    deCountPTile = petCount/tileCount
+    extraDEs = max(0, petCount-deCountPTile)
+    do i=1, tileCount
+      if (i<=extraDEs) then
+        regDecompPTile(1, i) = deCountPTile + 1
+      else
+        regDecompPTile(1, i) = deCountPTile
+      endif
+      do j=2, dimCount
+        regDecompPTile(j, i) = 1
+      enddo
+    enddo
+    
+    ! create the new DistGrid with the same minIndexPTile and maxIndexPTile,
+    ! but with a default regDecompPTile
+    distgrid = ESMF_DistGridCreate(minIndexPTile=minIndexPTile, &
+      maxIndexPTile=maxIndexPTile, regDecompPTile=regDecompPTile, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! Create a new Grid on the new DistGrid and swap it in the Field
+    grid = ESMF_GridCreate(distgrid, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_FieldEmptySet(field, grid=grid, rc=rc)    
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+    ! Also must swap the Grid for the "sst" Field in the importState
+    
+    ! access the "sst" field in the importState and set the Grid
+    call ESMF_StateGet(importState, field=field, itemName="sst", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_FieldEmptySet(field, grid=grid, rc=rc)    
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+    ! access localDeCount of the final Grid
+    call ESMF_GridGet(grid, localDeCount=localDeCount, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    write (msgString,*) "ATM - InitializeP6: final Grid localDeCount = ", &
+      localDeCount
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    ! local clean-up
+    deallocate(minIndexPTile, maxIndexPTile, regDecompPTile)
+    
   end subroutine
     
   !-----------------------------------------------------------------------------
@@ -345,8 +449,8 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
     
-    call ESMF_LogWrite("Just completed the 'sst' Field", ESMF_LOGMSG_INFO, &
-      rc=rc)
+    call ESMF_LogWrite("ATM - Just completed the 'sst' Field", &
+      ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -366,8 +470,8 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
     
-    call ESMF_LogWrite("Just completed the 'pmsl' Field", ESMF_LOGMSG_INFO, &
-      rc=rc)
+    call ESMF_LogWrite("ATM - Just completed the 'pmsl' Field", &
+      ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
