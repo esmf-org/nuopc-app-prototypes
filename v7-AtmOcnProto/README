@@ -2,7 +2,7 @@ README for ATM-OCN NUOPC prototype
 ----------------------------------
 
 Dependencies:
-  - ESMF v6.3.0r
+  - ESMF v7.0.0 beta
   
 Build:
   - Set environment variable ESMFMKFILE to point to the esmf.mk of your ESMF
