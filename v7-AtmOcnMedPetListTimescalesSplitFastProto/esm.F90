@@ -6,14 +6,10 @@ module ESM
 
   use ESMF
   use NUOPC
-  use NUOPC_DriverAtmOcnMed, only: &
+  use NUOPC_DriverAtmOcnMed, &
     driver_routine_SS             => routine_SetServices, &
     driver_label_SetModelPetLists => label_SetModelPetLists, &
-    driver_label_SetModelServices => label_SetModelServices, &
-    NUOPC_DriverAddComp, NUOPC_DriverGetComp, NUOPC_DriverSetModel, &
-    NUOPC_DriverNewRunSequence, NUOPC_DriverSetRunSequence, &
-    NUOPC_DriverAddRunElement
-
+    driver_label_SetModelServices => label_SetModelServices
   
   use ATM, only: atmSS => SetServices
   use OCN, only: ocnSS => SetServices
@@ -313,6 +309,14 @@ module ESM
       return  ! bail out
     ! install clock for MED-ATM coupling in slot 2
     call NUOPC_DriverSetRunSequence(driver, slot=2, clock=internalClock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+
+    ! Diagnostic
+    call NUOPC_DriverPrint(driver, orderflag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
