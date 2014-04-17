@@ -35,14 +35,14 @@ module LND
       return  ! bail out
     
     ! set entry point for methods that require specific implementation
-    call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
-      userRoutine=InitializeP1, phase=1, rc=rc)
+    call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
+      phaseLabelList=(/"IPDv00p1"/), userRoutine=InitializeP1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
-      userRoutine=InitializeP2, phase=2, rc=rc)
+    call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
+      phaseLabelList=(/"IPDv00p2"/), userRoutine=InitializeP2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
