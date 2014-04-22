@@ -79,8 +79,9 @@ module MED
       return  ! bail out
     
     ! fast Mediation phase with ATM
-    call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_RUN, &
-      userRoutine=mediator_routine_Run, phase=2, rc=rc)
+    call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_RUN, &
+      phaseLabelList=(/"RunPhaseFast"/), userRoutine=mediator_routine_Run, &
+      rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

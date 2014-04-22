@@ -74,7 +74,6 @@ module LND
     
     rc = ESMF_SUCCESS
 
-
   end subroutine
   
   !-----------------------------------------------------------------------------
@@ -84,12 +83,6 @@ module LND
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
-    
-    ! local variables    
-    type(ESMF_TimeInterval) :: stabilityTimeStep
-    type(ESMF_Field)        :: field
-    type(ESMF_Grid)         :: gridIn
-    type(ESMF_Grid)         :: gridOut
     
     rc = ESMF_SUCCESS
     

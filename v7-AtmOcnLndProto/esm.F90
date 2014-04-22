@@ -6,12 +6,11 @@ module ESM
 
   use ESMF
   use NUOPC
-  use NUOPC_Driver, only: &
+  use NUOPC_Driver, &
     driver_routine_SS             => routine_SetServices, &
     driver_label_SetModelCount    => label_SetModelCount, &
     driver_label_SetModelServices => label_SetModelServices, &
-    NUOPC_DriverAddComp, NUOPC_DriverGetComp, NUOPC_DriverNewRunSequence, &
-    NUOPC_DriverAddRunElement, NUOPC_DriverSet
+    driver_label_SetRunSequence   => label_SetRunSequence
   
   use ATM, only: atmSS => SetServices
   use OCN, only: ocnSS => SetServices
@@ -55,6 +54,12 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    call NUOPC_CompSpecialize(driver, specLabel=driver_label_SetRunSequence, &
+      specRoutine=SetRunSequence, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
     
   end subroutine
 
@@ -83,14 +88,12 @@ module ESM
     
     ! local variables
     integer                       :: localrc
-    type(ESMF_Grid)               :: grid
-    type(ESMF_Field)              :: field
+    type(ESMF_GridComp)           :: child
+    type(ESMF_CplComp)            :: connector
     type(ESMF_Time)               :: startTime
     type(ESMF_Time)               :: stopTime
     type(ESMF_TimeInterval)       :: timeStep
     type(ESMF_Clock)              :: internalClock
-    type(ESMF_GridComp)           :: child
-    type(ESMF_CplComp)            :: connector
 
     rc = ESMF_SUCCESS
     
@@ -229,6 +232,19 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
       
+  end subroutine
+
+  !-----------------------------------------------------------------------------
+
+  subroutine SetRunSequence(driver, rc)
+    type(ESMF_GridComp)  :: driver
+    integer, intent(out) :: rc
+    
+    ! local variables
+    integer                       :: localrc
+
+    rc = ESMF_SUCCESS
+    
     ! Replace the default RunSequence with a customized one
     call NUOPC_DriverNewRunSequence(driver, slotCount=1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -236,48 +252,50 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_DriverAddRunElement(driver, slot=1, &
-      srcCompLabel="ATM", dstCompLabel="OCN", phase=1, rc=rc)
+      srcCompLabel="ATM", dstCompLabel="OCN", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_DriverAddRunElement(driver, slot=1, &
-      srcCompLabel="OCN", dstCompLabel="ATM", phase=1, rc=rc)
+      srcCompLabel="OCN", dstCompLabel="ATM", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_DriverAddRunElement(driver, slot=1, &
-      srcCompLabel="ATM", dstCompLabel="LND", phase=1, rc=rc)
+      srcCompLabel="ATM", dstCompLabel="LND", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_DriverAddRunElement(driver, slot=1, &
-      srcCompLabel="LND", dstCompLabel="ATM", phase=1, rc=rc)
+      srcCompLabel="LND", dstCompLabel="ATM", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_DriverAddRunElement(driver, slot=1, &
-      compLabel="ATM", phase=1, rc=rc)
+      compLabel="ATM", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_DriverAddRunElement(driver, slot=1, &
-      compLabel="OCN", phase=1, rc=rc)
+      compLabel="OCN", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_DriverAddRunElement(driver, slot=1, &
-      compLabel="LND", phase=1, rc=rc)
+      compLabel="LND", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
       
   end subroutine
+
+  !-----------------------------------------------------------------------------
 
 end module
