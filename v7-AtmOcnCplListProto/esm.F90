@@ -205,33 +205,35 @@ module ESM
       return  ! bail out
       
     do i=1, size(connectorList)
-      ! query they cplList for connector i
+      ! query the cplList for connector i
       call NUOPC_CplCompAttributeGet(connectorList(i), &
         cplListSize=cplListSize, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-      allocate(cplList(cplListSize))
-      call NUOPC_CplCompAttributeGet(connectorList(i), cplList=cplList, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-      ! to through all of the entries in the cplList and add options
-      do j=1, cplListSize
-        tempString = trim(cplList(j))//":REGRIDMETHOD=bilinear:DUMPWEIGHTS=true:termOrder=free"
-        cplList(j) = trim(tempString)
-      enddo
-      ! store the modified cplList in CplList attribute of connector i
-      call ESMF_AttributeSet(connectorList(i), &
-        name="CplList", valueList=cplList, &
-        convention="NUOPC", purpose="General", rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-      deallocate(cplList)
+      if (cplListSize>0) then
+        allocate(cplList(cplListSize))
+        call NUOPC_CplCompAttributeGet(connectorList(i), cplList=cplList, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+        ! go through all of the entries in the cplList and add options
+        do j=1, cplListSize
+          tempString = trim(cplList(j))//":REGRIDMETHOD=bilinear:DUMPWEIGHTS=true:termOrder=free"
+          cplList(j) = trim(tempString)
+        enddo
+        ! store the modified cplList in CplList attribute of connector i
+        call ESMF_AttributeSet(connectorList(i), &
+          name="CplList", valueList=cplList, &
+          convention="NUOPC", purpose="General", rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+        deallocate(cplList)
+      endif
     enddo
       
     deallocate(connectorList)
