@@ -7,8 +7,9 @@ module MED
   use ESMF
   use NUOPC
   use NUOPC_Mediator, only: &
-    mediator_routine_SS    => routine_SetServices, &
-    mediator_label_Advance => label_Advance
+    mediator_routine_SS             => routine_SetServices, &
+    mediator_label_TimestampExport  => label_TimestampExport, &
+    mediator_label_Advance          => label_Advance
   
   implicit none
   
@@ -56,6 +57,12 @@ module MED
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_TimestampExport, &
+      specRoutine=TimestampExport, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
     
   end subroutine
   
@@ -74,9 +81,6 @@ module MED
     
     rc = ESMF_SUCCESS
     
-#define WITHIMPORTFIELDS
-#ifdef WITHIMPORTFIELDS
-
     ! ATM input Fields come through namespaces
     do i=1, atmCount
       write (iString,*) i
@@ -133,23 +137,37 @@ module MED
       return  ! bail out
 #endif
 
-#endif
 
+#define EXPORT_WITH_NAMESPACE
+#ifdef EXPORT_WITH_NAMESPACE
+    do i=1, atmCount
+      write (iString,*) i
+      ! add a namespace to the exportState
+      call NUOPC_StateNamespaceAdd(exportState, &
+        namespace="ATM"//trim(adjustl(iString)), &
+        nestedStateName="NestedState-ATM"//trim(adjustl(iString)), &
+        nestedState=state, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      ! exportable field: sea_surface_temperature
+      call NUOPC_StateAdvertiseField(state, &
+        StandardName="sea_surface_temperature", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    enddo
+#else
     ! exportable field: air_pressure_at_sea_level
     call NUOPC_StateAdvertiseField(exportState, &
-      StandardName="air_pressure_at_sea_level", rc=rc)
+      StandardName="sea_surface_temperature", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
-    ! exportable field: surface_net_downward_shortwave_flux
-    call NUOPC_StateAdvertiseField(exportState, &
-      StandardName="surface_net_downward_shortwave_flux", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
+#endif
 
   end subroutine
   
@@ -181,7 +199,6 @@ module MED
       return  ! bail out
     gridOut = gridIn ! for now out same as in
 
-#ifdef WITHIMPORTFIELDS
     ! ATM input Fields come through namespaces
     do i=1, atmCount
       write (iString,*) i
@@ -218,36 +235,82 @@ module MED
         file=__FILE__)) &
         return  ! bail out
     enddo
+
+#ifdef EXPORT_WITH_NAMESPACE
+    do i=1, atmCount
+      write (iString,*) i
+      ! namespaces are implemented via nested States
+      call ESMF_StateGet(exportState, &
+        itemName="NestedState-ATM"//trim(adjustl(iString)), nestedState=state, &
+        rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      ! exportable field: air_pressure_at_sea_level
+      field = ESMF_FieldCreate(name="sst", grid=gridOut, &
+        typekind=ESMF_TYPEKIND_R8, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      call NUOPC_StateRealizeField(state, field=field, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    enddo
+#else
+    ! exportable field: sea_surface_temperature
+    field = ESMF_FieldCreate(name="sst", grid=gridOut, &
+      typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_StateRealizeField(exportState, field=field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 #endif
-
-    ! exportable field: air_pressure_at_sea_level
-    field = ESMF_FieldCreate(name="pmsl", grid=gridOut, &
-      typekind=ESMF_TYPEKIND_R8, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_StateRealizeField(exportState, field=field, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    ! exportable field: surface_net_downward_shortwave_flux
-    field = ESMF_FieldCreate(name="rsns", grid=gridOut, &
-      typekind=ESMF_TYPEKIND_R8, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_StateRealizeField(exportState, field=field, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
 
   end subroutine
   
+  !-----------------------------------------------------------------------------
+  
+  subroutine TimestampExport(gcomp, rc)
+    type(ESMF_GridComp)   :: gcomp
+    integer, intent(out)  :: rc
+    
+    ! This is the routine that applies the time stamp on the export Fields:
+    ! -> By default the MED Run method time stamps the export Fields with the
+    !    current time at the beginning of the advance step, however here,
+    !    because the mediator essentially acts as a model, the correct time
+    !    stamp is the currTime _after_ the MED advance step.
+
+    ! local variables
+    type(ESMF_Clock)      :: clock
+    type(ESMF_State)      :: exportState
+
+    rc = ESMF_SUCCESS
+
+    ! query the Component for info
+    call ESMF_GridCompGet(gcomp, clock=clock, exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! update timestamp on export Fields
+    call NUOPC_StateSetTimestamp(exportState, clock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+  end subroutine TimestampExport
+
   !-----------------------------------------------------------------------------
 
   subroutine MediatorAdvance(gcomp, rc)

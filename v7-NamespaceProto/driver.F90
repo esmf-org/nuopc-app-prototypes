@@ -147,8 +147,36 @@ module driver
       file=__FILE__)) &
       return  ! bail out
       
+    ! SetServices for MED->ATM1
+    call NUOPC_DriverAddComp(driver, srcCompLabel="MED", dstCompLabel="ATM1", &
+      compSetServicesRoutine=cplSS, comp=connector, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_AttributeSet(connector, name="Verbosity", value="high", &
+      convention="NUOPC", purpose="General", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
     ! SetServices for ATM2->MED
     call NUOPC_DriverAddComp(driver, srcCompLabel="ATM2", dstCompLabel="MED", &
+      compSetServicesRoutine=cplSS, comp=connector, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_AttributeSet(connector, name="Verbosity", value="high", &
+      convention="NUOPC", purpose="General", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+    ! SetServices for MED->ATM2
+    call NUOPC_DriverAddComp(driver, srcCompLabel="MED", dstCompLabel="ATM2", &
       compSetServicesRoutine=cplSS, comp=connector, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
