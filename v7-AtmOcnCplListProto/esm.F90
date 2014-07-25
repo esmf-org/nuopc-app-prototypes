@@ -273,7 +273,7 @@ module ESM
           return  ! bail out
         ! go through all of the entries in the cplList and add options
         do j=1, cplListSize
-          tempString = trim(cplList(j))//":REGRIDMETHOD=bilinear"//&
+          tempString = trim(cplList(j))//":REMAPMETHOD=bilinear"//&
           ":SrcTermProcessing=1:DUMPWEIGHTS=true:TermOrder=SrcSeq"
           cplList(j) = trim(tempString)
         enddo
