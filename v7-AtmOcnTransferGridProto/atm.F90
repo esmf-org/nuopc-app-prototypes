@@ -70,14 +70,14 @@ module ATM
       return  ! bail out
 
     ! attach specializing method(s)
-    call ESMF_MethodAdd(gcomp, label=model_label_Advance, &
-      userRoutine=ModelAdvance, rc=rc)
+    call NUOPC_CompSpecialize(gcomp, specLabel=model_label_Advance, &
+      specRoutine=ModelAdvance, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call ESMF_MethodAdd(gcomp, label=model_label_DataInitialize, &
-      userRoutine=DataInitialize, rc=rc)
+    call NUOPC_CompSpecialize(gcomp, specLabel=model_label_DataInitialize, &
+      specRoutine=DataInitialize, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
