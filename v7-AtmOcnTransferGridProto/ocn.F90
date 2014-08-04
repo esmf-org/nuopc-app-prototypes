@@ -28,7 +28,7 @@ module OCN
     rc = ESMF_SUCCESS
     
     ! the NUOPC model component will register the generic methods
-    call model_routine_SS(gcomp, rc=rc)
+    call NUOPC_CompDerive(gcomp, model_routine_SS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
