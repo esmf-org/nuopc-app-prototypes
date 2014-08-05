@@ -36,22 +36,14 @@ module OCN
     
     ! set entry point for methods that require specific implementation
 
-    ! -> switching to IPD versions is done in InitializeP0
-    call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
-      userRoutine=InitializeP0, phase=0, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
     call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv01p1"/), userRoutine=InitializeP1, rc=rc)
+      phaseLabelList=(/"IPDv00p1"/), userRoutine=InitializeAdvertise, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv01p2"/), userRoutine=InitializeP2, rc=rc)
+      phaseLabelList=(/"IPDv00p2"/), userRoutine=InitializeRealize, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -75,27 +67,7 @@ module OCN
   
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP0(gcomp, importState, exportState, clock, rc)
-    type(ESMF_GridComp)   :: gcomp
-    type(ESMF_State)      :: importState, exportState
-    type(ESMF_Clock)      :: clock
-    integer, intent(out)  :: rc
-    
-    rc = ESMF_SUCCESS
-
-    ! Switch to IPDv01 by filtering all other phaseMap entries
-    call NUOPC_CompFilterPhaseMap(gcomp, ESMF_METHOD_INITIALIZE, &
-      acceptStringList=(/"IPDv01p"/), rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
-  end subroutine
-  
-  !-----------------------------------------------------------------------------
-
-  subroutine InitializeP1(gcomp, importState, exportState, clock, rc)
+  subroutine InitializeAdvertise(gcomp, importState, exportState, clock, rc)
     type(ESMF_GridComp)  :: gcomp
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
@@ -131,7 +103,7 @@ module OCN
   
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP2(gcomp, importState, exportState, clock, rc)
+  subroutine InitializeRealize(gcomp, importState, exportState, clock, rc)
     type(ESMF_GridComp)  :: gcomp
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
