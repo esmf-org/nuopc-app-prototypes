@@ -64,79 +64,89 @@ module MED
       file=__FILE__)) &
       return  ! bail out
     
-    ! slow Mediation phase with OCN
+    ! slow Mediation phase with OCN (use the default "RunPhase1" for slow)
     call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_SetRunClock, &
-      specIndex=1, specRoutine=SetRunClock_slow, rc=rc)
+      specPhaseLabel="RunPhase1", specRoutine=SetRunClock_slow, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_Advance, &
-      specIndex=1, specRoutine=MediatorAdvance_slow, rc=rc)
+      specPhaseLabel="RunPhase1", specRoutine=MediatorAdvance_slow, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
     ! fast Mediation phase with ATM: before
-    call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_RUN, &
-      userRoutine=mediator_routine_Run, phase=2, rc=rc)
+    call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_RUN, &
+      phaseLabelList=(/"RunPhaseFastBefore"/), &
+      userRoutine=mediator_routine_Run, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_SetRunClock, &
-      specIndex=2, specRoutine=SetRunClock_fast_before, rc=rc)
+      specPhaseLabel="RunPhaseFastBefore", &
+      specRoutine=SetRunClock_fast_before, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_CheckImport, &
-      specIndex=2, specRoutine=CheckImport_fast_before, rc=rc)
+      specPhaseLabel="RunPhaseFastBefore", &
+      specRoutine=CheckImport_fast_before, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_TimestampExport, &
-      specIndex=2, specRoutine=TimestampExport_fast_before, rc=rc)
+      specPhaseLabel="RunPhaseFastBefore", &
+      specRoutine=TimestampExport_fast_before, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_Advance, &
-      specIndex=2, specRoutine=MediatorAdvance_fast_before, rc=rc)
+      specPhaseLabel="RunPhaseFastBefore", &
+      specRoutine=MediatorAdvance_fast_before, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
     ! fast Mediation phase with ATM: after
-    call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_RUN, &
-      userRoutine=mediator_routine_Run, phase=3, rc=rc)
+    call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_RUN, &
+      phaseLabelList=(/"RunPhaseFastAfter"/), &
+      userRoutine=mediator_routine_Run, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_SetRunClock, &
-      specIndex=3, specRoutine=SetRunClock_fast_after, rc=rc)
+      specPhaseLabel="RunPhaseFastAfter", &
+      specRoutine=SetRunClock_fast_after, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_CheckImport, &
-      specIndex=3, specRoutine=CheckImport_fast_after, rc=rc)
+      specPhaseLabel="RunPhaseFastAfter", &
+      specRoutine=CheckImport_fast_after, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_TimestampExport, &
-      specIndex=3, specRoutine=TimestampExport_fast_after, rc=rc)
+      specPhaseLabel="RunPhaseFastAfter", &
+      specRoutine=TimestampExport_fast_after, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_Advance, &
-      specIndex=3, specRoutine=MediatorAdvance_fast_after, rc=rc)
+      specPhaseLabel="RunPhaseFastAfter", &
+      specRoutine=MediatorAdvance_fast_after, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
