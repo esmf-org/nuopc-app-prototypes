@@ -32,11 +32,6 @@ module nuopcExplorerDriver
   
   private
   
-  ! private module data --> ONLY PARAMETERS
-  integer, parameter            :: stepCount = 5
-  real(ESMF_KIND_R8), parameter :: stepTime  = 30.D0  ! step time [s]
-                                                      ! should be parent step
-
   public SetServices
   
   !-----------------------------------------------------------------------------
@@ -132,6 +127,20 @@ module nuopcExplorerDriver
     integer                       :: argCount
     character(len=160)            :: soName
 #endif
+    type(ESMF_Config)             :: config
+    integer                       :: start_year
+    integer                       :: start_month
+    integer                       :: start_day
+    integer                       :: start_hour
+    integer                       :: start_minute
+    integer                       :: start_second
+    integer                       :: stop_year
+    integer                       :: stop_month
+    integer                       :: stop_day
+    integer                       :: stop_hour
+    integer                       :: stop_minute
+    integer                       :: stop_second
+    integer                       :: step_seconds
 
     rc = ESMF_SUCCESS
     
@@ -250,20 +259,139 @@ module nuopcExplorerDriver
       file=__FILE__)) &
       return  ! bail out
             
-    ! set the driver clock
-    call ESMF_TimeSet(startTime, s = 0, rc=rc)
+    ! Set the driver clock -> according to the explorer.config file
+    
+    print *, "Accessing start, stop, and step time info from 'explorer.config':"
+    
+    config = ESMF_ConfigCreate(rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_ConfigLoadFile(config, "explorer.config", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    call ESMF_ConfigGetAttribute(config, start_year, label="start_year:", &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call ESMF_ConfigGetAttribute(config, start_month, label="start_month:", &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call ESMF_ConfigGetAttribute(config, start_day, label="start_day:", &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call ESMF_ConfigGetAttribute(config, start_hour, label="start_hour:", &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call ESMF_ConfigGetAttribute(config, start_minute, label="start_minute:", &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call ESMF_ConfigGetAttribute(config, start_second, label="start_second:", &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call ESMF_ConfigGetAttribute(config, stop_year, label="stop_year:", &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call ESMF_ConfigGetAttribute(config, stop_month, label="stop_month:", &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call ESMF_ConfigGetAttribute(config, stop_day, label="stop_day:", &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call ESMF_ConfigGetAttribute(config, stop_hour, label="stop_hour:", &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call ESMF_ConfigGetAttribute(config, stop_minute, label="stop_minute:", &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call ESMF_ConfigGetAttribute(config, stop_second, label="stop_second:", &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call ESMF_ConfigGetAttribute(config, step_seconds, label="step_seconds:", &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    call ESMF_TimeSet(startTime, &
+      yy = start_year, &
+      mm = start_month, &
+      dd = start_day, &
+      h  = start_hour, &
+      m  = start_minute, &
+      s  = start_second, &
+      rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    call ESMF_TimeSet(stopTime, s_r8 = stepTime * stepCount, rc=rc)
+    call ESMF_TimeSet(stopTime, &
+      yy = stop_year, &
+      mm = stop_month, &
+      dd = stop_day, &
+      h  = stop_hour, &
+      m  = stop_minute, &
+      s  = stop_second, &
+      rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    call ESMF_TimeIntervalSet(timeStep, s_r8 = stepTime, rc=rc)
+    call ESMF_TimeIntervalSet(timeStep, s = step_seconds, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -282,6 +410,36 @@ module nuopcExplorerDriver
       file=__FILE__)) &
       return  ! bail out
     
+    call ESMF_ConfigDestroy(config, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    print *, "  start_year:   ", start_year
+    print *, "  start_month:  ", start_month
+    print *, "  start_day:    ", start_day
+    print *, "  start_hour:   ", start_hour
+    print *, "  start_minute: ", start_minute
+    print *, "  start_second: ", start_second
+    print *, "  - "
+    print *, "  stop_year:    ", stop_year
+    print *, "  stop_month:   ", stop_month
+    print *, "  stop_day:     ", stop_day
+    print *, "  stop_hour:    ", stop_hour
+    print *, "  stop_minute:  ", stop_minute
+    print *, "  stop_second:  ", start_second 
+    print *, "  - "
+    print *, "  step_seconds: ", step_seconds 
+
+#if 0    
+    call ESMF_ClockPrint(internalClock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
     ! Use an internal NUOPC Layer call to allow AutoAdd field dictionary entries
     call NUOPC_FieldDictionarySetAutoAdd(.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
