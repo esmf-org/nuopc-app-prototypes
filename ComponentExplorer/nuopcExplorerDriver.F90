@@ -261,7 +261,9 @@ module nuopcExplorerDriver
             
     ! Set the driver clock -> according to the explorer.config file
     
-    print *, "Accessing start, stop, and step time info from 'explorer.config':"
+    if (localPet==0) then
+      print *, "Accessing start, stop, and step time info from 'explorer.config':"
+    endif
     
     config = ESMF_ConfigCreate(rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -416,21 +418,23 @@ module nuopcExplorerDriver
       file=__FILE__)) &
       return  ! bail out
     
-    print *, "  start_year:   ", start_year
-    print *, "  start_month:  ", start_month
-    print *, "  start_day:    ", start_day
-    print *, "  start_hour:   ", start_hour
-    print *, "  start_minute: ", start_minute
-    print *, "  start_second: ", start_second
-    print *, "  - "
-    print *, "  stop_year:    ", stop_year
-    print *, "  stop_month:   ", stop_month
-    print *, "  stop_day:     ", stop_day
-    print *, "  stop_hour:    ", stop_hour
-    print *, "  stop_minute:  ", stop_minute
-    print *, "  stop_second:  ", start_second 
-    print *, "  - "
-    print *, "  step_seconds: ", step_seconds 
+    if (localPet==0) then
+      print *, "  start_year:   ", start_year
+      print *, "  start_month:  ", start_month
+      print *, "  start_day:    ", start_day
+      print *, "  start_hour:   ", start_hour
+      print *, "  start_minute: ", start_minute
+      print *, "  start_second: ", start_second
+      print *, "  - "
+      print *, "  stop_year:    ", stop_year
+      print *, "  stop_month:   ", stop_month
+      print *, "  stop_day:     ", stop_day
+      print *, "  stop_hour:    ", stop_hour
+      print *, "  stop_minute:  ", stop_minute
+      print *, "  stop_second:  ", start_second
+      print *, "  - "
+      print *, "  step_seconds: ", step_seconds
+    endif
 
 #if 0    
     call ESMF_ClockPrint(internalClock, rc=rc)
