@@ -43,42 +43,43 @@ module nuopcExplorerDriver
   contains
   !-----------------------------------------------------------------------------
 
-  subroutine SetServices(gcomp, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine SetServices(driver, rc)
+    type(ESMF_GridComp)  :: driver
     integer, intent(out) :: rc
     
     rc = ESMF_SUCCESS
     
     ! NUOPC_Driver registers the generic methods
-    call driver_routine_SS(gcomp, rc=rc)
+    call NUOPC_CompDerive(driver, driver_routine_SS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
     ! set entry point for an Initialize phase 2
-    call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
-      userRoutine=InitializeP2, phase=2, rc=rc)
+    call NUOPC_CompSetEntryPoint(driver, ESMF_METHOD_INITIALIZE, &
+      phaseLabelList=(/"IPDv00p2"/), userRoutine=InitializeP2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
       
     ! attach specializing method(s)
-    call ESMF_MethodAdd(gcomp, label=driver_label_SetModelCount, &
-      userRoutine=SetModelCount, rc=rc)
+    call NUOPC_CompSpecialize(driver, specLabel=driver_label_SetModelCount, &
+      specRoutine=SetModelCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call ESMF_MethodAdd(gcomp, label=driver_label_SetModelServices, &
-      userRoutine=SetModelServices, rc=rc)
+    call NUOPC_CompSpecialize(driver, specLabel=driver_label_SetModelServices, &
+      specRoutine=SetModelServices, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call ESMF_MethodAdd(gcomp, label=driver_label_ModifyInitializePhaseMap, &
-      userRoutine=ModifyInitializePhaseMap, rc=rc)
+    call NUOPC_CompSpecialize(driver, &
+      specLabel=driver_label_ModifyInitializePhaseMap, &
+      specRoutine=ModifyInitializePhaseMap, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -88,8 +89,8 @@ module nuopcExplorerDriver
 
   !-----------------------------------------------------------------------------
 
-  subroutine SetModelCount(gcomp, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine SetModelCount(driver, rc)
+    type(ESMF_GridComp)  :: driver
     integer, intent(out) :: rc
     
     ! local variables
@@ -99,7 +100,7 @@ module nuopcExplorerDriver
     
     ! query Component for its internal State
     nullify(is%wrap)
-    call ESMF_UserCompGetInternalState(gcomp, driver_label_IS, is, rc)
+    call ESMF_UserCompGetInternalState(driver, driver_label_IS, is, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -112,8 +113,8 @@ module nuopcExplorerDriver
   
   !-----------------------------------------------------------------------------
   
-  subroutine SetModelServices(gcomp, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine SetModelServices(driver, rc)
+    type(ESMF_GridComp)  :: driver
     integer, intent(out) :: rc
     
     ! local variables
@@ -136,13 +137,13 @@ module nuopcExplorerDriver
     
     ! query Component for its internal State
     nullify(is%wrap)
-    call ESMF_UserCompGetInternalState(gcomp, driver_label_IS, is, rc)
+    call ESMF_UserCompGetInternalState(driver, driver_label_IS, is, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     ! query for localPet
-    call ESMF_GridCompGet(gcomp, localPet=localPet, rc=rc)
+    call ESMF_GridCompGet(driver, localPet=localPet, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -192,7 +193,7 @@ module nuopcExplorerDriver
     endif
     
     ! Obtain shared object name from the command line argument
-    call ESMF_GridCompGet(gcomp, vm=vm, rc=rc)
+    call ESMF_GridCompGet(driver, vm=vm, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -275,18 +276,25 @@ module nuopcExplorerDriver
       file=__FILE__)) &
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
       
-    call ESMF_GridCompSet(gcomp, clock=internalClock, rc=rc)
+    call ESMF_GridCompSet(driver, clock=internalClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+    
+    ! Use an internal NUOPC Layer call to allow AutoAdd field dictionary entries
+    call NUOPC_FieldDictionarySetAutoAdd(.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
   end subroutine
 
   !-----------------------------------------------------------------------------
 
-  subroutine ModifyInitializePhaseMap(gcomp, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine ModifyInitializePhaseMap(driver, rc)
+    type(ESMF_GridComp)  :: driver
     integer, intent(out) :: rc
     
     ! local variables
@@ -303,14 +311,14 @@ module nuopcExplorerDriver
     
     ! query Component for its internal State
     nullify(is%wrap)
-    call ESMF_UserCompGetInternalState(gcomp, driver_label_IS, is, rc)
+    call ESMF_UserCompGetInternalState(driver, driver_label_IS, is, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
     ! query Component for localPet
-    call ESMF_GridCompGet(gcomp, localPet=localPet, rc=rc)
+    call ESMF_GridCompGet(driver, localPet=localPet, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -428,8 +436,8 @@ module nuopcExplorerDriver
   
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP2(gcomp, importState, exportState, clock, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine InitializeP2(driver, importState, exportState, clock, rc)
+    type(ESMF_GridComp)  :: driver
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
@@ -451,14 +459,14 @@ module nuopcExplorerDriver
     
     ! query Component for its internal State
     nullify(is%wrap)
-    call ESMF_UserCompGetInternalState(gcomp, driver_label_IS, is, rc)
+    call ESMF_UserCompGetInternalState(driver, driver_label_IS, is, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
       
     ! query Component for localPet
-    call ESMF_GridCompGet(gcomp, localPet=localPet, rc=rc)
+    call ESMF_GridCompGet(driver, localPet=localPet, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
