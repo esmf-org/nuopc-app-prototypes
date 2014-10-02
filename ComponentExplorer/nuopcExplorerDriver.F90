@@ -305,7 +305,7 @@ module nuopcExplorerDriver
     integer                       :: phaseCount
     integer                       :: localPet
     character(len=NUOPC_PhaseMapStringLength), allocatable :: phaseMap(:)
-    character(len=NUOPC_PhaseMapStringLength) :: initPhase(1)
+    character(len=NUOPC_PhaseMapStringLength) :: initPhase(2)
 
     rc = ESMF_SUCCESS
     
@@ -366,12 +366,14 @@ module nuopcExplorerDriver
             endif            
           endif
           ! step3: set the initPhase variable to only include the p1 phase map
-          initPhase(1) = ""   ! initialize empty in case no p1 mapping is found
+          initPhase(:) = ""   ! initialize empty
           do k=1, phaseCount
             if (index(trim(phaseMap(k)), "p1") > 0) then
               ! found a p1 mapping
               initPhase(1) = trim(phaseMap(k))
-              exit  ! exit the loop when first p1 mapping is found
+            elseif (index(trim(phaseMap(k)), "p2") > 0) then
+              ! found a p1 mapping
+              initPhase(2) = trim(phaseMap(k))
             endif
           enddo
           ! step4: replace the full InitializePhaseMap with only the p1 mapping
