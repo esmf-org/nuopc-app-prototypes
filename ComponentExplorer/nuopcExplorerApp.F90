@@ -12,7 +12,7 @@ program explorerApp
   integer                 :: rc, urc
   type(ESMF_GridComp)     :: driver
   type(ESMF_VM)           :: vm
-  integer                 :: localPet
+  integer                 :: localPet, petCount
   
   ! Initialize ESMF
   call ESMF_Initialize(defaultCalKind=ESMF_CALKIND_GREGORIAN, &
@@ -22,7 +22,7 @@ program explorerApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
     
-  call ESMF_VMGet(vm, localPet=localPet, rc=rc)
+  call ESMF_VMGet(vm, localPet=localPet, petCount=petCount, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
@@ -36,8 +36,8 @@ program explorerApp
     
   if (localPet==0) then
     print *
-    print *, "NUOPC Component Explorer App"
-    print *, "----------------------------"
+    print *, "NUOPC Component Explorer App executing on ", petCount, "PETs"
+    print *, "------------------------------------------------------------"
   endif
 
   ! Create the earth system Component
