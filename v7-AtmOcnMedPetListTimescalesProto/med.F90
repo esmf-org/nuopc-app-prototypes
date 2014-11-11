@@ -375,7 +375,7 @@ module MED
       return  ! bail out
     
     ! check and set the component clock against the driver clock
-    call NUOPC_GridCompCheckSetClock(gcomp, driverClock, rc=rc)
+    call NUOPC_CompCheckSetClock(gcomp, driverClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, &
       msg="NUOPC INCOMPATIBILITY DETECTED: between model and driver clocks", &
       line=__LINE__, &
@@ -419,7 +419,7 @@ module MED
       return  ! bail out
     
     ! check and set the component clock against the driver clock
-    call NUOPC_GridCompCheckSetClock(gcomp, driverClock, rc=rc)
+    call NUOPC_CompCheckSetClock(gcomp, driverClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, &
       msg="NUOPC INCOMPATIBILITY DETECTED: between model and driver clocks", &
       line=__LINE__, &

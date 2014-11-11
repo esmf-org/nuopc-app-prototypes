@@ -174,7 +174,7 @@ module ESM
       rcToReturn=rc)) &
       return  ! bail out
 #else
-    call NUOPC_GridCompSetServices(is%wrap%modelComp(1), sharedObj="./"//ATM_FRONT_SO, &
+    call NUOPC_CompSetServices(is%wrap%modelComp(1), sharedObj="./"//ATM_FRONT_SO, &
       userRc=localrc, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -224,7 +224,7 @@ module ESM
 #endif
 #ifdef FRONT_SO_OCNC
     elseif (ocn_select=="C") then
-      call NUOPC_GridCompSetServices(is%wrap%modelComp(2), sharedObj="./"//FRONT_SO_OCNC, &
+      call NUOPC_CompSetServices(is%wrap%modelComp(2), sharedObj="./"//FRONT_SO_OCNC, &
         userRc=localrc, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &

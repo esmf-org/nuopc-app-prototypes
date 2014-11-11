@@ -202,7 +202,7 @@ module ocnSub
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_GridCompSetClock(gcomp, clock, stabilityTimeStep, rc=rc)
+    call NUOPC_CompSetClock(gcomp, clock, stabilityTimeStep, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
