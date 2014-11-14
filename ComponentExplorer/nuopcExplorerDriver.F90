@@ -182,7 +182,7 @@ module nuopcExplorerDriver
       print *, "Exploring a component with a shared object front, known at "// &
         "compile time..."
     endif
-    call NUOPC_GridCompSetServices(is%wrap%modelComp(1), &
+    call NUOPC_CompSetServices(is%wrap%modelComp(1), &
       sharedObj="./"//FRONT_SO_COMP, userRc=localrc, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -234,7 +234,7 @@ module nuopcExplorerDriver
       file=__FILE__)) &
       return  ! bail out
     
-    call NUOPC_GridCompSetServices(is%wrap%modelComp(1), &
+    call NUOPC_CompSetServices(is%wrap%modelComp(1), &
       sharedObj=trim(soName), userRc=localrc, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -491,7 +491,7 @@ module nuopcExplorerDriver
       write(iString, *) i
       ! Models
       if (i > 0) then
-        if (NUOPC_GridCompAreServicesSet(is%wrap%modelComp(i))) then
+        if (NUOPC_CompAreServicesSet(is%wrap%modelComp(i))) then
           ! clean out all phases out of InitializePhaseMap, except p1
           ! step1: determine how many phases are in the InitializePhaseMap
           call ESMF_AttributeGet(is%wrap%modelComp(i), &
@@ -551,7 +551,7 @@ module nuopcExplorerDriver
       endif
       ! Connectors
       do j=0, is%wrap%modelCount
-        if (NUOPC_CplCompAreServicesSet(is%wrap%connectorComp(i,j))) then
+        if (NUOPC_CompAreServicesSet(is%wrap%connectorComp(i,j))) then
           ! clean out all phases out of InitializePhaseMap, except p1
           ! step1: determine how many phases are in the InitializePhaseMap
           call ESMF_AttributeGet(is%wrap%connectorComp(i,j), &
@@ -642,7 +642,7 @@ module nuopcExplorerDriver
       do i=0, is%wrap%modelCount
         ! Models
         if (i > 0) then
-          if (NUOPC_GridCompAreServicesSet(is%wrap%modelComp(i))) then
+          if (NUOPC_CompAreServicesSet(is%wrap%modelComp(i))) then
           
             write(iString, *) i
             comp = is%wrap%modelComp(i) ! alias to the component to be explored
@@ -766,7 +766,7 @@ module nuopcExplorerDriver
         endif
         ! Connectors
         do j=0, is%wrap%modelCount
-          if (NUOPC_CplCompAreServicesSet(is%wrap%connectorComp(i,j))) then
+          if (NUOPC_CompAreServicesSet(is%wrap%connectorComp(i,j))) then
           
             ! not expecting any Connectors in the explorer right now
               
