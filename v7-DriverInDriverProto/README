@@ -2,7 +2,7 @@ README for Driver-in-Driver NUOPC prototype of a coupled ATM-OCN through Driver
 -------------------------------------------------------------------------------
 
 Dependencies:
-  - ESMF v7.0.0 snapshot
+  - ESMF v7.0.0 beta
   
 Build:
   - Set environment variable ESMFMKFILE to point to the esmf.mk of your ESMF
