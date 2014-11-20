@@ -1,0 +1,294 @@
+module driverChildComp
+
+  !-----------------------------------------------------------------------------
+  ! Code that specializes generic NUOPC_Driver
+  !-----------------------------------------------------------------------------
+
+  use ESMF
+  use NUOPC
+  use NUOPC_Driver, &
+    driver_routine_SS             => routine_SetServices, &
+    driver_label_SetModelCount    => label_SetModelCount, &
+    driver_label_SetModelServices => label_SetModelServices
+  
+  use ATM, only: atmSS => SetServices
+
+  use NUOPC_Connector, only: cplSS => routine_SetServices
+
+  implicit none
+  
+  private
+  
+  public SetServices
+  
+  !-----------------------------------------------------------------------------
+  contains
+  !-----------------------------------------------------------------------------
+
+  subroutine SetServices(driver, rc)
+    type(ESMF_GridComp)  :: driver
+    integer, intent(out) :: rc
+    
+    rc = ESMF_SUCCESS
+    
+    ! NUOPC_Driver registers the generic methods
+    call NUOPC_CompDerive(driver, driver_routine_SS, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+    ! attach specializing method(s)
+    call NUOPC_CompSpecialize(driver, specLabel=driver_label_SetModelCount, &
+      specRoutine=SetModelCount, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompSpecialize(driver, specLabel=driver_label_SetModelServices, &
+      specRoutine=SetModelServices, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! set entry points that driver uses internally to interact with model
+    call NUOPC_CompSetInternalEntryPoint(driver, ESMF_METHOD_INITIALIZE, &
+      phaseLabelList=(/"IPDv00p1"/), userRoutine=InternalInitializeP1, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompSetInternalEntryPoint(driver, ESMF_METHOD_INITIALIZE, &
+      phaseLabelList=(/"IPDv00p2"/), userRoutine=InternalInitializeP2, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompSetInternalEntryPoint(driver, ESMF_METHOD_INITIALIZE, &
+      phaseLabelList=(/"IPDv00p4"/), userRoutine=InternalInitializeP4, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+  end subroutine
+
+  !-----------------------------------------------------------------------------
+
+  subroutine SetModelCount(driver, rc)
+    type(ESMF_GridComp)  :: driver
+    integer, intent(out) :: rc
+    
+    rc = ESMF_SUCCESS
+    
+    ! set the modelCount for 1 single model component
+    call NUOPC_DriverSet(driver, modelCount=1, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+  end subroutine
+  
+  !-----------------------------------------------------------------------------
+
+  subroutine SetModelServices(driver, rc)
+    type(ESMF_GridComp)  :: driver
+    integer, intent(out) :: rc
+    
+    ! local variables
+    integer                       :: localrc
+    type(ESMF_GridComp)           :: child
+    type(ESMF_CplComp)            :: connector
+
+    rc = ESMF_SUCCESS
+    
+    ! SetServices for ATM
+    call NUOPC_DriverAddComp(driver, "ATM", atmSS, comp=child, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_AttributeSet(child, name="Verbosity", value="high", &
+      convention="NUOPC", purpose="General", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+    ! SetServices for driver2ATM
+    call NUOPC_DriverAddComp(driver, srcCompLabel="driverChild", &
+      dstCompLabel="ATM", &
+      compSetServicesRoutine=cplSS, comp=connector, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_AttributeSet(connector, name="Verbosity", value="high", &
+      convention="NUOPC", purpose="General", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! SetServices for ATM2driver
+    call NUOPC_DriverAddComp(driver, srcCompLabel="ATM", &
+      dstCompLabel="driverChild", &
+      compSetServicesRoutine=cplSS, comp=connector, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_AttributeSet(connector, name="Verbosity", value="high", &
+      convention="NUOPC", purpose="General", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+  end subroutine
+
+  !-----------------------------------------------------------------------------
+
+  subroutine InternalInitializeP1(driver, importState, exportState, clock, rc)
+    type(ESMF_GridComp)  :: driver
+    type(ESMF_State)     :: importState, exportState
+    type(ESMF_Clock)     :: clock
+    integer, intent(out) :: rc
+    
+    rc = ESMF_SUCCESS
+    
+    ! Disabling the following macro, e.g. renaming to WITHIMPORTFIELDS_disable,
+    ! will result in a model component that does not advertise any importable
+    ! Fields. Use this if you want to drive the model independently.
+#define WITHIMPORTFIELDS
+#ifdef WITHIMPORTFIELDS
+    ! importable field: sea_surface_temperature
+    call NUOPC_StateAdvertiseField(importState, &
+      StandardName="sea_surface_temperature", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+    
+#define WITHEXPORTFIELDS
+#ifdef WITHEXPORTFIELDS
+    ! exportable field: air_pressure_at_sea_level
+    call NUOPC_StateAdvertiseField(exportState, &
+      StandardName="air_pressure_at_sea_level", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    ! exportable field: surface_net_downward_shortwave_flux
+    call NUOPC_StateAdvertiseField(exportState, &
+      StandardName="surface_net_downward_shortwave_flux", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
+  end subroutine
+  
+  !-----------------------------------------------------------------------------
+
+  subroutine InternalInitializeP2(driver, importState, exportState, clock, rc)
+    type(ESMF_GridComp)  :: driver
+    type(ESMF_State)     :: importState, exportState
+    type(ESMF_Clock)     :: clock
+    integer, intent(out) :: rc
+    
+    ! local variables    
+    type(ESMF_Field)        :: field
+    type(ESMF_Grid)         :: gridIn
+    type(ESMF_Grid)         :: gridOut
+    
+    rc = ESMF_SUCCESS
+    
+    ! create a Grid object for Fields
+    gridIn = NUOPC_GridCreateSimpleXY(10._ESMF_KIND_R8, 20._ESMF_KIND_R8, &
+      100._ESMF_KIND_R8, 200._ESMF_KIND_R8, 10, 100, rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    gridOut = gridIn ! for now out same as in
+
+#ifdef WITHIMPORTFIELDS
+    ! importable field: sea_surface_temperature
+    field = ESMF_FieldCreate(name="sst", grid=gridIn, &
+      typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_StateRealizeField(importState, field=field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
+#ifdef WITHEXPORTFIELDS
+    ! exportable field: air_pressure_at_sea_level
+    field = ESMF_FieldCreate(name="pmsl", grid=gridOut, &
+      typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_StateRealizeField(exportState, field=field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! exportable field: surface_net_downward_shortwave_flux
+    field = ESMF_FieldCreate(name="rsns", grid=gridOut, &
+      typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_StateRealizeField(exportState, field=field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
+  end subroutine
+  
+  !-----------------------------------------------------------------------------
+
+  subroutine InternalInitializeP4(driver, importState, exportState, clock, rc)
+    type(ESMF_GridComp)  :: driver
+    type(ESMF_State)     :: importState, exportState
+    type(ESMF_Clock)     :: clock
+    integer, intent(out) :: rc
+    
+    ! local variables    
+    integer               :: localrc
+    type(ESMF_Clock)      :: internalClock
+    
+    rc = ESMF_SUCCESS
+    
+    ! update timestamp on export Fields
+    call ESMF_GridCompGet(driver, clock=internalClock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_StateSetTimestamp(exportState, internalClock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+  end subroutine
+  
+end module
