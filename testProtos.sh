@@ -112,6 +112,7 @@ TestProto v7-AtmOcnMedPetListProto esmApp
 TestProto v7-AtmOcnMedPetListTimescalesProto esmApp
 TestProto v7-AtmOcnMedPetListTimescalesSplitFastProto esmApp
 TestProto v7-AtmOcnTransferGridProto esmApp
+TestProto v7-DriverInDriverProto mainApp
 TestProto v7-NamespaceProto mainApp
 TestSelectProto v7-AtmOcnSelectExternalProto esmApp
 
