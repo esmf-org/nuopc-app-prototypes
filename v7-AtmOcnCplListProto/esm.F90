@@ -276,9 +276,8 @@ module ESM
           cplList(j) = trim(tempString)
         enddo
         ! store the modified cplList in CplList attribute of connector i
-        call ESMF_AttributeSet(connectorList(i), &
-          name="CplList", valueList=cplList, &
-          convention="NUOPC", purpose="General", rc=rc)
+        call NUOPC_CompAttributeSet(connectorList(i), &
+          name="CplList", valueList=cplList, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
           line=__LINE__, &
           file=__FILE__)) &

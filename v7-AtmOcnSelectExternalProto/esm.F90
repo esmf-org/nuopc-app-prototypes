@@ -187,8 +187,8 @@ module ESM
       return  ! bail out
 #endif
 
-    call ESMF_AttributeSet(is%wrap%modelComp(1), name="Verbosity", value="high", &
-      convention="NUOPC", purpose="General", rc=rc)
+    call NUOPC_CompAttributeSet(is%wrap%modelComp(1), &
+      name="Verbosity", value="high", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -245,8 +245,8 @@ module ESM
       return  ! bail out
     endif
     
-    call ESMF_AttributeSet(is%wrap%modelComp(2), name="Verbosity", value="high", &
-      convention="NUOPC", purpose="General", rc=rc)
+    call NUOPC_CompAttributeSet(is%wrap%modelComp(2), &
+      name="Verbosity", value="high", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -264,8 +264,8 @@ module ESM
       rcToReturn=rc)) &
       return  ! bail out
       
-    call ESMF_AttributeSet(is%wrap%connectorComp(1,2), name="Verbosity", value="high", &
-      convention="NUOPC", purpose="General", rc=rc)
+    call NUOPC_CompAttributeSet(is%wrap%connectorComp(1,2), &
+      name="Verbosity", value="high", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -283,8 +283,8 @@ module ESM
       rcToReturn=rc)) &
       return  ! bail out
       
-    call ESMF_AttributeSet(is%wrap%connectorComp(2,1), name="Verbosity", value="high", &
-      convention="NUOPC", purpose="General", rc=rc)
+    call NUOPC_CompAttributeSet(is%wrap%connectorComp(2,1), &
+      name="Verbosity", value="high", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

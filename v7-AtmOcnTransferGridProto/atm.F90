@@ -529,8 +529,7 @@ module ATM
         return  ! bail out
     endif
     ! set "Updated"
-    call ESMF_AttributeSet(field, name="Updated", value="true", &
-      convention="NUOPC", purpose="General", rc=rc)
+    call NUOPC_FieldAttributeSet(field, name="Updated", value="true", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -570,16 +569,15 @@ module ATM
         return  ! bail out
     endif
     ! set "Updated"
-    call ESMF_AttributeSet(field, name="Updated", value="true", &
-      convention="NUOPC", purpose="General", rc=rc)
+    call NUOPC_FieldAttributeSet(field, name="Updated", value="true", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
       
     ! indicate that data initialization is complete (breaking out of init-loop)
-    call ESMF_AttributeSet(gcomp, name="InitializeDataComplete", value="true", &
-      convention="NUOPC", purpose="General", rc=rc)
+    call NUOPC_CompAttributeSet(gcomp, &
+      name="InitializeDataComplete", value="true", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
