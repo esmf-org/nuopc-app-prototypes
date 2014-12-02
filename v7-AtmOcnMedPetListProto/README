@@ -26,6 +26,5 @@ Code structure:
   - med.F90     - The Mediator component, specializing generic 
                   NUOPC_Mediator.
   - esm.F90     - The Earth System Model (ESM) component, specializing generic
-                  NUOPC_DriverAtmOcnMed. Define partial petLists for
-                  ATM, OCN, and MED.
+                  NUOPC_Driver. Define partial petLists for ATM, OCN, and MED.
   - esmApp.F90  - ESM driver application.

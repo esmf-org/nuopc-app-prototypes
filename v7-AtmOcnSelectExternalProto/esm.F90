@@ -14,13 +14,9 @@ module ESM
 
   use ESMF
   use NUOPC
-  use NUOPC_Driver, only: &
+  use NUOPC_Driver, &
     driver_routine_SS             => routine_SetServices, &
-    driver_type_IS                => type_InternalState, &
-    driver_label_IS               => label_InternalState, &
-    driver_label_SetModelCount    => label_SetModelCount, &
-    driver_label_SetModelServices => label_SetModelServices, &
-    NUOPC_DriverSet
+    driver_label_SetModelServices => label_SetModelServices
 
   !- select exactly one ATM component 
 #if (defined FRONT_ATMA && !defined FRONT_ATMB && !defined FRONT_ATMC && !defined FRONT_ATMD && !defined FRONT_ATME && !defined FRONT_SO_ATME && !defined FRONT_ATMF && !defined FRONT_H_ATMF )
@@ -69,7 +65,7 @@ module ESM
     
     rc = ESMF_SUCCESS
     
-    ! NUOPC_DriverAtmOcn registers the generic methods
+    ! NUOPC_Driver registers the generic methods
     call NUOPC_CompDerive(driver, driver_routine_SS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -77,31 +73,8 @@ module ESM
       return  ! bail out
       
     ! attach specializing method(s)
-    call ESMF_MethodAdd(driver, label=driver_label_SetModelCount, &
-      userRoutine=SetModelCount, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
     call ESMF_MethodAdd(driver, label=driver_label_SetModelServices, &
       userRoutine=SetModelServices, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
-  end subroutine
-
-  !-----------------------------------------------------------------------------
-
-  subroutine SetModelCount(driver, rc)
-    type(ESMF_GridComp)  :: driver
-    integer, intent(out) :: rc
-    
-    rc = ESMF_SUCCESS
-
-    ! Set model count for two models
-    call NUOPC_DriverSet(driver, modelCount=2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -116,8 +89,6 @@ module ESM
     integer, intent(out) :: rc
     
     ! local variables
-    integer                       :: localrc
-    type(driver_type_IS)          :: is
     type(ESMF_Grid)               :: grid
     type(ESMF_Field)              :: field
     type(ESMF_Time)               :: startTime
@@ -127,6 +98,8 @@ module ESM
     type(ESMF_Config)             :: config
     character(len=1)              :: ocn_select
     character(len=80)             :: logMsg
+    type(ESMF_GridComp)           :: child
+    type(ESMF_CplComp)            :: connector
 
     rc = ESMF_SUCCESS
 
@@ -153,87 +126,52 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
       
-    ! query Component for its internal State
-    nullify(is%wrap)
-    call ESMF_UserCompGetInternalState(driver, driver_label_IS, is, rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
     ! SetServices for ATM
 #ifndef ATM_FRONT_SO
-    call ESMF_GridCompSetServices(is%wrap%modelComp(1), atmSS, userRc=localrc, rc=rc)
+    call NUOPC_DriverAddComp(driver, "ATM", atmSS, comp=child, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
-      return  ! bail out
-    if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__, &
-      rcToReturn=rc)) &
       return  ! bail out
 #else
-    call NUOPC_CompSetServices(is%wrap%modelComp(1), sharedObj="./"//ATM_FRONT_SO, &
-      userRc=localrc, rc=rc)
+    call NUOPC_DriverAddComp(driver, "ATM", &
+      sharedObj="./"//ATM_FRONT_SO, comp=child, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
-      return  ! bail out
-    if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__, &
-      rcToReturn=rc)) &
       return  ! bail out
 #endif
-
-    call NUOPC_CompAttributeSet(is%wrap%modelComp(1), &
-      name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(child, name="Verbosity", value="high", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     ! SetServices for OCN
     if (.false.) then
 #ifdef FRONT_OCNA
     elseif (ocn_select=="A") then
-      call ESMF_GridCompSetServices(is%wrap%modelComp(2), ocnA_SS, userRc=localrc, rc=rc)
+      call NUOPC_DriverAddComp(driver, "OCN", ocnA_SS, comp=child, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
-        return  ! bail out
-      if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__, &
-        rcToReturn=rc)) &
         return  ! bail out
 #endif
 #ifdef FRONT_OCNB
     elseif (ocn_select=="B") then
-      call ESMF_GridCompSetServices(is%wrap%modelComp(2), ocnB_SS, userRc=localrc, rc=rc)
+      call NUOPC_DriverAddComp(driver, "OCN", ocnB_SS, comp=child, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
-        return  ! bail out
-      if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__, &
-        rcToReturn=rc)) &
         return  ! bail out
 #endif
 #ifdef FRONT_SO_OCNC
     elseif (ocn_select=="C") then
-      call NUOPC_CompSetServices(is%wrap%modelComp(2), sharedObj="./"//FRONT_SO_OCNC, &
-        userRc=localrc, rc=rc)
+      call NUOPC_DriverAddComp(driver, "OCN", &
+        sharedObj="./"//FRONT_SO_OCNC, comp=child, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
-        return  ! bail out
-      if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__, &
-        rcToReturn=rc)) &
         return  ! bail out
 #endif
     else
@@ -244,47 +182,34 @@ module ESM
         rcToReturn=rc)
       return  ! bail out
     endif
-    
-    call NUOPC_CompAttributeSet(is%wrap%modelComp(2), &
-      name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(child, name="Verbosity", value="high", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
       
     ! SetServices for atm2ocn
-    call ESMF_CplCompSetServices(is%wrap%connectorComp(1,2), cplSS, userRc=localrc, rc=rc)
+    call NUOPC_DriverAddComp(driver, srcCompLabel="ATM", dstCompLabel="OCN", &
+      compSetServicesRoutine=cplSS, comp=connector, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__, &
-      rcToReturn=rc)) &
-      return  ! bail out
-      
-    call NUOPC_CompAttributeSet(is%wrap%connectorComp(1,2), &
-      name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
       
     ! SetServices for ocn2atm
-    call ESMF_CplCompSetServices(is%wrap%connectorComp(2,1), cplSS, userRc=localrc, rc=rc)
+    call NUOPC_DriverAddComp(driver, srcCompLabel="OCN", dstCompLabel="ATM", &
+      compSetServicesRoutine=cplSS, comp=connector, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__, &
-      rcToReturn=rc)) &
-      return  ! bail out
-      
-    call NUOPC_CompAttributeSet(is%wrap%connectorComp(2,1), &
-      name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", &
+      rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

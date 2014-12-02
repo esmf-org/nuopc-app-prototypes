@@ -6,11 +6,10 @@ module ESM
 
   use ESMF
   use NUOPC
-  use NUOPC_DriverAtmOcn, &
+  use NUOPC_Driver, &
     driver_routine_SS             => routine_SetServices, &
-    driver_label_SetModelPetLists => label_SetModelPetLists, &
     driver_label_SetModelServices => label_SetModelServices
-    
+
   use ATM, only: atmSS => SetServices
   use OCN, only: ocnSS => SetServices
   
@@ -32,7 +31,7 @@ module ESM
     
     rc = ESMF_SUCCESS
     
-    ! NUOPC_DriverAtmOcn registers the generic methods
+    ! NUOPC_Driver registers the generic methods
     call NUOPC_CompDerive(driver, driver_routine_SS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -40,12 +39,6 @@ module ESM
       return  ! bail out
       
     ! attach specializing method(s)
-    call NUOPC_CompSpecialize(driver, specLabel=driver_label_SetModelPetLists, &
-      specRoutine=SetModelPetLists, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
     call NUOPC_CompSpecialize(driver, specLabel=driver_label_SetModelServices, &
       specRoutine=SetModelServices, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -65,52 +58,6 @@ module ESM
 
   !-----------------------------------------------------------------------------
 
-  subroutine SetModelPetLists(driver, rc)
-    type(ESMF_GridComp)  :: driver
-    integer, intent(out) :: rc
-    
-    ! local variables
-    integer                       :: localrc
-    integer                       :: petCount, i
-    integer, allocatable          :: petList(:)
-
-    rc = ESMF_SUCCESS
-
-    ! get the petCount
-    call ESMF_GridCompGet(driver, petCount=petCount, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
-    ! set petList for ATM -> first half of PETs
-    allocate(petList(petCount/2))
-    do i=1, petCount/2
-      petList(i) = i-1 ! PET labeling goes from 0 to petCount-1
-    enddo
-    call NUOPC_DriverSetModel(driver, compIndex=1, petList=petList, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    deallocate(petList)
-      
-    ! set petList for OCN -> second half of PETs
-    allocate(petList(petCount/2))
-    do i=1, petCount/2
-      petList(i) = petCount/2 + i-1 ! PET labeling goes from 0 to petCount-1
-    enddo
-    call NUOPC_DriverSetModel(driver, compIndex=2, petList=petList, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    deallocate(petList)
-
-  end subroutine
-
-  !-----------------------------------------------------------------------------
-
   subroutine SetModelServices(driver, rc)
     type(ESMF_GridComp)  :: driver
     integer, intent(out) :: rc
@@ -125,11 +72,25 @@ module ESM
     type(ESMF_Clock)              :: internalClock
     type(ESMF_GridComp)           :: child
     type(ESMF_CplComp)            :: connector
+    integer                       :: petCount, i
+    integer, allocatable          :: petList(:)
 
     rc = ESMF_SUCCESS
     
-    ! SetServices for ATM
-    call NUOPC_DriverAddComp(driver, "ATM", atmSS, comp=child, rc=rc)
+   ! get the petCount
+    call ESMF_GridCompGet(driver, petCount=petCount, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    ! SetServices for ATM with petList on first half of PETs
+    allocate(petList(petCount/2))
+    do i=1, petCount/2
+      petList(i) = i-1 ! PET labeling goes from 0 to petCount-1
+    enddo
+    call NUOPC_DriverAddComp(driver, "ATM", atmSS, &
+      petList=petList, comp=child, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -139,9 +100,15 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    deallocate(petList)
       
-    ! SetServices for OCN
-    call NUOPC_DriverAddComp(driver, "OCN", ocnSS, comp=child, rc=rc)
+    ! SetServices for OCN with petList on second half of PETs
+    allocate(petList(petCount/2))
+    do i=1, petCount/2
+      petList(i) = petCount/2 + i-1 ! PET labeling goes from 0 to petCount-1
+    enddo
+    call NUOPC_DriverAddComp(driver, "OCN", ocnSS, &
+      petList=petList, comp=child, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -151,6 +118,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    deallocate(petList)
       
     ! SetServices for atm2ocn
     call NUOPC_DriverAddComp(driver, srcCompLabel="ATM", dstCompLabel="OCN", &

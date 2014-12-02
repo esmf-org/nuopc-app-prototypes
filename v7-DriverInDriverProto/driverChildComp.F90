@@ -8,7 +8,6 @@ module driverChildComp
   use NUOPC
   use NUOPC_Driver, &
     driver_routine_SS             => routine_SetServices, &
-    driver_label_SetModelCount    => label_SetModelCount, &
     driver_label_SetModelServices => label_SetModelServices
   
   use ATM, only: atmSS => SetServices
@@ -39,12 +38,6 @@ module driverChildComp
       return  ! bail out
       
     ! attach specializing method(s)
-    call NUOPC_CompSpecialize(driver, specLabel=driver_label_SetModelCount, &
-      specRoutine=SetModelCount, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
     call NUOPC_CompSpecialize(driver, specLabel=driver_label_SetModelServices, &
       specRoutine=SetModelServices, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -74,23 +67,6 @@ module driverChildComp
     
   end subroutine
 
-  !-----------------------------------------------------------------------------
-
-  subroutine SetModelCount(driver, rc)
-    type(ESMF_GridComp)  :: driver
-    integer, intent(out) :: rc
-    
-    rc = ESMF_SUCCESS
-    
-    ! set the modelCount for 1 single model component
-    call NUOPC_DriverSet(driver, modelCount=1, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
-  end subroutine
-  
   !-----------------------------------------------------------------------------
 
   subroutine SetModelServices(driver, rc)

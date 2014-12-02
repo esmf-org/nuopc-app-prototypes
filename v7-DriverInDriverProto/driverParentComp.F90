@@ -8,10 +8,6 @@ module driverParentComp
   use NUOPC
   use NUOPC_Driver, &
     driver_routine_SS             => routine_SetServices, &
-    driver_type_IS                => type_InternalState, &
-    driver_label_IS               => label_InternalState, &
-    driver_label_SetModelCount    => label_SetModelCount, &
-    driver_label_SetModelPetLists => label_SetModelPetLists, &    
     driver_label_SetModelServices => label_SetModelServices
   
   use driverChildComp, only: driver_SS => SetServices
@@ -48,76 +44,12 @@ module driverParentComp
       return  ! bail out
       
     ! attach specializing method(s)
-    call NUOPC_CompSpecialize(driver, specLabel=driver_label_SetModelCount, &
-      specRoutine=SetModelCount, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_CompSpecialize(driver, specLabel=driver_label_SetModelPetLists, &
-      specRoutine=SetModelPetLists, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
     call NUOPC_CompSpecialize(driver, specLabel=driver_label_SetModelServices, &
       specRoutine=SetModelServices, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-
-  end subroutine
-
-  !-----------------------------------------------------------------------------
-
-  subroutine SetModelCount(driver, rc)
-    type(ESMF_GridComp)  :: driver
-    integer, intent(out) :: rc
-    
-    rc = ESMF_SUCCESS
-    
-    ! set the modelCount for 2 model components
-    call NUOPC_DriverSet(driver, modelCount=2, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
-  end subroutine
-  
-  !-----------------------------------------------------------------------------
-  
-  subroutine SetModelPetLists(driver, rc)
-    type(ESMF_GridComp)  :: driver
-    integer, intent(out) :: rc
-    
-    ! local variables
-    integer                       :: localrc
-    type(driver_type_IS)          :: is
-    integer                       :: petCount, i
-
-    rc = ESMF_SUCCESS
-
-    ! query Component for its internal State
-    nullify(is%wrap)
-    call ESMF_UserCompGetInternalState(driver, driver_label_IS, is, rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-      
-    ! get the petCount
-    call ESMF_GridCompGet(driver, petCount=petCount, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    ! set petList for the first child component
-    allocate(is%wrap%modelPetLists(1)%petList(petCount/2))
-    do i=1, petCount/2
-      is%wrap%modelPetLists(1)%petList(i) = i-1 ! PET labeling goes from 0 to petCount-1
-    enddo
 
   end subroutine
 
@@ -135,12 +67,25 @@ module driverParentComp
     type(ESMF_Time)               :: stopTime
     type(ESMF_TimeInterval)       :: timeStep
     type(ESMF_Clock)              :: internalClock
+    integer                       :: petCount, i
+    integer, allocatable          :: petList(:)
 
     rc = ESMF_SUCCESS
     
-    ! SetServices for the child driver, acting as ATM
-    call NUOPC_DriverAddComp(driver, "driverChild", driver_SS, comp=child, &
-      rc=rc)
+    ! get the petCount
+    call ESMF_GridCompGet(driver, petCount=petCount, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! SetServices for the child driver, acting as ATM, on custom petList
+    allocate(petList(petCount/2))
+    do i=1, petCount/2
+      petList(i) = i-1 ! PET labeling goes from 0 to petCount-1
+    enddo
+    call NUOPC_DriverAddComp(driver, "driverChild", driver_SS, &
+      petList=petList, comp=child, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -150,6 +95,7 @@ module driverParentComp
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    deallocate(petList)
       
     ! SetServices for the OCN
     call NUOPC_DriverAddComp(driver, "OCN", ocnSS, comp=child, rc=rc)

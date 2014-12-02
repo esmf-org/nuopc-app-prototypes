@@ -30,7 +30,7 @@ Code structure:
                   * Implicitly indicate "will provide" for Grids on all import
                     and export Fields.
   - esm.F90     - The Earth System Model (ESM) component, specializing generic
-                  NUOPC_DriverAtmOcn. Define partial petLists for ATM
+                  NUOPC_Driver. Define partial petLists for ATM
                   and OCN.
   - esmApp.F90  - ESM driver application.
   

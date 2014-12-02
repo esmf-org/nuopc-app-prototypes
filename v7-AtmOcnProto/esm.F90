@@ -31,7 +31,7 @@ module ESM
     
     rc = ESMF_SUCCESS
     
-    ! NUOPC_DriverAtmOcn registers the generic methods
+    ! NUOPC_Driver registers the generic methods
     call NUOPC_CompDerive(driver, driver_routine_SS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &

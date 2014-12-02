@@ -28,7 +28,7 @@ Code structure:
                   NUOPC_Mediator, implementing three Advance phases: 
                   slow, fast-before, fast-after.
   - esm.F90     - The Earth System Model (ESM) component, specializing generic
-                  NUOPC_DriverAtmOcnMed. Define partial petLists for
+                  NUOPC_Driver. Define partial petLists for
                   ATM, OCN, and MEDm; Set custom RunSequence with two 
                   timescales: slow interaction w/ OCN & fast interaction w/ ATM.
   - esmApp.F90  - ESM driver application.

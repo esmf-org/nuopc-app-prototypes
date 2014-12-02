@@ -27,6 +27,6 @@ Code structure:
   - atm.F90     - The ATM component, specializing generic NUOPC_Model.
   - ocn.F90     - The OCN component, specializing generic NUOPC_Model.
   - esm.F90     - The Earth System Model (ESM) component, specializing generic
-                  NUOPC_DriverAtmOcn. Sets an internal initialization method:
+                  NUOPC_Driver. Sets an internal initialization method:
                   ModifyCplLists() to modify the CplList of the Connectors.
   - esmApp.F90  - ESM driver application.
