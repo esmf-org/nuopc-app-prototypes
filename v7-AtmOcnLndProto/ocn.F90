@@ -7,7 +7,7 @@ module OCN
   use ESMF
   use NUOPC
   use NUOPC_Model, only: &
-    model_routine_SS      => routine_SetServices, &
+    model_routine_SS      => SetServices, &
     model_label_SetClock  => label_SetClock, &
     model_label_Advance   => label_Advance
   

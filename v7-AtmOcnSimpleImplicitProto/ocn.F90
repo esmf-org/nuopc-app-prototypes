@@ -7,9 +7,11 @@ module OCN
   use ESMF
   use NUOPC
   use NUOPC_Model, only: &
-    model_routine_SS      => SetServices, &
-    model_label_SetClock  => label_SetClock, &
-    model_label_Advance   => label_Advance
+    model_routine_SS            => SetServices, &
+    model_label_SetClock        => label_SetClock, &
+    model_label_DataInitialize  => label_DataInitialize, &
+    model_label_Advance         => label_Advance, &
+    model_label_CheckImport     => label_CheckImport
   
   implicit none
   
@@ -34,34 +36,81 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
     
+    ! overwrite the default IPDv00 with IPDv02
+    call ESMF_GridCompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
+      userRoutine=InitializeP0, phase=0, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! set entry point for methods that require specific implementation
     call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv00p1"/), userRoutine=InitializeP1, rc=rc)
+      phaseLabelList=(/"IPDv02p1"/), userRoutine=InitializeP1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv00p2"/), userRoutine=InitializeP2, rc=rc)
+      phaseLabelList=(/"IPDv02p2"/), userRoutine=InitializeP2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
     ! attach specializing method(s)
-    call NUOPC_CompSpecialize(model, specLabel=model_label_SetClock, &
-      specRoutine=SetClock, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
     call NUOPC_CompSpecialize(model, specLabel=model_label_Advance, &
       specRoutine=ModelAdvance, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    call NUOPC_CompSpecialize(model, specLabel=model_label_SetClock, &
+      specRoutine=SetClock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompSpecialize(model, specLabel=model_label_DataInitialize, &
+      specRoutine=DataInitialize, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    ! overwrite default CheckImport method to replace explicit with implement check
+    call ESMF_MethodRemove(model, label=model_label_CheckImport, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompSpecialize(model, specLabel=model_label_CheckImport, &
+      specRoutine=CheckImport, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+  end subroutine
+  
+  !-----------------------------------------------------------------------------
 
+  subroutine InitializeP0(model, importState, exportState, clock, rc)
+    type(ESMF_GridComp)   :: model
+    type(ESMF_State)      :: importState, exportState
+    type(ESMF_Clock)      :: clock
+    integer, intent(out)  :: rc
+    
+    rc = ESMF_SUCCESS
+
+    ! Switch to IPDv02 by filtering all other phaseMap entries
+    call NUOPC_CompFilterPhaseMap(model, ESMF_METHOD_INITIALIZE, &
+      acceptStringList=(/"IPDv02p"/), rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
   end subroutine
   
   !-----------------------------------------------------------------------------
@@ -74,11 +123,6 @@ module OCN
     
     rc = ESMF_SUCCESS
 
-    ! Disabling the following macro, e.g. renaming to WITHIMPORTFIELDS_disable,
-    ! will result in a model component that does not advertise any importable
-    ! Fields. Use this if you want to drive the model independently.
-#define WITHIMPORTFIELDS
-#ifdef WITHIMPORTFIELDS
     ! importable field: air_pressure_at_sea_level
     call NUOPC_StateAdvertiseField(importState, &
       StandardName="air_pressure_at_sea_level", rc=rc)
@@ -94,7 +138,6 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-#endif
 
     ! exportable field: sea_surface_temperature
     call NUOPC_StateAdvertiseField(exportState, &
@@ -131,7 +174,6 @@ module OCN
       return  ! bail out
     gridOut = gridIn ! for now out same as in
 
-#ifdef WITHIMPORTFIELDS
     ! importable field: air_pressure_at_sea_level
     field = ESMF_FieldCreate(name="pmsl", grid=gridIn, &
       typekind=ESMF_TYPEKIND_R8, rc=rc)
@@ -157,7 +199,6 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-#endif
 
     ! exportable field: sea_surface_temperature
     field = ESMF_FieldCreate(name="sst", grid=gridOut, &
@@ -207,6 +248,98 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    
+  end subroutine
+
+  !-----------------------------------------------------------------------------
+
+  subroutine DataInitialize(model, rc)
+    type(ESMF_GridComp)  :: model
+    integer, intent(out) :: rc
+    
+    ! local variables
+    type(ESMF_Clock)              :: clock
+    type(ESMF_State)              :: importState, exportState
+    type(ESMF_Time)               :: time
+    type(ESMF_Field)              :: field
+    logical                       :: neededCurrent
+
+    rc = ESMF_SUCCESS
+    
+    ! the OCN needs valid ATM export Fields to initialize its internal state
+
+    ! query the Component for its clock, importState and exportState
+    call ESMF_GridCompGet(model, clock=clock, importState=importState, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    ! get the current time out of the clock
+    call ESMF_ClockGet(clock, currTime=time, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    ! check that required Fields in the importState show correct timestamp
+    ! -> here only "pmsl" is needed
+    call ESMF_StateGet(importState, field=field, itemName="pmsl", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    neededCurrent = NUOPC_FieldIsAtTime(field, time, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+    if (.not.neededCurrent) then
+      call ESMF_LogWrite("OCN - Initialize-Data-Dependency NOT YET SATISFIED!!!", &
+        ESMF_LOGMSG_INFO, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    else
+      call ESMF_LogWrite("OCN - Initialize-Data-Dependency SATISFIED!!!", &
+        ESMF_LOGMSG_INFO, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      
+      ! -> set Updated Field Attribute to "true", indicating to the IPDv02p5
+      ! generic code to set the timestamp for this Field
+      call ESMF_StateGet(exportState, field=field, itemName="sst", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      call ESMF_AttributeSet(field, &
+        name="Updated", value="true", &
+        convention="NUOPC", purpose="General", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+        
+      ! Since setting the "sst" field was the only thing to be done on the OCN
+      ! side, the component needs to indicate that it is fully done with 
+      ! initializing its data:
+      ! -> set InitializeDataComplete Component Attribute to "true", indicating
+      ! to the driver that this Component has fully initialized its data
+      call ESMF_AttributeSet(model, &
+        name="InitializeDataComplete", value="true", &
+        convention="NUOPC", purpose="General", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+    endif
     
   end subroutine
 
@@ -262,5 +395,61 @@ module OCN
       return  ! bail out
 
   end subroutine
+
+  !-----------------------------------------------------------------------------
+  
+  subroutine CheckImport(model, rc)
+    type(ESMF_GridComp)   :: model
+    integer, intent(out)  :: rc
+    
+    ! This is the routine that enforces the implicit time dependence on the
+    ! import fields. This simply means that the timestamps on the Fields in the
+    ! importState are checked against the stopTime on the Component's 
+    ! internalClock. Consequenty, this model starts out with forcing fields
+    ! at the future stopTime, as it does its forward stepping from currentTime
+    ! to stopTime.
+    
+    ! local variables
+    type(ESMF_Clock)        :: clock
+    type(ESMF_Time)         :: time
+    type(ESMF_State)        :: importState
+    logical                 :: allCurrent
+
+    rc = ESMF_SUCCESS
+    
+    ! query the Component for its clock and importState
+    call ESMF_GridCompGet(model, clock=clock, importState=importState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! get the current time out of the clock
+    call ESMF_ClockGet(clock, stopTime=time, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    ! check that Fields in the importState show correct timestamp
+    allCurrent = NUOPC_StateIsAtTime(importState, time, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+    if (.not.allCurrent) then
+      !TODO: introduce and use INCOMPATIBILITY return codes!!!!
+      call ESMF_LogSetError(ESMF_RC_ARG_BAD, &
+        msg="NUOPC INCOMPATIBILITY DETECTED: Import Fields not at current time", &
+        line=__LINE__, &
+        file=__FILE__, &
+        rcToReturn=rc)
+      return  ! bail out
+    endif
+    
+  end subroutine
+
+  !-----------------------------------------------------------------------------
 
 end module

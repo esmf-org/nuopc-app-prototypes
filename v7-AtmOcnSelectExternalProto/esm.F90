@@ -15,7 +15,7 @@ module ESM
   use ESMF
   use NUOPC
   use NUOPC_Driver, &
-    driver_routine_SS             => routine_SetServices, &
+    driver_routine_SS             => SetServices, &
     driver_label_SetModelServices => label_SetModelServices
 
   !- select exactly one ATM component 
@@ -47,7 +47,7 @@ module ESM
   use FRONT_OCNB, only: ocnB_SS => SetServices
 #endif
   
-  use NUOPC_Connector, only: cplSS => routine_SetServices
+  use NUOPC_Connector, only: cplSS => SetServices
   
   implicit none
   

@@ -7,7 +7,7 @@ module ATM
   use ESMF
   use NUOPC
   use NUOPC_Model, only: &
-    model_routine_SS            => routine_SetServices, &
+    model_routine_SS            => SetServices, &
     model_label_DataInitialize  => label_DataInitialize, &
     model_label_Advance         => label_Advance
   

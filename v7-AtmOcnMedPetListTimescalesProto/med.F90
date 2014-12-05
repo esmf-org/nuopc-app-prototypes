@@ -9,7 +9,7 @@ module MED
   use ESMF
   use NUOPC
   use NUOPC_Mediator, only: &
-    mediator_routine_SS             => routine_SetServices, &
+    mediator_routine_SS             => SetServices, &
     mediator_routine_Run            => routine_Run, &
     mediator_label_Advance          => label_Advance, &
     mediator_label_CheckImport      => label_CheckImport, &

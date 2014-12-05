@@ -15,7 +15,7 @@ module CON
   use ESMF
   use NUOPC
   use NUOPC_Connector, only: &
-    con_routine_SS      => routine_SetServices, &
+    con_routine_SS      => SetServices, &
     con_type_IS         => type_InternalState, &
     con_label_IS        => label_InternalState, &
 #ifdef WITHSTATEUSE_on

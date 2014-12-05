@@ -1,3 +1,17 @@
+! The ATM Component can either use default IPDv00, if the following macro is
+! in the _off state, or use IPDv02 if in the _on state:
+#define WITHCOMPLEXDATADEPENDENCY_on
+! When the IPDv02 option is selected, the ATM introduces a more complex
+! initialize data dependency with the OCN Component. In both modes (_on or _off)
+! the OCN Component depends on ATM's "pmsl" Field
+! in order to initialize the OCN "sst" Field. On the other hand, the ATM
+! Component in IPDv00 mode does not depend on any OCN Fields - both ATM Fields
+! are initialized without requiring valid input data Fields from OCN. However,
+! when turning on Complex-Data-Dependency via the above macro, the ATM Component
+! starts depending on the "sst" OCN Field for the initialization of the "rsns"
+! ATM Field. The IPDv02 can handle these sort of complex data dependencies 
+! between Components.
+
 module ATM
 
   !-----------------------------------------------------------------------------
@@ -7,8 +21,11 @@ module ATM
   use ESMF
   use NUOPC
   use NUOPC_Model, only: &
-    model_routine_SS    => SetServices, &
-    model_label_Advance => label_Advance
+    model_routine_SS            => SetServices, &
+#ifdef WITHCOMPLEXDATADEPENDENCY_on
+    model_label_DataInitialize  => label_DataInitialize, &
+#endif
+    model_label_Advance         => label_Advance
   
   implicit none
   
@@ -33,15 +50,25 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
     
+#ifdef WITHCOMPLEXDATADEPENDENCY_on
+    ! overwrite the default IPDv00 with IPDv02
+    call ESMF_GridCompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
+      userRoutine=InitializeP0, phase=0, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
     ! set entry point for methods that require specific implementation
     call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv00p1"/), userRoutine=InitializeP1, rc=rc)
+      phaseLabelList=(/"IPDv02p1"/), userRoutine=InitializeP1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv00p2"/), userRoutine=InitializeP2, rc=rc)
+      phaseLabelList=(/"IPDv02p2"/), userRoutine=InitializeP2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -54,9 +81,39 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef WITHCOMPLEXDATADEPENDENCY_on
+    call NUOPC_CompSpecialize(model, specLabel=model_label_DataInitialize, &
+      specRoutine=DataInitialize, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
     
   end subroutine
   
+  !-----------------------------------------------------------------------------
+
+#ifdef WITHCOMPLEXDATADEPENDENCY_on
+  subroutine InitializeP0(model, importState, exportState, clock, rc)
+    type(ESMF_GridComp)   :: model
+    type(ESMF_State)      :: importState, exportState
+    type(ESMF_Clock)      :: clock
+    integer, intent(out)  :: rc
+    
+    rc = ESMF_SUCCESS
+
+    ! Switch to IPDv02 by filtering all other phaseMap entries
+    call NUOPC_CompFilterPhaseMap(model, ESMF_METHOD_INITIALIZE, &
+      acceptStringList=(/"IPDv02p"/), rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+  end subroutine
+#endif
+
   !-----------------------------------------------------------------------------
 
   subroutine InitializeP1(model, importState, exportState, clock, rc)
@@ -67,11 +124,6 @@ module ATM
     
     rc = ESMF_SUCCESS
     
-    ! Disabling the following macro, e.g. renaming to WITHIMPORTFIELDS_disable,
-    ! will result in a model component that does not advertise any importable
-    ! Fields. Use this if you want to drive the model independently.
-#define WITHIMPORTFIELDS
-#ifdef WITHIMPORTFIELDS
     ! importable field: sea_surface_temperature
     call NUOPC_StateAdvertiseField(importState, &
       StandardName="sea_surface_temperature", rc=rc)
@@ -79,7 +131,6 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-#endif
     
     ! exportable field: air_pressure_at_sea_level
     call NUOPC_StateAdvertiseField(exportState, &
@@ -123,7 +174,6 @@ module ATM
       return  ! bail out
     gridOut = gridIn ! for now out same as in
 
-#ifdef WITHIMPORTFIELDS
     ! importable field: sea_surface_temperature
     field = ESMF_FieldCreate(name="sst", grid=gridIn, &
       typekind=ESMF_TYPEKIND_R8, rc=rc)
@@ -136,7 +186,6 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-#endif
 
     ! exportable field: air_pressure_at_sea_level
     field = ESMF_FieldCreate(name="pmsl", grid=gridOut, &
@@ -166,6 +215,115 @@ module ATM
 
   end subroutine
   
+  !-----------------------------------------------------------------------------
+
+#ifdef WITHCOMPLEXDATADEPENDENCY_on
+  subroutine DataInitialize(model, rc)
+    type(ESMF_GridComp)  :: model
+    integer, intent(out) :: rc
+    
+    ! local variables
+    type(ESMF_Clock)              :: clock
+    type(ESMF_State)              :: importState, exportState
+    type(ESMF_Time)               :: time
+    type(ESMF_Field)              :: field
+    logical                       :: neededCurrent
+
+    rc = ESMF_SUCCESS
+    
+    ! the ATM needs valid OCN export Fields to initialize its internal state
+
+    ! query the Component for its clock, importState and exportState
+    call ESMF_GridCompGet(model, clock=clock, importState=importState, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    ! get the current time out of the clock
+    call ESMF_ClockGet(clock, currTime=time, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    ! check that required Fields in the importState show correct timestamp
+    ! -> here only "sst" is needed
+    call ESMF_StateGet(importState, field=field, itemName="sst", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    neededCurrent = NUOPC_FieldIsAtTime(field, time, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+    if (.not.neededCurrent) then
+      call ESMF_LogWrite("ATM - Initialize-Data-Dependency NOT YET SATISFIED!!!", &
+        ESMF_LOGMSG_INFO, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    else
+      call ESMF_LogWrite("ATM - Initialize-Data-Dependency SATISFIED!!!", &
+        ESMF_LOGMSG_INFO, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      ! -> set Updated Field Attribute to "true", indicating to the IPDv02p5
+      ! generic code to set the timestamp for this Field
+      call ESMF_StateGet(exportState, field=field, itemName="rsns", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      call ESMF_AttributeSet(field, &
+        name="Updated", value="true", &
+        convention="NUOPC", purpose="General", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    endif
+    
+    ! the "pmsl" Field can be initialized without depending on "sst"
+    ! -> set Updated Field Attribute to "true", indicating to the IPDv02p5
+    ! generic code to set the timestamp for this Field
+    call ESMF_StateGet(exportState, field=field, itemName="pmsl", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_AttributeSet(field, &
+      name="Updated", value="true", &
+      convention="NUOPC", purpose="General", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    ! check whether all Fields in the exportState are "Updated"
+    if (NUOPC_StateIsUpdated(exportState)) then
+      ! This simple ATM component is only concerned with marking Fields in
+      ! the exportState as "Updated". Once that is done, it is considered
+      ! fully data initialized:
+      call ESMF_AttributeSet(model, &
+        name="InitializeDataComplete", value="true", &
+        convention="NUOPC", purpose="General", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    endif
+    
+  end subroutine
+#endif
+
   !-----------------------------------------------------------------------------
 
   subroutine ModelAdvance(model, rc)

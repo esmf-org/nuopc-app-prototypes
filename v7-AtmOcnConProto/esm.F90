@@ -13,7 +13,7 @@ module ESM
   use ESMF
   use NUOPC
   use NUOPC_Driver, &
-    driver_routine_SS             => routine_SetServices, &
+    driver_routine_SS             => SetServices, &
     driver_label_SetModelServices => label_SetModelServices
   
   use ATM, only: atmSS => SetServices

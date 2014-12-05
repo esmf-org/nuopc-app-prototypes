@@ -7,13 +7,13 @@ module driverParentComp
   use ESMF
   use NUOPC
   use NUOPC_Driver, &
-    driver_routine_SS             => routine_SetServices, &
+    driver_routine_SS             => SetServices, &
     driver_label_SetModelServices => label_SetModelServices
   
   use driverChildComp, only: driver_SS => SetServices
   use OCN, only: ocnSS => SetServices
   
-  use NUOPC_Connector, only: cplSS => routine_SetServices
+  use NUOPC_Connector, only: cplSS => SetServices
 
   implicit none
   

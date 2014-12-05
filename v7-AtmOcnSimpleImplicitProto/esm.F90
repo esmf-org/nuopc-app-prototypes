@@ -4,6 +4,12 @@ module ESM
   ! Code that specializes generic ESM Component code.
   !-----------------------------------------------------------------------------
 
+  ! Enabling the followng macro, i.e. setting it to WITHPETLISTS_on, will 
+  ! activate sections of code that demonstrate how
+  ! the ATM and OCN components can run on exclusive sets of PETs. Turning this
+  ! on/off does not affect how the Connector component is specialized.
+#define WITHPETLISTS_on
+
   use ESMF
   use NUOPC
   use NUOPC_Driver, &
@@ -13,7 +19,6 @@ module ESM
   
   use ATM, only: atmSS => SetServices
   use OCN, only: ocnSS => SetServices
-  use LND, only: lndSS => SetServices
   
   use NUOPC_Connector, only: cplSS => SetServices
   
@@ -64,17 +69,38 @@ module ESM
     
     ! local variables
     integer                       :: localrc
-    type(ESMF_GridComp)           :: child
-    type(ESMF_CplComp)            :: connector
+    type(ESMF_Grid)               :: grid
+    type(ESMF_Field)              :: field
     type(ESMF_Time)               :: startTime
     type(ESMF_Time)               :: stopTime
     type(ESMF_TimeInterval)       :: timeStep
     type(ESMF_Clock)              :: internalClock
+    type(ESMF_GridComp)           :: child
+    type(ESMF_CplComp)            :: connector
+    integer                       :: petCount, i
+    integer, allocatable          :: petList(:)
 
     rc = ESMF_SUCCESS
     
-    ! SetServices for ATM
-    call NUOPC_DriverAddComp(driver, "ATM", atmSS, comp=child, rc=rc)
+   ! get the petCount
+    call ESMF_GridCompGet(driver, petCount=petCount, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    ! SetServices for ATM with petList on first half of PETs
+#ifdef WITHPETLISTS_on
+    allocate(petList(petCount/2))
+    do i=1, petCount/2
+      petList(i) = i-1 ! PET labeling goes from 0 to petCount-1
+    enddo
+#endif
+    call NUOPC_DriverAddComp(driver, "ATM", atmSS, &
+#ifdef WITHPETLISTS_on
+      petList=petList, &
+#endif
+      comp=child, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -84,9 +110,22 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef WITHPETLISTS_on
+    deallocate(petList)
+#endif
       
-    ! SetServices for OCN
-    call NUOPC_DriverAddComp(driver, "OCN", ocnSS, comp=child, rc=rc)
+    ! SetServices for OCN with petList on second half of PETs
+#ifdef WITHPETLISTS_on
+    allocate(petList(petCount/2))
+    do i=1, petCount/2
+      petList(i) = petCount/2 + i-1 ! PET labeling goes from 0 to petCount-1
+    enddo
+#endif
+    call NUOPC_DriverAddComp(driver, "OCN", ocnSS, &
+#ifdef WITHPETLISTS_on
+      petList=petList, &
+#endif
+      comp=child, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -96,26 +135,10 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef WITHPETLISTS_on
+    deallocate(petList)
+#endif
       
-    ! SetServices for LND
-    call NUOPC_DriverAddComp(driver, "LND", lndSS, comp=child, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_CompAttributeSet(child, name="Verbosity", value="high", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    ! Disabling the following macro, e.g. renaming to WITHCONNECTORS_disable,
-    ! will result in a driver that does not call connectors between the model
-    ! components. This mode can be used if all model components are driven 
-    ! as independent models. However, even for independent models the
-    ! connectors can be set here, but will turn into no-ops.
-#define WITHCONNECTORS
-#ifdef WITHCONNECTORS
     ! SetServices for atm2ocn
     call NUOPC_DriverAddComp(driver, srcCompLabel="ATM", dstCompLabel="OCN", &
       compSetServicesRoutine=cplSS, comp=connector, rc=rc)
@@ -129,7 +152,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+      
     ! SetServices for ocn2atm
     call NUOPC_DriverAddComp(driver, srcCompLabel="OCN", dstCompLabel="ATM", &
       compSetServicesRoutine=cplSS, comp=connector, rc=rc)
@@ -143,35 +166,6 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
-    ! SetServices for atm2lnd
-    call NUOPC_DriverAddComp(driver, srcCompLabel="ATM", dstCompLabel="LND", &
-      compSetServicesRoutine=cplSS, comp=connector, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", &
-      rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    ! SetServices for lnd2atm
-    call NUOPC_DriverAddComp(driver, srcCompLabel="LND", dstCompLabel="ATM", &
-      compSetServicesRoutine=cplSS, comp=connector, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", &
-      rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-#endif
       
     ! set the model clock
     call ESMF_TimeIntervalSet(timeStep, m=15, rc=rc) ! 15 minute steps
@@ -180,13 +174,15 @@ module ESM
       file=__FILE__)) &
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    call ESMF_TimeSet(startTime, yy=2010, mm=6, dd=1, h=0, m=0, rc=rc)
+    call ESMF_TimeSet(startTime, yy=2010, mm=6, dd=1, h=0, m=0, &
+      calkindflag=ESMF_CALKIND_GREGORIAN, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    call ESMF_TimeSet(stopTime, yy=2010, mm=6, dd=1, h=1, m=0, rc=rc)
+    call ESMF_TimeSet(stopTime, yy=2010, mm=6, dd=1, h=1, m=0, &
+      calkindflag=ESMF_CALKIND_GREGORIAN, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -215,17 +211,15 @@ module ESM
     
     ! local variables
     integer                       :: localrc
+    type(ESMF_Time)               :: startTime
+    type(ESMF_Time)               :: stopTime
+    type(ESMF_TimeInterval)       :: timeStep
+    type(ESMF_Clock)              :: internalClock
 
     rc = ESMF_SUCCESS
     
-    ! Replace the default RunSequence with a customized one
+    ! Replace the default RunSequence with a leap-frog scheme
     call NUOPC_DriverNewRunSequence(driver, slotCount=1, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=1, &
-      srcCompLabel="ATM", dstCompLabel="OCN", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -236,37 +230,23 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=1, &
-      srcCompLabel="ATM", dstCompLabel="LND", rc=rc)
+    call NUOPC_DriverAddRunElement(driver, slot=1, compLabel="ATM", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_DriverAddRunElement(driver, slot=1, &
-      srcCompLabel="LND", dstCompLabel="ATM", rc=rc)
+      srcCompLabel="ATM", dstCompLabel="OCN", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=1, &
-      compLabel="ATM", rc=rc)
+    call NUOPC_DriverAddRunElement(driver, slot=1, compLabel="OCN", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=1, &
-      compLabel="OCN", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=1, &
-      compLabel="LND", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-      
+    
   end subroutine
 
   !-----------------------------------------------------------------------------
