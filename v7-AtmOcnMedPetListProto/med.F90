@@ -20,27 +20,27 @@ module MED
   contains
   !-----------------------------------------------------------------------------
   
-  subroutine SetServices(gcomp, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine SetServices(mediator, rc)
+    type(ESMF_GridComp)  :: mediator
     integer, intent(out) :: rc
     
     rc = ESMF_SUCCESS
     
     ! the NUOPC model component will register the generic methods
-    call NUOPC_CompDerive(gcomp, model_routine_SS, rc=rc)
+    call NUOPC_CompDerive(mediator, model_routine_SS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
     ! set entry point for methods that require specific implementation
-    call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
+    call NUOPC_CompSetEntryPoint(mediator, ESMF_METHOD_INITIALIZE, &
       phaseLabelList=(/"IPDv00p1"/), userRoutine=InitializeP1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
+    call NUOPC_CompSetEntryPoint(mediator, ESMF_METHOD_INITIALIZE, &
       phaseLabelList=(/"IPDv00p2"/), userRoutine=InitializeP2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -48,7 +48,7 @@ module MED
       return  ! bail out
     
     ! attach specializing method(s)
-    call NUOPC_CompSpecialize(gcomp, specLabel=model_label_Advance, &
+    call NUOPC_CompSpecialize(mediator, specLabel=model_label_Advance, &
       specRoutine=MediatorAdvance, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -59,8 +59,8 @@ module MED
   
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP1(gcomp, importState, exportState, clock, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine InitializeP1(mediator, importState, exportState, clock, rc)
+    type(ESMF_GridComp)  :: mediator
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
@@ -119,8 +119,8 @@ module MED
   
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP2(gcomp, importState, exportState, clock, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine InitializeP2(mediator, importState, exportState, clock, rc)
+    type(ESMF_GridComp)  :: mediator
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
@@ -223,8 +223,8 @@ module MED
   
   !-----------------------------------------------------------------------------
 
-  subroutine MediatorAdvance(gcomp, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine MediatorAdvance(mediator, rc)
+    type(ESMF_GridComp)  :: mediator
     integer, intent(out) :: rc
     
     ! local variables
@@ -234,7 +234,7 @@ module MED
     rc = ESMF_SUCCESS
     
     ! query the Component for its clock, importState and exportState
-    call ESMF_GridCompGet(gcomp, clock=clock, importState=importState, &
+    call ESMF_GridCompGet(mediator, clock=clock, importState=importState, &
       exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
