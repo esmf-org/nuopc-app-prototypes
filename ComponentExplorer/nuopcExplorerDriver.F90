@@ -72,6 +72,7 @@ module nuopcExplorerDriver
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#if 0
     call NUOPC_CompSpecialize(driver, &
       specLabel=driver_label_ModifyInitializePhaseMap, &
       specRoutine=ModifyInitializePhaseMap, rc=rc)
@@ -79,6 +80,7 @@ module nuopcExplorerDriver
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 
   end subroutine
 
