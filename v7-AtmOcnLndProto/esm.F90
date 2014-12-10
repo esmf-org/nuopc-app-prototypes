@@ -267,7 +267,8 @@ module ESM
     character(len=20), allocatable  :: line(:)
     character(len=20)               :: tempString
     logical                         :: phaseFlag
-    integer                         :: level, slot, slotHWM, seconds
+    integer                         :: level, slot, slotHWM
+    real(ESMF_KIND_R8)              :: seconds
     integer, allocatable            :: slotStack(:)
     type(ESMF_TimeInterval)         :: timeStep
     type(ESMF_Clock)                :: internalClock, subClock
@@ -375,9 +376,9 @@ module ESM
             slotStack(level)=slot
             slot = slotHWM + 1
             slotHWM = slotHWM + 1
-            read(tempString(2:len(tempString)), '(i20)' ) seconds
+            read(tempString(2:len(tempString)), *) seconds
             print *, "found time step indicator: ", seconds
-            call ESMF_TimeIntervalSet(timeStep, s=seconds, rc=rc)
+            call ESMF_TimeIntervalSet(timeStep, s_r8=seconds, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
               line=__LINE__, &
               file=__FILE__)) &
