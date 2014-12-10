@@ -31,6 +31,8 @@ module ESM
     type(ESMF_GridComp)  :: driver
     integer, intent(out) :: rc
     
+    type(ESMF_Config)           :: config
+
     rc = ESMF_SUCCESS
     
     ! NUOPC_Driver registers the generic methods
@@ -54,6 +56,23 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     
+    ! create, open and set the config
+    config = ESMF_ConfigCreate(rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_ConfigLoadFile(config, "esmApp.runconfig", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_GridCompSet(driver, config=config, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
   end subroutine
 
   !-----------------------------------------------------------------------------
@@ -63,7 +82,6 @@ module ESM
     integer, intent(out) :: rc
     
     ! local variables
-    integer                       :: localrc
     type(ESMF_GridComp)           :: child
     type(ESMF_CplComp)            :: connector
     type(ESMF_Time)               :: startTime
@@ -174,30 +192,30 @@ module ESM
 #endif
       
     ! set the model clock
-    call ESMF_TimeIntervalSet(timeStep, m=15, rc=rc) ! 15 minute steps
+    call ESMF_TimeIntervalSet(timeStep, m=15, rc=rc) ! 15 minute default step
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
-      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      return  ! bail out
 
     call ESMF_TimeSet(startTime, yy=2010, mm=6, dd=1, h=0, m=0, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
-      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      return  ! bail out
 
     call ESMF_TimeSet(stopTime, yy=2010, mm=6, dd=1, h=1, m=0, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
-      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      return  ! bail out
 
     internalClock = ESMF_ClockCreate(name="Application Clock", &
       timeStep=timeStep, startTime=startTime, stopTime=stopTime, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
-      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      return  ! bail out
       
     call ESMF_GridCompSet(driver, clock=internalClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -214,58 +232,219 @@ module ESM
     integer, intent(out) :: rc
     
     ! local variables
-    integer                       :: localrc
+    character(ESMF_MAXSTR)          :: name
+    type(ESMF_Config)               :: config
+    integer                         :: lineCount, columnCount, i, slotCount
+    integer, allocatable            :: count(:)
+    character(len=20), allocatable  :: line(:)
+    character(len=20)               :: tempString
+    logical                         :: phaseFlag
+    integer                         :: level, slot, slotHWM, seconds
+    integer, allocatable            :: slotStack(:)
+    type(ESMF_TimeInterval)         :: timeStep
+    type(ESMF_Clock)                :: internalClock, subClock
 
     rc = ESMF_SUCCESS
     
+    ! query the Component for info
+    call ESMF_GridCompGet(driver, name=name, config=config, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+
+    ! test the config
+    call ESMF_ConfigFindLabel(config, label="runSeq::", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+
+    call ESMF_ConfigGetDim(config, lineCount, columnCount, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+    
+    print *, "lineCount, columnCount", lineCount, columnCount
+    
+    allocate(count(lineCount))
+    
+    call ESMF_ConfigFindLabel(config, label="runSeq::", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+
+    do i=1, lineCount
+      call ESMF_ConfigNextLine(config)
+      count(i) = ESMF_ConfigGetLen(config)
+    enddo
+    
+    call ESMF_ConfigFindLabel(config, label="runSeq::", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+
+    ! determine slotCount
+    slotCount = 0
+    do i=1, lineCount
+      call ESMF_ConfigNextLine(config)
+      allocate(line(count(i)))
+      call ESMF_ConfigGetAttribute(config, line, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+      
+      ! process the configuration line
+      if (size(line) == 1) then
+        if (index(trim(line(1)),"@") == 1) then
+          slotCount = slotCount + 1
+        endif
+      endif
+
+      ! clean-up
+      deallocate(line)
+    enddo
+    slotCount = (slotCount+1) / 2
+    
+    print *, "slotCount = ", slotCount
+    
+    allocate(slotStack(slotCount))
+
     ! Replace the default RunSequence with a customized one
-    call NUOPC_DriverNewRunSequence(driver, slotCount=1, rc=rc)
+    call NUOPC_DriverNewRunSequence(driver, slotCount=slotCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=1, &
-      srcCompLabel="ATM", dstCompLabel="OCN", rc=rc)
+
+    ! Get driver intenalClock
+    call ESMF_GridCompGet(driver, clock=internalClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=1, &
-      srcCompLabel="OCN", dstCompLabel="ATM", rc=rc)
+
+    call ESMF_ConfigFindLabel(config, label="runSeq::", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=1, &
-      srcCompLabel="ATM", dstCompLabel="LND", rc=rc)
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+
+    level = 0
+    slot = 0
+    slotHWM = 0
+    do i=1, lineCount
+      call ESMF_ConfigNextLine(config)
+      allocate(line(count(i)))
+      call ESMF_ConfigGetAttribute(config, line, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+      
+      ! process the configuration line
+      if ((size(line) < 1) .or. (size(line) > 4)) then
+        call ESMF_LogSetError(rcToCheck=ESMF_RC_ARG_BAD, &
+          msg="Configuration line incorrectly formatted.", &
+          line=__LINE__, &
+          file=__FILE__)
+        return  ! bail out
+      elseif (size(line) == 1) then
+        ! either a model or a time step indicator
+        if (index(trim(line(1)),"@") == 1) then
+          ! time step indicator
+          tempString=trim(line(1))
+          if (len(trim(tempString)) > 1) then
+            ! entering new time loop level
+            level = level + 1
+            slotStack(level)=slot
+            slot = slotHWM + 1
+            slotHWM = slotHWM + 1
+            read(tempString(2:len(tempString)), '(i20)' ) seconds
+            print *, "found time step indicator: ", seconds
+            call ESMF_TimeIntervalSet(timeStep, s=seconds, rc=rc)
+            if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+              line=__LINE__, &
+              file=__FILE__)) &
+              return  ! bail out
+            if (slot==1) then
+              ! Set the timeStep of the internalClock
+              call ESMF_ClockSet(internalClock, timeStep=timeStep, rc=rc)
+              if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                line=__LINE__, &
+                file=__FILE__)) &
+                return  ! bail out
+            else
+              ! Insert the link to a new slot, and set the timeStep
+              call NUOPC_DriverAddRunElement(driver, slot=slotStack(level), &
+                linkSlot=slot, rc=rc)
+              if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+              subClock = ESMF_ClockCreate(internalClock, rc=rc)  ! make a copy first
+              if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+              call ESMF_ClockSet(subClock, timeStep=timeStep, rc=rc)
+              if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+              call NUOPC_DriverSetRunSequence(driver, slot=slot, &
+                clock=subClock, rc=rc)
+              if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+            endif
+          else
+            ! exiting time loop level
+            slot = slotStack(level)
+            level = level - 1
+          endif
+        else
+          ! model
+          call NUOPC_DriverAddRunElement(driver, slot=slot, &
+            compLabel=trim(line(1)), rc=rc)
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+        endif
+      elseif (size(line) == 2) then
+        ! a model with a specific phase label
+        call NUOPC_DriverAddRunElement(driver, slot=slot, &
+          compLabel=trim(line(1)), phaseLabel=trim(line(2)), rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+      elseif (size(line) == 3) then
+        ! a connector if the second element is "->"
+        if (trim(line(2)) /= "->") then
+          call ESMF_LogSetError(rcToCheck=ESMF_RC_ARG_BAD, &
+            msg="Configuration line incorrectly formatted.", &
+            line=__LINE__, &
+            file=__FILE__)
+          return  ! bail out
+        endif
+        call NUOPC_DriverAddRunElement(driver, slot=slot, &
+          srcCompLabel=trim(line(1)), dstCompLabel=trim(line(3)), rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+      elseif (size(line) == 4) then
+        ! a connector with phase labnel if the second element is "->"
+        if (trim(line(2)) /= "->") then
+          call ESMF_LogSetError(rcToCheck=ESMF_RC_ARG_BAD, &
+            msg="Configuration line incorrectly formatted.", &
+            line=__LINE__, &
+            file=__FILE__)
+          return  ! bail out
+        endif
+        call NUOPC_DriverAddRunElement(driver, slot=slot, &
+          srcCompLabel=trim(line(1)), dstCompLabel=trim(line(3)), &
+          phaseLabel=trim(line(4)), rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+      endif    
+      
+      ! clean-up
+      deallocate(line)
+    enddo
+    
+    deallocate(count)
+    deallocate(slotStack)
+        
+    ! Diagnostic output
+    call NUOPC_DriverPrint(driver, orderflag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=1, &
-      srcCompLabel="LND", dstCompLabel="ATM", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=1, &
-      compLabel="ATM", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=1, &
-      compLabel="OCN", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=1, &
-      compLabel="LND", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
       
   end subroutine
 

@@ -1,0 +1,22 @@
+###############################################
+####  esmApp Run-Time Configuration File  #####
+###############################################
+
+# Encoding a simple run sequence
+runSeq::
+    @1800             # 30min time step 
+      ATM -> OCN
+      OCN -> ATM
+      ATM -> LND
+      LND -> ATM
+      ATM
+      @1800           # 30min sub cycle driving OCN to show it is parsed ok
+        OCN
+        @300          # 5min test cycle that does not do anything
+        @
+      @
+      @1800           # 30min sub cycle driving LND to show it is parsed ok
+        LND
+      @
+    @
+::
