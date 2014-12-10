@@ -233,6 +233,34 @@ module ESM
     
     ! local variables
     character(ESMF_MAXSTR)          :: name
+
+    rc = ESMF_SUCCESS
+    
+    ! query the Component for info
+    call ESMF_GridCompGet(driver, name=name, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+
+    ! access runSeq in the config
+    call SetRunSequenceFromConfig(driver, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+        
+    ! Diagnostic output
+    call NUOPC_DriverPrint(driver, orderflag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+      
+  end subroutine
+
+  !-----------------------------------------------------------------------------
+
+  subroutine SetRunSequenceFromConfig(driver, rc)
+    type(ESMF_GridComp)  :: driver
+    integer, intent(out) :: rc
+    
+    ! local variables
+    character(ESMF_MAXSTR)          :: name
     type(ESMF_Config)               :: config
     integer                         :: lineCount, columnCount, i, slotCount
     integer, allocatable            :: count(:)
@@ -251,11 +279,10 @@ module ESM
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
 
-    ! test the config
+    ! access runSeq in the config
     call ESMF_ConfigFindLabel(config, label="runSeq::", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
-
     call ESMF_ConfigGetDim(config, lineCount, columnCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
@@ -441,11 +468,6 @@ module ESM
     deallocate(count)
     deallocate(slotStack)
         
-    ! Diagnostic output
-    call NUOPC_DriverPrint(driver, orderflag=.true., rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
-      
   end subroutine
 
   !-----------------------------------------------------------------------------
