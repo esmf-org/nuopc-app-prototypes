@@ -6,24 +6,23 @@ module CON
   
   ! Enabling the followng macro, i.e. setting it to WITHSTATEUSE_on,
   ! will activate sections of code that demonstrate how
-  ! the "state" member inside the NUOPC_Connector internal State is used. The
-  ! example creates an FieldBundle that's a duplicate of is%wrap%dstFields,
-  ! and precomputes two RouteHandles. The first is a Regrid, while the second
-  ! is simply an identity operation using FieldRedist() to show the principle.
+  ! the "state" member inside the NUOPC_Connector is used. The
+  ! example creates an FieldBundle that's a duplicate of dstFields inside the
+  ! connector, and precomputes two RouteHandles. The first is a Regrid, while 
+  ! the second is simply an identity operation using FieldRedist() to show the
+  ! principle.
 #define WITHSTATEUSE_on
 
   use ESMF
   use NUOPC
   use NUOPC_Connector, only: &
     con_routine_SS      => SetServices, &
-    con_type_IS         => type_InternalState, &
-    con_label_IS        => label_InternalState, &
 #ifdef WITHSTATEUSE_on
     con_label_ExecuteRH => label_ExecuteRouteHandle, &
     con_label_ReleaseRH => label_ReleaseRouteHandle, &
 #endif
-    con_label_ComputeRH => label_ComputeRouteHandle
-    
+    con_label_ComputeRH => label_ComputeRouteHandle, &
+    NUOPC_ConnectorGet, NUOPC_ConnectorSet
   
   implicit none
   
@@ -80,30 +79,31 @@ module CON
     
     ! local variables
     integer                       :: localrc
-    type(con_type_IS)             :: is
+    type(ESMF_State)              :: state
+    type(ESMF_FieldBundle)        :: dstFields, srcFields
 #ifdef WITHSTATEUSE_on
-    type(ESMF_FieldBundle)        :: dstFields, interDstFields
+    type(ESMF_FieldBundle)        :: interDstFields
     type(ESMF_Field), allocatable :: fields(:)
     integer                       :: fieldCount, i
     type(ESMF_Grid)               :: Grid
     type(ESMF_TypeKind_Flag)      :: typekind    
     type(ESMF_Field)              :: field
     type(ESMF_RouteHandle)        :: rh1, rh2
+#else
+    type(ESMF_RouteHandle)        :: rh
 #endif
 
     rc = ESMF_SUCCESS
     
-    ! query Component for its internal State
-    nullify(is%wrap)
-    call ESMF_UserCompGetInternalState(connector, con_label_IS, is, rc)
+    call NUOPC_ConnectorGet(connector, srcFields=srcFields, &
+      dstFields=dstFields, state=state, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
 #ifdef WITHSTATEUSE_on
     ! replicate dstFields FieldBundle in order to provide intermediate Fields
-    dstFields = is%wrap%dstFields
     call ESMF_FieldBundleGet(dstFields, fieldCount=fieldCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -138,13 +138,13 @@ module CON
         return  ! bail out
     enddo
     ! add interDstFields to the state member
-    call ESMF_StateAdd(is%wrap%state, (/interDstFields/), rc=rc)
+    call ESMF_StateAdd(state, (/interDstFields/), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     ! compute the first RouteHandle for srcFields->interDstFields (Regrid)
-    call ESMF_FieldBundleRegridStore(is%wrap%srcFields, interDstFields, &
+    call ESMF_FieldBundleRegridStore(srcFields, interDstFields, &
       unmappedaction=ESMF_UNMAPPEDACTION_IGNORE, routehandle=rh1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -156,7 +156,7 @@ module CON
       file=__FILE__)) &
       return  ! bail out
     ! compute the second RouteHandle for interDstFields->dstFields (Redist)
-    call ESMF_FieldBundleRedistStore(interDstFields, is%wrap%dstFields, &
+    call ESMF_FieldBundleRedistStore(interDstFields, dstFields, &
       routehandle=rh2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -168,15 +168,20 @@ module CON
       file=__FILE__)) &
       return  ! bail out
     ! add rh1, rh2 to the state member
-    call ESMF_StateAdd(is%wrap%state, (/rh1, rh2/), rc=rc)
+    call ESMF_StateAdd(state, (/rh1, rh2/), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 #else      
     ! specialize with Redist, instead of the default Regrid
-    call ESMF_FieldBundleRedistStore(is%wrap%srcFields, is%wrap%dstFields, &
-      routehandle=is%wrap%rh, rc=rc)
+    call ESMF_FieldBundleRedistStore(srcFields, dstFields, &
+      routehandle=rh, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_ConnectorSet(connector, rh=rh, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -195,47 +200,47 @@ module CON
     
     ! local variables
     integer                       :: localrc
-    type(con_type_IS)             :: is
     type(ESMF_FieldBundle)        :: interDstFields
     type(ESMF_RouteHandle)        :: rh1, rh2
+    type(ESMF_State)              :: state
+    type(ESMF_FieldBundle)        :: dstFields, srcFields
 
     rc = ESMF_SUCCESS
     
-    ! query Component for its internal State
-    nullify(is%wrap)
-    call ESMF_UserCompGetInternalState(connector, con_label_IS, is, rc)
+    call NUOPC_ConnectorGet(connector, srcFields=srcFields, &
+      dstFields=dstFields, state=state, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
       
     ! retrieve interDstFields FieldBundle from state member
-    call ESMF_StateGet(is%wrap%state, "interDstFields", interDstFields, rc=rc)
+    call ESMF_StateGet(state, "interDstFields", interDstFields, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     ! retrieve rh1 from state member
-    call ESMF_StateGet(is%wrap%state, "src2interDstRH", rh1, rc=rc)
+    call ESMF_StateGet(state, "src2interDstRH", rh1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     ! retrieve rh2 from state member
-    call ESMF_StateGet(is%wrap%state, "interDst2dstRH", rh2, rc=rc)
+    call ESMF_StateGet(state, "interDst2dstRH", rh2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     ! apply rh1
-    call ESMF_FieldBundleRegrid(is%wrap%srcFields, interDstFields, &
+    call ESMF_FieldBundleRegrid(srcFields, interDstFields, &
       routehandle=rh1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     ! apply rh2
-    call ESMF_FieldBundleRedist(interDstFields, is%wrap%dstFields, &
+    call ESMF_FieldBundleRedist(interDstFields, dstFields, &
       routehandle=rh2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -251,34 +256,32 @@ module CON
     
     ! local variables
     integer                       :: localrc
-    type(con_type_IS)             :: is
+    type(ESMF_State)              :: state
     type(ESMF_FieldBundle)        :: interDstFields
     type(ESMF_RouteHandle)        :: rh1, rh2
 
     rc = ESMF_SUCCESS
     
-    ! query Component for its internal State
-    nullify(is%wrap)
-    call ESMF_UserCompGetInternalState(connector, con_label_IS, is, rc)
+    call NUOPC_ConnectorGet(connector, state=state, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
       
     ! retrieve interDstFields FieldBundle from state member
-    call ESMF_StateGet(is%wrap%state, "interDstFields", interDstFields, rc=rc)
+    call ESMF_StateGet(state, "interDstFields", interDstFields, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     ! retrieve rh1 from state member
-    call ESMF_StateGet(is%wrap%state, "src2interDstRH", rh1, rc=rc)
+    call ESMF_StateGet(state, "src2interDstRH", rh1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     ! retrieve rh2 from state member
-    call ESMF_StateGet(is%wrap%state, "interDst2dstRH", rh2, rc=rc)
+    call ESMF_StateGet(state, "interDst2dstRH", rh2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
