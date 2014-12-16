@@ -53,8 +53,18 @@ echo
 
 echo "-- Building the explorer application using the component in the .mk file ..."
 gmake COMP=$1 nuopcExplorerApp
-echo
 
+if [ $? -eq 0 ]
+then
+echo
+echo "SUCCESS: nuopcExplorerApp successfully built"
+else
+echo
+echo "FAILURE: nuopcExplorerApp failed to build"
+fi
+
+echo "...exiting nuopcExplorerScript."
+echo
 
 # - end output
 
