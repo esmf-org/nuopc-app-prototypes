@@ -194,15 +194,16 @@ module ESM
       
     do i=1, size(connectorList)
       ! query the cplList for connector i
-      call NUOPC_CompAttributeGet(connectorList(i), &
-        cplListSize=cplListSize, rc=rc)
+      call NUOPC_CompAttributeGet(connectorList(i), name="CplList", &
+        itemCount=cplListSize, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
       if (cplListSize>0) then
         allocate(cplList(cplListSize))
-        call NUOPC_CompAttributeGet(connectorList(i), cplList=cplList, rc=rc)
+        call NUOPC_CompAttributeGet(connectorList(i), name="CplList", &
+          valueList=cplList, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
           line=__LINE__, &
           file=__FILE__)) &
