@@ -166,7 +166,7 @@ module MED
     
     ! importable field: sea_surface_temperature
     call NUOPC_StateAdvertiseField(importState, &
-      StandardName="sea_surface_temperature", rc=rc)
+      StandardName="sea_surface_temperature", name="sst", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -174,7 +174,7 @@ module MED
       
     ! importable field: air_pressure_at_sea_level
     call NUOPC_StateAdvertiseField(importState, &
-      StandardName="air_pressure_at_sea_level", rc=rc)
+      StandardName="air_pressure_at_sea_level", name="pmsl", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -182,7 +182,7 @@ module MED
     
     ! importable field: surface_net_downward_shortwave_flux
     call NUOPC_StateAdvertiseField(importState, &
-      StandardName="surface_net_downward_shortwave_flux", rc=rc)
+      StandardName="surface_net_downward_shortwave_flux", name="rsns", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -190,7 +190,7 @@ module MED
 
     ! exportable field: sea_surface_temperature
     call NUOPC_StateAdvertiseField(exportState, &
-      StandardName="sea_surface_temperature", rc=rc)
+      StandardName="sea_surface_temperature", name="sst", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -198,7 +198,7 @@ module MED
 
     ! exportable field: air_pressure_at_sea_level
     call NUOPC_StateAdvertiseField(exportState, &
-      StandardName="air_pressure_at_sea_level", rc=rc)
+      StandardName="air_pressure_at_sea_level", name="pmsl", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -206,7 +206,7 @@ module MED
     
     ! exportable field: surface_net_downward_shortwave_flux
     call NUOPC_StateAdvertiseField(exportState, &
-      StandardName="surface_net_downward_shortwave_flux", rc=rc)
+      StandardName="surface_net_downward_shortwave_flux", name="rsns", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

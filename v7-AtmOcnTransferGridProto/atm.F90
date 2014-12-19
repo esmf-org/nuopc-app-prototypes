@@ -117,7 +117,7 @@ module ATM
     
     ! importable field: sea_surface_temperature
     call NUOPC_StateAdvertiseField(importState, &
-      StandardName="sea_surface_temperature", &
+      StandardName="sea_surface_temperature", name="sst", &
       TransferOfferGeomObject="can provide", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -126,7 +126,7 @@ module ATM
 
     ! exportable field: air_pressure_at_sea_level
     call NUOPC_StateAdvertiseField(exportState, &
-      StandardName="air_pressure_at_sea_level", &
+      StandardName="air_pressure_at_sea_level", name="pmsl", &
       TransferOfferGeomObject="cannot provide", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -135,7 +135,7 @@ module ATM
     
     ! exportable field: surface_net_downward_shortwave_flux
     call NUOPC_StateAdvertiseField(exportState, &
-      StandardName="surface_net_downward_shortwave_flux", rc=rc)
+      StandardName="surface_net_downward_shortwave_flux", name="rsns", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
