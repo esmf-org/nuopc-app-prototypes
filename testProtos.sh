@@ -107,6 +107,7 @@ echo
 
 TestProto v7-SingleModelProto mainApp
 TestProto v7-AtmOcnProto esmApp
+TestProto v7-AtmOcnFDSynoProto esmApp
 TestProto v7-AtmOcnPetListProto esmApp
 TestProto v7-AtmOcnCplListProto esmApp
 TestProto v7-AtmOcnConProto esmApp
