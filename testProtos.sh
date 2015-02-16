@@ -120,6 +120,7 @@ TestProto v7-AtmOcnSimpleImplicitProto esmApp
 TestProto v7-AtmOcnTransferGridProto esmApp
 TestProto v7-DriverInDriverProto mainApp
 TestProto v7-NamespaceProto mainApp
+TestProto v7-GenericMediatorProto app
 TestSelectProto v7-AtmOcnSelectExternalProto esmApp
 
 i=1
