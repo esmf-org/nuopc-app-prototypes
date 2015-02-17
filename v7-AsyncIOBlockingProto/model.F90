@@ -75,6 +75,7 @@ module ModelComp
       file=__FILE__)) &
       return  ! bail out
     
+#ifdef SECONDFIELD
     ! exportable field: surface_net_downward_shortwave_flux
     call NUOPC_StateAdvertiseField(exportState, &
       StandardName="surface_net_downward_shortwave_flux", name="rsns", rc=rc)
@@ -82,6 +83,7 @@ module ModelComp
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 
   end subroutine
   
@@ -145,6 +147,7 @@ module ModelComp
     enddo
     enddo
 
+#ifdef SECONDFIELD
     ! exportable field: surface_net_downward_shortwave_flux
     field = ESMF_FieldCreate(name="rsns", grid=gridOut, &
       typekind=ESMF_TYPEKIND_R8, rc=rc)
@@ -169,7 +172,7 @@ module ModelComp
       dataPtr(i,j) = sin(3.1416*lonPtr(i,j)/180.) * cos(2*3.1416*latPtr(i,j)/180.)
     enddo
     enddo
-
+#endif
 
   end subroutine
   
@@ -188,7 +191,7 @@ module ModelComp
     real(ESMF_KIND_R8), pointer :: dataPtr(:,:), lonPtr(:,:), latPtr(:,:)
     integer                     :: i,j, k
     integer, save               :: slice=1
-    integer, parameter          :: kWaste=10
+    integer, parameter          :: kWaste=40
 
     rc = ESMF_SUCCESS
     
@@ -201,7 +204,7 @@ module ModelComp
       return  ! bail out
 
     ! HERE THE MODEL ADVANCES: currTime -> currTime + timeStep
-    
+#ifdef PRINT    
     call NUOPC_ClockPrintCurrTime(clock, &
       "------>Advancing Model from: ", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -215,6 +218,7 @@ module ModelComp
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 
     ! update the "pmsl" field
     call ESMF_StateGet(exportState, itemName="pmsl", itemType=itemType, rc=rc)
@@ -261,6 +265,7 @@ module ModelComp
       
     endif
     
+#ifdef SECONDFIELD
     ! update the "rsns" field
     call ESMF_StateGet(exportState, itemName="rsns", itemType=itemType, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -303,9 +308,11 @@ module ModelComp
       enddo
       enddo
       enddo
-      
+     
     endif
     
+#endif
+
     ! advance the time slice counter
     slice = slice + 1
 

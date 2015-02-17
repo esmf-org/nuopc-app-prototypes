@@ -131,6 +131,7 @@ module IOComp
       file=__FILE__)) &
       return  ! bail out
     
+#ifdef SECONDFIELD
     ! importable field: surface_net_downward_shortwave_flux
     call NUOPC_StateAdvertiseField(importState, &
       StandardName="surface_net_downward_shortwave_flux", name="rsns", &
@@ -139,6 +140,7 @@ module IOComp
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 
   end subroutine
   
@@ -639,6 +641,7 @@ module IOComp
 
     ! HERE THE MODEL ADVANCES: currTime -> currTime + timeStep
     
+#ifdef PRINT    
     call NUOPC_ClockPrintCurrTime(clock, &
       "------>Advancing IO from: ", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -658,6 +661,7 @@ module IOComp
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 
     ! write out the Fields in the importState
     call NUOPC_StateWrite(importState, filePrefix="field_", &
