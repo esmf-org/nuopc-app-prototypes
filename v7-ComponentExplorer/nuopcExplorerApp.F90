@@ -73,103 +73,103 @@ program explorerApp
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
-    return  ! bail out
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
   call ESMF_ConfigLoadFile(config, "explorer.config", rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
-    return  ! bail out
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
   
   call ESMF_ConfigGetAttribute(config, start_year, label="start_year:", &
     rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
-    return  ! bail out
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
 
   call ESMF_ConfigGetAttribute(config, start_month, label="start_month:", &
     rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
-    return  ! bail out
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
 
   call ESMF_ConfigGetAttribute(config, start_day, label="start_day:", &
     rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
-    return  ! bail out
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
 
   call ESMF_ConfigGetAttribute(config, start_hour, label="start_hour:", &
     rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
-    return  ! bail out
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
 
   call ESMF_ConfigGetAttribute(config, start_minute, label="start_minute:", &
     rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
-    return  ! bail out
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
 
   call ESMF_ConfigGetAttribute(config, start_second, label="start_second:", &
     rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
-    return  ! bail out
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
 
   call ESMF_ConfigGetAttribute(config, stop_year, label="stop_year:", &
     rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
-    return  ! bail out
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
 
   call ESMF_ConfigGetAttribute(config, stop_month, label="stop_month:", &
     rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
-    return  ! bail out
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
 
   call ESMF_ConfigGetAttribute(config, stop_day, label="stop_day:", &
     rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
-    return  ! bail out
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
 
   call ESMF_ConfigGetAttribute(config, stop_hour, label="stop_hour:", &
     rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
-    return  ! bail out
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
 
   call ESMF_ConfigGetAttribute(config, stop_minute, label="stop_minute:", &
     rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
-    return  ! bail out
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
 
   call ESMF_ConfigGetAttribute(config, stop_second, label="stop_second:", &
     rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
-    return  ! bail out
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
 
   call ESMF_ConfigGetAttribute(config, step_seconds, label="step_seconds:", &
     rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
-    return  ! bail out
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
   
   call ESMF_TimeSet(startTime, &
     yy = start_year, &
@@ -233,7 +233,7 @@ program explorerApp
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
-    return  ! bail out
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
 #endif
 
   call ESMF_ConfigGetAttribute(config, enable_run_string, label="enable_run:", &
@@ -241,7 +241,7 @@ program explorerApp
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
-    return  ! bail out
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
   
   enable_run = .false.  ! initialize
   if (trim(enable_run_string)=="yes") then
@@ -252,7 +252,7 @@ program explorerApp
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
-    return  ! bail out
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
   
   ! Create the earth system Component
   driver = ESMF_GridCompCreate(name="explorerDriver", rc=rc)
