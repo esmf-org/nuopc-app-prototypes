@@ -274,7 +274,9 @@ module ATM
     integer, allocatable          :: minIndexPTile(:,:), maxIndexPTile(:,:)
     integer, allocatable          :: regDecompPTile(:,:)
     integer                       :: i, j
-    
+    integer                       :: connectionCount
+    type(ESMF_DistGridConnection), allocatable :: connectionList(:)
+
     rc = ESMF_SUCCESS
     
     !NOTE: The air_pressure_at_sea_level (pmsl) Field should now have the
@@ -318,7 +320,7 @@ module ATM
     
     ! get dimCount and tileCount
     call ESMF_DistGridGet(distgrid, dimCount=dimCount, tileCount=tileCount, &
-      rc=rc)
+      connectionCount=connectionCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -327,15 +329,24 @@ module ATM
     ! allocate minIndexPTile and maxIndexPTile accord. to dimCount and tileCount
     allocate(minIndexPTile(dimCount, tileCount), &
       maxIndexPTile(dimCount, tileCount))
+    allocate(connectionList(connectionCount))
     
     ! get minIndex and maxIndex arrays
     call ESMF_DistGridGet(distgrid, minIndexPTile=minIndexPTile, &
-      maxIndexPTile=maxIndexPTile, rc=rc)
+      maxIndexPTile=maxIndexPTile, connectionList=connectionList, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
+#if 0      
+    ! report on the connections    
+    print *, "connectionCount=", connectionCount
+    do i=1, connectionCount
+      call ESMF_DistGridConnectionPrint(connectionList(i))
+    enddo
+#endif
+
     ! construct a default regDecompPTile -> TODO: move this into ESMF as default
     call ESMF_GridCompGet(gcomp, petCount=petCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -355,11 +366,12 @@ module ATM
         regDecompPTile(j, i) = 1
       enddo
     enddo
-    
+
     ! create the new DistGrid with the same minIndexPTile and maxIndexPTile,
     ! but with a default regDecompPTile
     distgrid = ESMF_DistGridCreate(minIndexPTile=minIndexPTile, &
-      maxIndexPTile=maxIndexPTile, regDecompPTile=regDecompPTile, rc=rc)
+      maxIndexPTile=maxIndexPTile, regDecompPTile=regDecompPTile, &
+      connectionList=connectionList, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -407,7 +419,7 @@ module ATM
       return  ! bail out
     
     ! local clean-up
-    deallocate(minIndexPTile, maxIndexPTile, regDecompPTile)
+    deallocate(minIndexPTile, maxIndexPTile, regDecompPTile, connectionList)
     
   end subroutine
     
