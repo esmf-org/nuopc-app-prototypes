@@ -176,6 +176,7 @@ TestProto v7-AtmOcnTransferGridProto      esmApp
 TestProto v7-DriverInDriverProto mainApp
 TestProto v7-GenericMediatorProto app
 TestProto v7-NamespaceProto mainApp
+TestProto v7-NestingSingleProto mainApp
 TestProto v7-SingleModelProto mainApp
 
 i=1
