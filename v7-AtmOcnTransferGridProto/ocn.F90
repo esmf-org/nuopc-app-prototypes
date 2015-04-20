@@ -6,7 +6,7 @@ module OCN
 
   use ESMF
   use NUOPC
-  use NUOPC_Model, only: &
+  use NUOPC_Model, &
     model_routine_SS      => SetServices, &
     model_label_SetClock  => label_SetClock, &
     model_label_Advance   => label_Advance
@@ -21,14 +21,14 @@ module OCN
   contains
   !-----------------------------------------------------------------------------
   
-  subroutine SetServices(gcomp, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine SetServices(model, rc)
+    type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
     
     rc = ESMF_SUCCESS
     
     ! the NUOPC model component will register the generic methods
-    call NUOPC_CompDerive(gcomp, model_routine_SS, rc=rc)
+    call NUOPC_CompDerive(model, model_routine_SS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -36,13 +36,13 @@ module OCN
     
     ! set entry point for methods that require specific implementation
 
-    call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
+    call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
       phaseLabelList=(/"IPDv00p1"/), userRoutine=InitializeAdvertise, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
+    call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
       phaseLabelList=(/"IPDv00p2"/), userRoutine=InitializeRealize, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -50,13 +50,13 @@ module OCN
       return  ! bail out
     
     ! attach specializing method(s)
-    call NUOPC_CompSpecialize(gcomp, specLabel=model_label_SetClock, &
+    call NUOPC_CompSpecialize(model, specLabel=model_label_SetClock, &
       specRoutine=SetClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSpecialize(gcomp, specLabel=model_label_Advance, &
+    call NUOPC_CompSpecialize(model, specLabel=model_label_Advance, &
       specRoutine=ModelAdvance, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -67,8 +67,8 @@ module OCN
   
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeAdvertise(gcomp, importState, exportState, clock, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine InitializeAdvertise(model, importState, exportState, clock, rc)
+    type(ESMF_GridComp)  :: model
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
@@ -103,8 +103,8 @@ module OCN
   
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeRealize(gcomp, importState, exportState, clock, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine InitializeRealize(model, importState, exportState, clock, rc)
+    type(ESMF_GridComp)  :: model
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
@@ -191,8 +191,8 @@ module OCN
   
   !-----------------------------------------------------------------------------
 
-  subroutine SetClock(gcomp, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine SetClock(model, rc)
+    type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
     
     ! local variables
@@ -202,7 +202,7 @@ module OCN
     rc = ESMF_SUCCESS
     
     ! query the Component for its clock, importState and exportState
-    call ESMF_GridCompGet(gcomp, clock=clock, rc=rc)
+    call NUOPC_ModelGet(model, modelClock=clock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -217,7 +217,7 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSetClock(gcomp, clock, stabilityTimeStep, rc=rc)
+    call NUOPC_CompSetClock(model, clock, stabilityTimeStep, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -227,8 +227,8 @@ module OCN
 
   !-----------------------------------------------------------------------------
 
-  subroutine ModelAdvance(gcomp, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine ModelAdvance(model, rc)
+    type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
     
     ! local variables
@@ -240,7 +240,7 @@ module OCN
     rc = ESMF_SUCCESS
     
     ! query the Component for its clock, importState and exportState
-    call ESMF_GridCompGet(gcomp, clock=clock, importState=importState, &
+    call NUOPC_ModelGet(model, modelClock=clock, importState=importState, &
       exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &

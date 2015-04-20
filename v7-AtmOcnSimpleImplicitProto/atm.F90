@@ -20,7 +20,7 @@ module ATM
 
   use ESMF
   use NUOPC
-  use NUOPC_Model, only: &
+  use NUOPC_Model, &
     model_routine_SS            => SetServices, &
 #ifdef WITHCOMPLEXDATADEPENDENCY_on
     model_label_DataInitialize  => label_DataInitialize, &
@@ -234,7 +234,7 @@ module ATM
     ! the ATM needs valid OCN export Fields to initialize its internal state
 
     ! query the Component for its clock, importState and exportState
-    call ESMF_GridCompGet(model, clock=clock, importState=importState, &
+    call NUOPC_ModelGet(model, modelClock=clock, importState=importState, &
       exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -337,7 +337,7 @@ module ATM
     rc = ESMF_SUCCESS
     
     ! query the Component for its clock, importState and exportState
-    call ESMF_GridCompGet(model, clock=clock, importState=importState, &
+    call NUOPC_ModelGet(model, modelClock=clock, importState=importState, &
       exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &

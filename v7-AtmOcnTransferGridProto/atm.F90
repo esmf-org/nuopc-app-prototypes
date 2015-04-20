@@ -6,7 +6,7 @@ module ATM
 
   use ESMF
   use NUOPC
-  use NUOPC_Model, only: &
+  use NUOPC_Model, &
     model_routine_SS            => SetServices, &
     model_label_DataInitialize  => label_DataInitialize, &
     model_label_Advance         => label_Advance
@@ -21,14 +21,14 @@ module ATM
   contains
   !-----------------------------------------------------------------------------
   
-  subroutine SetServices(gcomp, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine SetServices(model, rc)
+    type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
     
     rc = ESMF_SUCCESS
     
     ! the NUOPC model component will register the generic methods
-    call NUOPC_CompDerive(gcomp, model_routine_SS, rc=rc)
+    call NUOPC_CompDerive(model, model_routine_SS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -37,32 +37,32 @@ module ATM
     ! set entry point for methods that require specific implementation
 
     ! -> switching to IPD versions is done in InitializeP0
-    call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
+    call ESMF_GridCompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
       userRoutine=InitializeP0, phase=0, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 
-    call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
+    call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
       phaseLabelList=(/"IPDv03p1"/), userRoutine=InitializeP1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
+    call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
       phaseLabelList=(/"IPDv03p3"/), userRoutine=InitializeP3, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
+    call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
       phaseLabelList=(/"IPDv03p4"/), userRoutine=InitializeP4, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
+    call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
       phaseLabelList=(/"IPDv03p5"/), userRoutine=InitializeP5, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -70,13 +70,13 @@ module ATM
       return  ! bail out
 
     ! attach specializing method(s)
-    call NUOPC_CompSpecialize(gcomp, specLabel=model_label_Advance, &
+    call NUOPC_CompSpecialize(model, specLabel=model_label_Advance, &
       specRoutine=ModelAdvance, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSpecialize(gcomp, specLabel=model_label_DataInitialize, &
+    call NUOPC_CompSpecialize(model, specLabel=model_label_DataInitialize, &
       specRoutine=DataInitialize, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -87,8 +87,8 @@ module ATM
   
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP0(gcomp, importState, exportState, clock, rc)
-    type(ESMF_GridComp)   :: gcomp
+  subroutine InitializeP0(model, importState, exportState, clock, rc)
+    type(ESMF_GridComp)   :: model
     type(ESMF_State)      :: importState, exportState
     type(ESMF_Clock)      :: clock
     integer, intent(out)  :: rc
@@ -96,7 +96,7 @@ module ATM
     rc = ESMF_SUCCESS
 
     ! Switch to IPDv03 by filtering all other phaseMap entries
-    call NUOPC_CompFilterPhaseMap(gcomp, ESMF_METHOD_INITIALIZE, &
+    call NUOPC_CompFilterPhaseMap(model, ESMF_METHOD_INITIALIZE, &
       acceptStringList=(/"IPDv03p"/), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -107,8 +107,8 @@ module ATM
   
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP1(gcomp, importState, exportState, clock, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine InitializeP1(model, importState, exportState, clock, rc)
+    type(ESMF_GridComp)  :: model
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
@@ -145,8 +145,8 @@ module ATM
   
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP3(gcomp, importState, exportState, clock, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine InitializeP3(model, importState, exportState, clock, rc)
+    type(ESMF_GridComp)  :: model
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
@@ -256,8 +256,8 @@ module ATM
   
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP4(gcomp, importState, exportState, clock, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine InitializeP4(model, importState, exportState, clock, rc)
+    type(ESMF_GridComp)  :: model
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
@@ -348,7 +348,7 @@ module ATM
 #endif
 
     ! construct a default regDecompPTile -> TODO: move this into ESMF as default
-    call ESMF_GridCompGet(gcomp, petCount=petCount, rc=rc)
+    call ESMF_GridCompGet(model, petCount=petCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -425,8 +425,8 @@ module ATM
     
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP5(gcomp, importState, exportState, clock, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine InitializeP5(model, importState, exportState, clock, rc)
+    type(ESMF_GridComp)  :: model
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
@@ -482,8 +482,8 @@ module ATM
     
   !-----------------------------------------------------------------------------
 
-  subroutine DataInitialize(gcomp, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine DataInitialize(model, rc)
+    type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
     
     ! local variables
@@ -501,7 +501,7 @@ module ATM
       (ESMF_IO_NETCDF_PRESENT .or. ESMF_IO_PNETCDF_PRESENT))
 
     ! query the Component for its exportState
-    call ESMF_GridCompGet(gcomp, exportState=exportState, rc=rc)
+    call NUOPC_ModelGet(model, exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -588,7 +588,7 @@ module ATM
       return  ! bail out
       
     ! indicate that data initialization is complete (breaking out of init-loop)
-    call NUOPC_CompAttributeSet(gcomp, &
+    call NUOPC_CompAttributeSet(model, &
       name="InitializeDataComplete", value="true", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -598,8 +598,8 @@ module ATM
   end subroutine
 
   !-----------------------------------------------------------------------------
-  subroutine ModelAdvance(gcomp, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine ModelAdvance(model, rc)
+    type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
     
     ! local variables
@@ -609,7 +609,7 @@ module ATM
     rc = ESMF_SUCCESS
     
     ! query the Component for its clock, importState and exportState
-    call ESMF_GridCompGet(gcomp, clock=clock, importState=importState, &
+    call NUOPC_ModelGet(model, modelClock=clock, importState=importState, &
       exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &

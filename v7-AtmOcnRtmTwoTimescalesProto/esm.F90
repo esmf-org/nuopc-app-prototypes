@@ -193,21 +193,21 @@ module ESM
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
-      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      return  ! bail out
 
     call ESMF_TimeSet(startTime, yy=2010, mm=6, dd=1, h=0, m=0, &
       calkindflag=ESMF_CALKIND_GREGORIAN, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
-      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      return  ! bail out
 
     call ESMF_TimeSet(stopTime, yy=2010, mm=6, dd=5, h=0, m=0, &
       calkindflag=ESMF_CALKIND_GREGORIAN, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
-      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      return  ! bail out
 
     internalClock = ESMF_ClockCreate(name="Application Clock", &
       timeStep=timeStep, &  ! 24h for slow coupling with RTM
@@ -215,7 +215,7 @@ module ESM
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
-      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      return  ! bail out
       
     call ESMF_GridCompSet(driver, clock=internalClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
