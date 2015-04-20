@@ -6,7 +6,7 @@ module atmA
 
   use ESMF
   use NUOPC
-  use NUOPC_Model, only: &
+  use NUOPC_Model, &
     model_routine_SS    => SetServices, &
     model_label_Advance => label_Advance
   
@@ -20,27 +20,27 @@ module atmA
   contains
   !-----------------------------------------------------------------------------
   
-  subroutine SetServices(gcomp, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine SetServices(model, rc)
+    type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
     
     rc = ESMF_SUCCESS
     
     ! the NUOPC model component will register the generic methods
-    call NUOPC_CompDerive(gcomp, model_routine_SS, rc=rc)
+    call NUOPC_CompDerive(model, model_routine_SS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
     ! set entry point for methods that require specific implementation
-    call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
+    call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
       phaseLabelList=(/"IPDv00p1"/), userRoutine=InitializeP1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
+    call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
       phaseLabelList=(/"IPDv00p2"/), userRoutine=InitializeP2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -48,7 +48,7 @@ module atmA
       return  ! bail out
     
     ! attach specializing method(s)
-    call NUOPC_CompSpecialize(gcomp, specLabel=model_label_Advance, &
+    call NUOPC_CompSpecialize(model, specLabel=model_label_Advance, &
       specRoutine=ModelAdvance, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -59,8 +59,8 @@ module atmA
   
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP1(gcomp, importState, exportState, clock, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine InitializeP1(model, importState, exportState, clock, rc)
+    type(ESMF_GridComp)  :: model
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
@@ -92,7 +92,7 @@ module atmA
       return  ! bail out
     
     ! set Component name so it becomes identifiable
-    call ESMF_GridCompSet(gcomp, name="atmA", rc=rc)
+    call ESMF_GridCompSet(model, name="atmA", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -102,8 +102,8 @@ module atmA
   
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP2(gcomp, importState, exportState, clock, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine InitializeP2(model, importState, exportState, clock, rc)
+    type(ESMF_GridComp)  :: model
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
@@ -167,8 +167,8 @@ module atmA
   
   !-----------------------------------------------------------------------------
 
-  subroutine ModelAdvance(gcomp, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine ModelAdvance(model, rc)
+    type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
     
     ! local variables
@@ -178,7 +178,7 @@ module atmA
     rc = ESMF_SUCCESS
     
     ! query the Component for its clock, importState and exportState
-    call ESMF_GridCompGet(gcomp, clock=clock, importState=importState, &
+    call NUOPC_ModelGet(model, modelClock=clock, importState=importState, &
       exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &

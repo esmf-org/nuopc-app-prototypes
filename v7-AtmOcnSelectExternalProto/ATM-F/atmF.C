@@ -11,7 +11,7 @@
 //-------------------------------------------------------------------------
 //-------------------------------------------------------------------------
 
-void Initialize(ESMC_GridComp gcomp, ESMC_State importState,
+void Initialize(ESMC_GridComp model, ESMC_State importState,
   ESMC_State exportState, ESMC_Clock *clock, int *rc){
 
   // initialize return code
@@ -19,7 +19,7 @@ void Initialize(ESMC_GridComp gcomp, ESMC_State importState,
 }
 
 
-void Run(ESMC_GridComp gcomp, ESMC_State importState,
+void Run(ESMC_GridComp model, ESMC_State importState,
   ESMC_State exportState, ESMC_Clock *clock, int *rc){
 
   // initialize return code
@@ -27,7 +27,7 @@ void Run(ESMC_GridComp gcomp, ESMC_State importState,
 }
 
 
-void Finalize(ESMC_GridComp gcomp, ESMC_State importState,
+void Finalize(ESMC_GridComp model, ESMC_State importState,
   ESMC_State exportState, ESMC_Clock *clock, int *rc){
 
   // initialize return code
@@ -41,7 +41,7 @@ extern "C" {
   // The SetServices entry point must ensure to have external C linkage,
   // that way it can be called from C or Fortran.
   
-  void FTN_X(setservices_atmf)(ESMC_GridComp gcomp, int *rc){
+  void FTN_X(setservices_atmf)(ESMC_GridComp model, int *rc){
     
     // initialize return code
     *rc = ESMF_SUCCESS;
@@ -49,11 +49,11 @@ extern "C" {
     // This is where the NUOPC_Model SetServices needs to be called once it is
     // available for C code.
     
-    *rc = ESMC_GridCompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE,Initialize,1);
+    *rc = ESMC_GridCompSetEntryPoint(model, ESMF_METHOD_INITIALIZE,Initialize,1);
     if (*rc!=ESMF_SUCCESS) return;  // bail out
-    *rc = ESMC_GridCompSetEntryPoint(gcomp, ESMF_METHOD_RUN, Run, 1);
+    *rc = ESMC_GridCompSetEntryPoint(model, ESMF_METHOD_RUN, Run, 1);
     if (*rc!=ESMF_SUCCESS) return;  // bail out
-    *rc = ESMC_GridCompSetEntryPoint(gcomp, ESMF_METHOD_FINALIZE, Finalize, 1);
+    *rc = ESMC_GridCompSetEntryPoint(model, ESMF_METHOD_FINALIZE, Finalize, 1);
     if (*rc!=ESMF_SUCCESS) return;  // bail out
   }
 } //extern "C"
