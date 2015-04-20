@@ -105,23 +105,27 @@ echo ---------------------------------------------------------------------------
 echo
 }
 
-TestProto v7-SingleModelProto mainApp
-TestProto v7-AtmOcnProto esmApp
-TestProto v7-AtmOcnFDSynoProto esmApp
-TestProto v7-AtmOcnPetListProto esmApp
-TestProto v7-AtmOcnCplListProto esmApp
-TestProto v7-AtmOcnConProto esmApp
-TestProto v7-AtmOcnLndProto esmApp
-TestProto v7-AtmOcnMedProto esmApp
-TestProto v7-AtmOcnMedPetListProto esmApp
-TestProto v7-AtmOcnMedPetListTimescalesProto esmApp
+TestProto v7-AsyncIOBlockingProto         asyncIOApp
+TestProto v7-AsyncIONonblockingProto      asyncIOApp
+TestProto v7-AtmOcnConProto               esmApp
+TestProto v7-AtmOcnCplListProto           esmApp
+TestProto v7-AtmOcnFDSynoProto            esmApp
+TestProto v7-AtmOcnLndProto               esmApp
+TestProto v7-AtmOcnMedPetListProto        esmApp
+TestProto v7-AtmOcnMedPetListTimescalesProto          esmApp
 TestProto v7-AtmOcnMedPetListTimescalesSplitFastProto esmApp
-TestProto v7-AtmOcnSimpleImplicitProto esmApp
-TestProto v7-AtmOcnTransferGridProto esmApp
+TestProto v7-AtmOcnMedProto               esmApp
+TestProto v7-AtmOcnPetListProto           esmApp
+TestProto v7-AtmOcnProto                  esmApp
+TestProto v7-AtmOcnRtmTwoTimescalesProto  esmApp
+TestSelectProto v7-AtmOcnSelectExternalProto          esmApp
+TestProto v7-AtmOcnSimpleImplicitProto    esmApp
+TestProto v7-AtmOcnTransferGridProto      esmApp
+#  v7-ComponentExplorer
 TestProto v7-DriverInDriverProto mainApp
-TestProto v7-NamespaceProto mainApp
 TestProto v7-GenericMediatorProto app
-TestSelectProto v7-AtmOcnSelectExternalProto esmApp
+TestProto v7-NamespaceProto mainApp
+TestProto v7-SingleModelProto mainApp
 
 i=1
 while [[ $i -le $count ]]
