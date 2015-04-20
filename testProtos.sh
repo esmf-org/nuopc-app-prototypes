@@ -110,6 +110,7 @@ TestProto v7-AsyncIONonblockingProto      asyncIOApp
 TestProto v7-AtmOcnConProto               esmApp
 TestProto v7-AtmOcnCplListProto           esmApp
 TestProto v7-AtmOcnFDSynoProto            esmApp
+TestProto v7-AtmOcnImplicitProto          esmApp
 TestProto v7-AtmOcnLndProto               esmApp
 TestProto v7-AtmOcnMedPetListProto        esmApp
 TestProto v7-AtmOcnMedPetListTimescalesProto          esmApp
