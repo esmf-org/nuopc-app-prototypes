@@ -43,6 +43,7 @@ module advectDiffComp
     type(ESMF_Grid)               :: gridTrans
     type(ESMF_Field)              :: fieldTrans
     type(ESMF_Alarm)              :: timeToTransfer
+    integer                       :: slice
   end type
 
   type InternalState
@@ -119,8 +120,8 @@ module advectDiffComp
     rc = ESMF_SUCCESS
     
     ! look at the "NestingGeneration" Attribute of this instance
-    call ESMF_AttributeGet(model, name="NestingGeneration", &
-      value=nestingGeneration, convention="NUOPC", purpose="General", rc=rc)
+    call NUOPC_CompAttributeGet(model, name="NestingGeneration", &
+      value=nestingGeneration, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -166,15 +167,15 @@ module advectDiffComp
     rc = ESMF_SUCCESS
 
     ! look at the "NestingGeneration" Attribute of this instance
-    call ESMF_AttributeGet(model, name="NestingGeneration", &
-      value=nestingGeneration, convention="NUOPC", purpose="General", rc=rc)
+    call NUOPC_CompAttributeGet(model, name="NestingGeneration", &
+      value=nestingGeneration, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     ! look at the "Nestling" Attribute of this instance
-    call ESMF_AttributeGet(model, name="Nestling", &
-      value=nestling, convention="NUOPC", purpose="General", rc=rc)
+    call NUOPC_CompAttributeGet(model, name="Nestling", &
+      value=nestling, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -366,23 +367,9 @@ module advectDiffComp
         return  ! bail out
     endif
     
-    call ESMF_GridCompGet(model, name=name, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return
-#if (ESMF_VERSION_MAJOR >= 6)
-    if (ESMF_IO_PIO_PRESENT .and. &
-      (ESMF_IO_NETCDF_PRESENT .or. ESMF_IO_PNETCDF_PRESENT)) then
-      call ESMF_FieldWrite(is%wrap%field, file=trim(name)//"_field.nc", &
-        status=ESMF_FILESTATUS_REPLACE, timeslice=1, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return
-    endif
-#endif
-
+    ! intialize instance private slice counter
+    is%wrap%slice = 1
+    
   end subroutine
 
   !-----------------------------------------------------------------------------
@@ -454,8 +441,8 @@ module advectDiffComp
     rc = ESMF_SUCCESS
     
     ! look at the "NestingGeneration" Attribute of this instance of the model component
-    call ESMF_AttributeGet(model, name="NestingGeneration", &
-      value=nestingGeneration, convention="NUOPC", purpose="General", rc=rc)
+    call NUOPC_CompAttributeGet(model, name="NestingGeneration", &
+      value=nestingGeneration, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -576,6 +563,7 @@ module advectDiffComp
     
     ! local variables
     type(InternalState)           :: is
+    type(ESMF_State)              :: exportState
     real(ESMF_KIND_R8), pointer   :: coordPtr(:)
     real(ESMF_KIND_R8), pointer   :: dataPtr(:,:)
     real(ESMF_KIND_R8), pointer   :: dataTransPtr(:,:)
@@ -593,6 +581,13 @@ module advectDiffComp
     ! on the internal model Clock. This may be (and likely is) a smaller
     ! timeStep than the parent's timeStep on the incoming Clock, which is
     ! equal to the coupling timeStep.
+    
+    ! access exportState
+    call NUOPC_ModelGet(model, exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
     
     ! -> get internal state from Component
     nullify(is%wrap)
@@ -715,23 +710,14 @@ module advectDiffComp
         line=__LINE__, &
         file=__FILE__)) &
         return
-#if (ESMF_VERSION_MAJOR >= 6)
-      if (ESMF_IO_PIO_PRESENT .and. &
-        (ESMF_IO_NETCDF_PRESENT .or. ESMF_IO_PNETCDF_PRESENT)) then
-        call ESMF_FieldWrite(is%wrap%field, file=trim(name)//"_field.nc", rc=rc)
-        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=__LINE__, &
-          file=__FILE__)) &
-          return
-      endif
-#else
-      call ESMF_FieldWrite(is%wrap%field, file=trim(name)//"_field.nc", &
-        timeslice=1, rc=rc)
+      call NUOPC_StateWrite(exportState, filePrefix=trim(name)//"_export_", &
+        timeslice=is%wrap%slice, overwrite=.true., relaxedFlag=.true., rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
-        return
-#endif
+        return  ! bail out
+      ! advance the time slice counter
+      is%wrap%slice = is%wrap%slice + 1
     endif
     
   end subroutine

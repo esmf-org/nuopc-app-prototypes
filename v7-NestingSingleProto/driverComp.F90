@@ -74,9 +74,10 @@ module driverComp
     type(ESMF_Time)               :: stopTime
     type(ESMF_TimeInterval)       :: timeStep
     type(ESMF_Clock)              :: internalClock
-    type(ESMF_GridComp)           :: child
     integer                       :: petCount, i
     integer, allocatable          :: petList(:)
+    type(ESMF_GridComp)           :: model
+    type(ESMF_CplComp)            :: connector
 
     rc = ESMF_SUCCESS
 
@@ -89,19 +90,25 @@ module driverComp
 
     ! SetServices for PARENT DOMAIN advectDiffComp
     call NUOPC_DriverAddComp(driver, "advectDiff_Parent", advectDiff_SS, &
-      comp=child, rc=rc)
+      comp=model, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! Set verbosity
+    call NUOPC_CompAttributeSet(model, name="Verbosity", value="high", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     ! Set parent domain's Nesting Attributes
-    call NUOPC_CompAttributeSet(child, name="NestingGeneration", &
+    call NUOPC_CompAttributeSet(model, name="NestingGeneration", &
       value=0, rc=rc)   ! Parent generation
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(child, name="Nestling", &
+    call NUOPC_CompAttributeSet(model, name="Nestling", &
       value=0, rc=rc)   ! First (and only) nestling in this generation
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -114,20 +121,26 @@ module driverComp
       petList(i) = i-1 ! PET labeling goes from 0 to petCount-1
     enddo
     call NUOPC_DriverAddComp(driver, "advectDiff_Nestling0", advectDiff_SS, &
-      petList=petList, comp=child, rc=rc)
+      petList=petList, comp=model, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     deallocate(petList)
+    ! Set verbosity
+    call NUOPC_CompAttributeSet(model, name="Verbosity", value="high", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
     ! Set nestling domain's Nesting Attributes
-    call NUOPC_CompAttributeSet(child, name="NestingGeneration", &
+    call NUOPC_CompAttributeSet(model, name="NestingGeneration", &
       value=1, rc=rc)   ! First child generation
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(child, name="Nestling", &
+    call NUOPC_CompAttributeSet(model, name="Nestling", &
       value=0, rc=rc)   ! First (and only) nestling in this generation
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -136,7 +149,15 @@ module driverComp
 
     ! SetServices for parent2nestling0
     call NUOPC_DriverAddComp(driver, srcCompLabel="advectDiff_Parent", &
-      dstCompLabel="advectDiff_Nestling0", compSetServicesRoutine=cplSS, rc=rc)
+      dstCompLabel="advectDiff_Nestling0", compSetServicesRoutine=cplSS, &
+      comp=connector, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! Set verbosity
+    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", &
+      rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
