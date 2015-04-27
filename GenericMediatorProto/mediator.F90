@@ -15,8 +15,8 @@ module Mediator
   
   private
   
-  type(ESMF_State)  :: frModelA, toModelA
-  type(ESMF_State)  :: frModelB, toModelB
+  type(ESMF_State), save  :: frModelA, toModelA
+  type(ESMF_State), save  :: frModelB, toModelB
   
   public SetServices
   
