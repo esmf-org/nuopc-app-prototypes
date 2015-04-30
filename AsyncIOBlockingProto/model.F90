@@ -96,16 +96,41 @@ module ModelComp
     integer, intent(out) :: rc
     
     ! local variables    
-    type(ESMF_Field)            :: field
-    type(ESMF_Grid)             :: gridOut
-    real(ESMF_KIND_R8), pointer :: dataPtr(:,:), lonPtr(:,:), latPtr(:,:)
-    integer                     :: i,j
-    
+    type(ESMF_Field)              :: field
+    type(ESMF_Grid)               :: gridOut
+    real(ESMF_KIND_R8), pointer   :: dataPtr(:,:), lonPtr(:,:), latPtr(:,:)
+    integer                       :: i,j
+    type(ESMF_Config)             :: config
+    integer                       :: gridDims(2)
+
     rc = ESMF_SUCCESS
     
+    ! create and open the config
+    config = ESMF_ConfigCreate(rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_ConfigLoadFile(config, "test.config", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! determine the grid size
+    call ESMF_ConfigGetAttribute(config, gridDims, &
+      label="grid_dims:", default=-1, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=__FILE__)) return  ! bail out
+    if (gridDims(1)==-1 .or. gridDims(2)==-1) then
+      ! default tiny grid
+      gridDims(1) = 10
+      gridDims(2) = 20
+    endif
+   
     ! create a Grid object for Fields
     gridOut = NUOPC_GridCreateSimpleSph(0._ESMF_KIND_R8, -60._ESMF_KIND_R8, &
-      360._ESMF_KIND_R8, 80._ESMF_KIND_R8, 200, 300, &
+      360._ESMF_KIND_R8, 80._ESMF_KIND_R8, gridDims(1), gridDims(2), &
       scheme=ESMF_REGRID_SCHEME_FULL3D, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &

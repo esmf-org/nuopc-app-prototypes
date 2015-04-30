@@ -93,7 +93,7 @@ module asyncIODriver
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call ESMF_ConfigLoadFile(config, "driver.config", rc=rc)
+    call ESMF_ConfigLoadFile(config, "test.config", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

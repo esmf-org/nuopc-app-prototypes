@@ -60,7 +60,6 @@ program asyncIOApp
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
     
   ! Call Run  for earth the system Component
   call ESMF_GridCompRun(driver, userRc=urc, rc=rc)
