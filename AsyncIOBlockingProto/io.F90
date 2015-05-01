@@ -628,6 +628,7 @@ module IOComp
     real(ESMF_KIND_R8), pointer :: dataPtr(:,:)
     integer                     :: i,j
     integer, save               :: slice=1
+    character(len=5)            :: sChar
 
     rc = ESMF_SUCCESS
     
@@ -664,12 +665,22 @@ module IOComp
 #endif
 
     ! write out the Fields in the importState
+#ifdef SINGLEFILE
     call NUOPC_StateWrite(importState, filePrefix="field_", &
       timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#else
+    write (sChar,"(i5.5)") slice
+    call NUOPC_StateWrite(importState, filePrefix="field_"//trim(sChar)//"_", &
+      overwrite=.true., relaxedFlag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
     ! advance the time slice counter
     slice = slice + 1
 
