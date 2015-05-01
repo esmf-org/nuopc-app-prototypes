@@ -131,17 +131,6 @@ module IOComp
       file=__FILE__)) &
       return  ! bail out
     
-#ifdef SECONDFIELD
-    ! importable field: surface_net_downward_shortwave_flux
-    call NUOPC_StateAdvertiseField(importState, &
-      StandardName="surface_net_downward_shortwave_flux", name="rsns", &
-      TransferOfferGeomObject="cannot provide", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-#endif
-
   end subroutine
   
   !-----------------------------------------------------------------------------
