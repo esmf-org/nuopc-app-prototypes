@@ -125,7 +125,12 @@ module IOComp
     ! importable field: air_pressure_at_sea_level
     call NUOPC_StateAdvertiseField(importState, &
       StandardName="air_pressure_at_sea_level", name="pmsl", &
+#define WITH_GRID_TRANSFERoff
+#ifdef WITH_GRID_TRANSFER
       TransferOfferGeomObject="cannot provide", rc=rc)
+#else
+      TransferOfferGeomObject="will provide", rc=rc)
+#endif
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -173,7 +178,10 @@ module IOComp
       character(len=20)                       :: transferAction
       character(len=80), allocatable          :: itemNameList(:)
       type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
-    
+      type(ESMF_Config)                       :: config
+      integer                                 :: gridDims(2)
+      type(ESMF_Grid)                         :: gridIn
+      
       if (present(rc)) rc = ESMF_SUCCESS
     
       call ESMF_StateGet(state, name=stateName, nestedFlag=.true., &
@@ -223,13 +231,52 @@ module IOComp
               return  ! bail out
             if (trim(transferAction)=="provide") then
               ! the Connector instructed the gcomp to provide geom object
-              call ESMF_LogSetError(ESMF_RC_NOT_VALID, &
-                msg="Cannot fulfill request to provide geom object for "// &
-                trim(itemNameList(item))//" in State "//trim(stateName), &
+              
+              ! create and open the config
+              config = ESMF_ConfigCreate(rc=rc)
+              if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                 line=__LINE__, &
-                file=__FILE__, &
-                rcToReturn=rc)
-              return ! bail out
+                file=__FILE__)) &
+                return  ! bail out
+              call ESMF_ConfigLoadFile(config, "test.config", rc=rc)
+              if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                line=__LINE__, &
+                file=__FILE__)) &
+                return  ! bail out
+
+              ! determine the grid size
+              call ESMF_ConfigGetAttribute(config, gridDims, &
+                label="grid_dims:", default=-1, rc=rc)
+              if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                line=__LINE__, file=__FILE__)) return  ! bail out
+              if (gridDims(1)==-1 .or. gridDims(2)==-1) then
+                ! default tiny grid
+                gridDims(1) = 10
+                gridDims(2) = 20
+              endif
+             
+              ! create a Grid object for Fields
+              gridIn = NUOPC_GridCreateSimpleSph(0._ESMF_KIND_R8, -60._ESMF_KIND_R8, &
+                360._ESMF_KIND_R8, 80._ESMF_KIND_R8, gridDims(1), gridDims(2), &
+                scheme=ESMF_REGRID_SCHEME_FULL3D, rc=rc)
+              if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                line=__LINE__, &
+                file=__FILE__)) &
+                return  ! bail out
+
+              ! importable field: air_pressure_at_sea_level
+              field = ESMF_FieldCreate(name="pmsl", grid=gridIn, &
+                typekind=ESMF_TYPEKIND_R8, rc=rc)
+              if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                line=__LINE__, &
+                file=__FILE__)) &
+                return  ! bail out
+              call NUOPC_StateRealizeField(importState, field=field, rc=rc)
+              if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                line=__LINE__, &
+                file=__FILE__)) &
+                return  ! bail out
+                
             endif
           endif
         endif
