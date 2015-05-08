@@ -22,6 +22,8 @@ module driver
   real(ESMF_KIND_R8), parameter :: stepTime  = 30.D0  ! step time [s]
                                                       ! should be parent step
 
+  type(ESMF_GridComp)           :: model10
+
   public SetServices
   public stepCount
   
@@ -55,6 +57,14 @@ module driver
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    
+    ! pure ESMF call of model
+    call ESMF_GridCompSetEntryPoint(driver, ESMF_METHOD_RUN, pureESMFrun, &
+      phase=10, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 
   end subroutine
 
@@ -67,7 +77,6 @@ module driver
     ! local variables
     integer                       :: localrc
     type(ESMF_GridComp)           :: child
-    type(ESMF_CplComp)            :: connector
     type(ESMF_Time)               :: startTime
     type(ESMF_Time)               :: stopTime
     type(ESMF_TimeInterval)       :: timeStep
@@ -118,7 +127,10 @@ module driver
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+    
+    ! -- for explicit ESMF Run
+    model10 = child
+        
   end subroutine
 
   !-----------------------------------------------------------------------------
@@ -147,6 +159,79 @@ module driver
       
   end subroutine
 
+  !-----------------------------------------------------------------------------
+
+  subroutine pureESMFrun(driver, importState, exportState, clock, rc)
+    type(ESMF_GridComp)  :: driver
+    type(ESMF_State)     :: importState, exportState
+    type(ESMF_Clock)     :: clock
+    integer, intent(out) :: rc
+    
+    type(ESMF_Time)               :: startTime
+    type(ESMF_Time)               :: stopTime
+    type(ESMF_TimeInterval)       :: timeStep
+    type(ESMF_Clock)              :: internalClock, fakeClock
+    integer                       :: userrc
+
+    rc = ESMF_SUCCESS
+    
+    !print *, "In pureESMFrun()"
+
+    ! set the driver clock
+    call ESMF_TimeSet(startTime, s = 0, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call ESMF_TimeSet(stopTime, s_r8 = stepTime * stepCount, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call ESMF_TimeIntervalSet(timeStep, s_r8 = stepTime, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    internalClock = ESMF_ClockCreate(name="Driver Clock", &
+      timeStep=timeStep, startTime=startTime, stopTime=stopTime, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    do while (.not. ESMF_ClockIsStopTime(internalClock, rc=rc))
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+        
+#if 1
+      call ESMF_GridCompRun(model10, phase=999, userrc=userrc, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      if (ESMF_LogFoundError(rcToCheck=userrc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+#endif
+
+      call ESMF_ClockAdvance(internalClock, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+    enddo
+
+
+  end subroutine
+  
   !-----------------------------------------------------------------------------
 
 end module

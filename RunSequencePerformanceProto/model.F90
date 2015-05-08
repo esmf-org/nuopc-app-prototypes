@@ -73,6 +73,14 @@ module MODEL
       file=__FILE__)) &
       return  ! bail out
     
+    ! pure ESMF call of model
+    call ESMF_GridCompSetEntryPoint(model, ESMF_METHOD_RUN, myRunRoutine, &
+      phase=999, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
   end subroutine
   
   !-----------------------------------------------------------------------------
