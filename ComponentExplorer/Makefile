@@ -88,3 +88,5 @@ output:
 	@echo "ESMF_DEP_CMPL_OBJS =" $(ESMF_DEP_CMPL_OBJS)
 	@echo "ESMF_DEP_LINK_OBJS =" $(ESMF_DEP_LINK_OBJS)
 
+edit:
+	nedit nuopcExplorerScript nuopcExplorerApp.F90  nuopcExplorerDriver.F90 explorer.config &
