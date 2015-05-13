@@ -287,7 +287,7 @@ program explorerApp
   
   ! Set Attribute on Driver
   call ESMF_AttributeSet(driver, name="filter_initialize_phases", &
-    value=filter_initialize_phases, rc=rc)
+    value=filter_initialize_phases, convention="gjt", rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
@@ -316,7 +316,7 @@ program explorerApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-  ! Call Druver Initialize, with Clock to set Driver internal Clock
+  ! Call Driver Initialize, with Clock to set Driver internal Clock
   call ESMF_GridCompInitialize(driver, clock=clock, userRc=urc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
