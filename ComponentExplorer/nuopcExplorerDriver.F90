@@ -39,6 +39,8 @@ module nuopcExplorerDriver
     type(ESMF_GridComp)  :: driver
     integer, intent(out) :: rc
     
+    character(len=80)       :: filter_initialize_phases
+
     rc = ESMF_SUCCESS
     
     ! NUOPC_Driver registers the generic methods
@@ -64,17 +66,23 @@ module nuopcExplorerDriver
       file=__FILE__)) &
       return  ! bail out
       
-!TODO: make the following macromized on/off a runtime-configuration
-#if 1
-    call NUOPC_CompSpecialize(driver, &
-      specLabel=driver_label_ModifyInitializePhaseMap, &
-      specRoutine=ModifyInitializePhaseMap, rc=rc)
+    ! see if initialize phases need to be filtered
+    call ESMF_AttributeGet(driver, name="filter_initialize_phases", &
+      value=filter_initialize_phases, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
-      return  ! bail out
-#endif
-
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    if (trim(filter_initialize_phases)=="yes") then
+      call NUOPC_CompSpecialize(driver, &
+        specLabel=driver_label_ModifyInitializePhaseMap, &
+        specRoutine=ModifyInitializePhaseMap, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    endif
+    
   end subroutine
 
   !-----------------------------------------------------------------------------

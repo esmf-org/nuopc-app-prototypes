@@ -34,8 +34,13 @@ program explorerApp
   type(ESMF_TimeInterval) :: timeStep
   type(ESMF_Clock)        :: clock
   
+  character(len=80)       :: filter_initialize_phases
+
   character(len=80)       :: enable_run_string
   logical                 :: enable_run
+  
+  character(len=80)       :: enable_finalize_string
+  logical                 :: enable_finalize
   
   ! Initialize ESMF
   call ESMF_Initialize(defaultCalKind=ESMF_CALKIND_GREGORIAN, &
@@ -236,8 +241,15 @@ program explorerApp
     call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
 #endif
 
-  call ESMF_ConfigGetAttribute(config, enable_run_string, label="enable_run:", &
-    rc=rc)
+  call ESMF_ConfigGetAttribute(config, filter_initialize_phases, &
+    label="filter_initialize_phases:", rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
+  
+  call ESMF_ConfigGetAttribute(config, enable_run_string, &
+    label="enable_run:", rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
@@ -248,19 +260,39 @@ program explorerApp
     enable_run = .true.
   endif
   
+  call ESMF_ConfigGetAttribute(config, enable_finalize_string, &
+    label="enable_finalize:", rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
+  
+  enable_finalize = .false.  ! initialize
+  if (trim(enable_finalize_string)=="yes") then
+    enable_finalize = .true.
+  endif
+  
   call ESMF_ConfigDestroy(config, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
   
-  ! Create the earth system Component
+  ! Create the Driver Component
   driver = ESMF_GridCompCreate(name="explorerDriver", rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    
+  
+  ! Set Attribute on Driver
+  call ESMF_AttributeSet(driver, name="filter_initialize_phases", &
+    value=filter_initialize_phases, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  
   ! SetServices
   call ESMF_GridCompSetServices(driver, explorerDriverSS, userRc=urc, &
     rc=rc)
@@ -272,7 +304,7 @@ program explorerApp
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
+    
   ! Call 0 phase Initialize
   call ESMF_GridCompInitialize(driver, phase=0, userRc=urc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -284,7 +316,7 @@ program explorerApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-  ! Call Initialize, with Clock to set Driver internal Clock
+  ! Call Druver Initialize, with Clock to set Driver internal Clock
   call ESMF_GridCompInitialize(driver, clock=clock, userRc=urc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
@@ -303,7 +335,8 @@ program explorerApp
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
     
   if (enable_run) then
-    ! Call Run, with Clock that stops from start to stop in one large timeStep
+    ! Call Driver Run, 
+    ! with Clock that stops from start to stop in one large timeStep
     call ESMF_GridCompRun(driver, clock=clock, userRc=urc, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -315,18 +348,20 @@ program explorerApp
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
   endif
   
-  ! Call Finalize
-  call ESMF_GridCompFinalize(driver, userRc=urc, rc=rc)
-  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-    line=__LINE__, &
-    file=__FILE__)) &
-    call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
-    line=__LINE__, &
-    file=__FILE__)) &
-    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  if (enable_finalize) then
+    ! Call Driver Finalize
+    call ESMF_GridCompFinalize(driver, userRc=urc, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  endif
 
-  ! Destroy the earth system Component
+  ! Destroy the Driver Component
   call ESMF_GridCompDestroy(driver, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
