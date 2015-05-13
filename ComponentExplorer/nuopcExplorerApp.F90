@@ -286,8 +286,14 @@ program explorerApp
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
   
   ! Set Attribute on Driver
+  call ESMF_AttributeAdd(driver, convention="gjt", purpose="gjt", &
+    attrList=(/"filter_initialize_phases"/), rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
   call ESMF_AttributeSet(driver, name="filter_initialize_phases", &
-    value=filter_initialize_phases, convention="gjt", rc=rc)
+    value=filter_initialize_phases, convention="gjt", purpose="gjt", rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &

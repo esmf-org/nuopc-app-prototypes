@@ -68,7 +68,7 @@ module nuopcExplorerDriver
       
     ! see if initialize phases need to be filtered
     call ESMF_AttributeGet(driver, name="filter_initialize_phases", &
-      value=filter_initialize_phases, convention="gjt", rc=rc)
+      value=filter_initialize_phases, convention="gjt", purpose="gjt", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
