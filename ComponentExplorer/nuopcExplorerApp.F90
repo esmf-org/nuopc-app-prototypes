@@ -284,7 +284,7 @@ program explorerApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-  ! Call Initialize
+  ! Call Initialize, with Clock to set Driver internal Clock
   call ESMF_GridCompInitialize(driver, clock=clock, userRc=urc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
@@ -295,8 +295,15 @@ program explorerApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
     
+  ! Change timeStep in Clock to be only a single timeStep from start to stop
+  call ESMF_ClockSet(clock, timeStep=stopTime-startTime, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    
   if (enable_run) then
-    ! Call Run  for earth the system Component
+    ! Call Run, with Clock that stops from start to stop in one large timeStep
     call ESMF_GridCompRun(driver, clock=clock, userRc=urc, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
