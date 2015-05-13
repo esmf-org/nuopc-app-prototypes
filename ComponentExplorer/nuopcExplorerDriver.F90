@@ -18,6 +18,8 @@ module nuopcExplorerDriver
     driver_routine_SS             => SetServices, &
     driver_label_SetModelServices => label_SetModelServices, &
     driver_label_ModifyInitializePhaseMap => label_ModifyInitializePhaseMap
+  
+  use NUOPC_Compliance_Model, only: registerIC
     
 #ifdef FRONT_COMP
   use FRONT_COMP, only: compSS => SetServices
@@ -67,6 +69,7 @@ module nuopcExplorerDriver
       return  ! bail out
       
     ! see if initialize phases need to be filtered
+    !TODO: not using convention & purpose here can cause AttributeUpdate failures
     call ESMF_AttributeGet(driver, name="filter_initialize_phases", &
       value=filter_initialize_phases, convention="gjt", purpose="gjt", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -92,7 +95,7 @@ module nuopcExplorerDriver
     integer, intent(out) :: rc
     
     ! local variables
-    integer                       :: localrc
+    integer                       :: urc
     type(ESMF_Grid)               :: grid
     type(ESMF_Field)              :: field
     integer                       :: localPet
@@ -102,6 +105,7 @@ module nuopcExplorerDriver
     character(len=160)            :: soName
 #endif
     type(ESMF_GridComp)           :: child
+    character(len=80)             :: enable_compliance_check
 
     rc = ESMF_SUCCESS
     
@@ -197,6 +201,30 @@ module nuopcExplorerDriver
       file=__FILE__)) &
       return  ! bail out
     
+    ! see if compliance checking is enabled
+    !TODO: not using convention & purpose here can cause AttributeUpdate failures
+    call ESMF_AttributeGet(driver, name="enable_compliance_check", &
+      value=enable_compliance_check, convention="gjt", purpose="gjt", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    if (trim(enable_compliance_check)=="yes") then
+      ! Explicitly register compliance IC for Driver
+      !TODO: future versions of ESMF/NUOPC may provide RUNTIME environemnt to 
+      !TODO: switch NUOPC component specific compliance checking on/off.
+      call ESMF_GridCompSetServices(child, userRoutine=registerIC, &
+        userRc=urc, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    endif
+
   end subroutine
 
   !-----------------------------------------------------------------------------

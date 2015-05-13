@@ -5,7 +5,9 @@ program explorerApp
   !-----------------------------------------------------------------------------
 
   use ESMF
-  use nuopcExplorerDriver, only: explorerDriverSS => SetServices
+  use nuopcExplorerDriver,      only: explorerDriverSS => SetServices
+  
+  use NUOPC_Compliance_Driver,  only: registerIC
 
   implicit none
 
@@ -41,6 +43,8 @@ program explorerApp
   
   character(len=80)       :: enable_finalize_string
   logical                 :: enable_finalize
+  
+  character(len=80)       :: enable_compliance_check
   
   ! Initialize ESMF
   call ESMF_Initialize(defaultCalKind=ESMF_CALKIND_GREGORIAN, &
@@ -272,6 +276,13 @@ program explorerApp
     enable_finalize = .true.
   endif
   
+  call ESMF_ConfigGetAttribute(config, enable_compliance_check, &
+    label="enable_compliance_check:", rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
+  
   call ESMF_ConfigDestroy(config, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
@@ -285,15 +296,22 @@ program explorerApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
   
-  ! Set Attribute on Driver
+  ! Set Attributes on Driver
+  !TODO: not using convention & purpose here can cause AttributeUpdate failures
   call ESMF_AttributeAdd(driver, convention="gjt", purpose="gjt", &
-    attrList=(/"filter_initialize_phases"/), rc=rc)
+    attrList=(/"filter_initialize_phases", "enable_compliance_check "/), rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
   call ESMF_AttributeSet(driver, name="filter_initialize_phases", &
     value=filter_initialize_phases, convention="gjt", purpose="gjt", rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  call ESMF_AttributeSet(driver, name="enable_compliance_check", &
+    value=enable_compliance_check, convention="gjt", purpose="gjt", rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
@@ -310,7 +328,23 @@ program explorerApp
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    
+  
+  if (trim(enable_compliance_check)=="yes") then
+    ! Explicitly register compliance IC for Driver
+    !TODO: future versions of ESMF/NUOPC may provide RUNTIME environemnt to 
+    !TODO: switch NUOPC component specific compliance checking on/off.
+    call ESMF_GridCompSetServices(driver, userRoutine=registerIC, &
+      userRc=urc, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  endif
+
   ! Call 0 phase Initialize
   call ESMF_GridCompInitialize(driver, phase=0, userRc=urc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
