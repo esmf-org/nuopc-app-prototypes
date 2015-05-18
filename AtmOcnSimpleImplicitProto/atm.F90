@@ -2,15 +2,14 @@
 ! in the _off state, or use IPDv02 if in the _on state:
 #define WITHCOMPLEXDATADEPENDENCY_on
 ! When the IPDv02 option is selected, the ATM introduces a more complex
-! initialize data dependency with the OCN Component. In both modes (_on or _off)
-! the OCN Component depends on ATM's "pmsl" Field
-! in order to initialize the OCN "sst" Field. On the other hand, the ATM
-! Component in IPDv00 mode does not depend on any OCN Fields - both ATM Fields
-! are initialized without requiring valid input data Fields from OCN. However,
-! when turning on Complex-Data-Dependency via the above macro, the ATM Component
-! starts depending on the "sst" OCN Field for the initialization of the "rsns"
-! ATM Field. The IPDv02 can handle these sort of complex data dependencies 
-! between Components.
+! initialize data dependency with the OCN component. In both modes (_on or _off)
+! the OCN component depends on ATM's "pmsl" Field in order to initialize the
+! OCN "sst" Field. However, the ATM component in IPDv00 mode does not depend on
+! any OCN Fields - both ATM Fields are initialized without requiring valid input
+! data Fields from OCN. When turning on Complex-Data-Dependency via the above 
+! macro, this changes, and the ATM component starts depending on the "sst" OCN
+! Field for the initialization of the "rsns" ATM Field. The IPDv02 can handle 
+! these sort of complex data dependencies during initialize between components.
 
 module ATM
 
@@ -62,13 +61,13 @@ module ATM
 
     ! set entry point for methods that require specific implementation
     call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv02p1"/), userRoutine=InitializeP1, rc=rc)
+      phaseLabelList=(/"IPDv00p1", "IPDv02p1"/), userRoutine=InitializeP1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv02p2"/), userRoutine=InitializeP2, rc=rc)
+      phaseLabelList=(/"IPDv00p2", "IPDv02p2"/), userRoutine=InitializeP2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
