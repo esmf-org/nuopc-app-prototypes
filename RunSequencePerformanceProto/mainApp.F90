@@ -81,6 +81,46 @@ program mainApp
   !-----------------------------------------------------------------------------
 
   !-----------------------------------------------------------------------------
+  call ESMF_VMWtime(timeStart(2))
+  
+  ! RUN THE DRIVER
+  call ESMF_GridCompRun(drvComp, userRc=userRc, phase=2, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  if (ESMF_LogFoundError(rcToCheck=userRc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  
+  call ESMF_VMWtime(timeEnd(2))
+  
+  print *, "timer2: / per step:", timeEnd(2)-timeStart(2), &
+    (timeEnd(2)-timeStart(2))/real(stepCount)
+  !-----------------------------------------------------------------------------
+
+  !-----------------------------------------------------------------------------
+  call ESMF_VMWtime(timeStart(3))
+  
+  ! RUN THE DRIVER
+  call ESMF_GridCompRun(drvComp, userRc=userRc, phase=3, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  if (ESMF_LogFoundError(rcToCheck=userRc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  
+  call ESMF_VMWtime(timeEnd(3))
+  
+  print *, "timer3: / per step:", timeEnd(3)-timeStart(3), &
+    (timeEnd(3)-timeStart(3))/real(stepCount)
+  !-----------------------------------------------------------------------------
+
+  !-----------------------------------------------------------------------------
   call ESMF_VMWtime(timeStart(10))
   
   ! RUN THE DRIVER

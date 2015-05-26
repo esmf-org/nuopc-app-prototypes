@@ -8,6 +8,7 @@ module driver
   use NUOPC
   use NUOPC_Driver, &
     driver_routine_SS             => SetServices, &
+    driver_routine_Run            => routine_Run, &
     driver_label_SetModelServices => label_SetModelServices, &
     driver_label_SetRunSequence   => label_SetRunSequence
   
@@ -58,9 +59,25 @@ module driver
       file=__FILE__)) &
       return  ! bail out
     
-    ! pure ESMF call of model
-    call ESMF_GridCompSetEntryPoint(driver, ESMF_METHOD_RUN, pureESMFrun, &
-      phase=10, rc=rc)
+    ! explicit entry point -> use generic routine_Run
+    call ESMF_GridCompSetEntryPoint(driver, ESMF_METHOD_RUN, &
+      driver_routine_Run, phase=2, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! explicit entry point -> use generic routine_Run
+    call ESMF_GridCompSetEntryPoint(driver, ESMF_METHOD_RUN, &
+      driver_routine_Run, phase=3, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! explicit entry point -> use pureESMFrun
+    call ESMF_GridCompSetEntryPoint(driver, ESMF_METHOD_RUN, &
+      pureESMFrun, phase=10, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
