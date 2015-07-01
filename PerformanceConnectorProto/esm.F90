@@ -265,6 +265,15 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     
+#define DRIVER_PRINT
+#ifdef DRIVER_PRINT
+    call NUOPC_DriverPrint(driver, orderflag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
   end subroutine
 
   !-----------------------------------------------------------------------------
