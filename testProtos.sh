@@ -171,6 +171,7 @@ TestProto AtmOcnRtmTwoTimescalesProto    esmApp
 TestSelectExternalProto   AtmOcnSelectExternalProto    esmApp
 TestSelectProto           AtmOcnSelectProto            esmApp
 TestProto AtmOcnSimpleImplicitProto      esmApp
+TestProto AtmOcnIceSimpleImplicitProto   esmApp
 TestProto AtmOcnTransferGridProto        esmApp
 #  ComponentExplorer
 TestProto DriverInDriverProto            mainApp
