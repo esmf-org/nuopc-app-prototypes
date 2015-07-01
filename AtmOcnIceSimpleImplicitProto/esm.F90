@@ -9,6 +9,7 @@ module ESM
   ! the ATM and OCN components can run on exclusive sets of PETs. Turning this
   ! on/off does not affect how the Connector component is specialized.
 #define WITHPETLISTS_on
+#define OCN_ICE_LEAPFROG_on
 
   use ESMF
   use NUOPC
@@ -296,11 +297,13 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef OCN_ICE_LEAPFROG_on
     call NUOPC_DriverAddRunElement(driver, slot=1, compLabel="ICE", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     call NUOPC_DriverAddRunElement(driver, slot=1, &
       srcCompLabel="ATM", dstCompLabel="OCN", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -313,6 +316,13 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifndef OCN_ICE_LEAPFROG_on
+    call NUOPC_DriverAddRunElement(driver, slot=1, compLabel="ICE", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
     call NUOPC_DriverAddRunElement(driver, slot=1, compLabel="OCN", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
