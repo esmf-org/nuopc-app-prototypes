@@ -8,7 +8,7 @@ module ESM
   ! activate sections of code that demonstrate how
   ! the ATM and OCN components can run on exclusive sets of PETs. Turning this
   ! on/off does not affect how the Connector component is specialized.
-#define WITHPETLISTS_off
+#define WITHPETLISTS_on
 
   use ESMF
   use NUOPC
