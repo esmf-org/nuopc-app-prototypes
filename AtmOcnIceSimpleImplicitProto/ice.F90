@@ -139,6 +139,14 @@ module ICE
       file=__FILE__)) &
       return  ! bail out
 
+    ! importable field: sea_surface_temperature
+    call NUOPC_StateAdvertiseField(importState, &
+      StandardName="sea_surface_temperature", name="sst", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
     ! exportable field: sea_surface_salinity
     call NUOPC_StateAdvertiseField(exportState, &
       StandardName="sea_surface_salinity", name="sss", rc=rc)
@@ -189,6 +197,19 @@ module ICE
     
     ! importable field: surface_net_downward_shortwave_flux
     field = ESMF_FieldCreate(name="rsns", grid=gridIn, &
+      typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_StateRealizeField(importState, field=field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! importable field: sea_surface_temperature
+    field = ESMF_FieldCreate(name="sst", grid=gridIn, &
       typekind=ESMF_TYPEKIND_R8, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -402,18 +423,20 @@ module ICE
     type(ESMF_GridComp)   :: model
     integer, intent(out)  :: rc
     
-    ! This is the routine that enforces the implicit time dependence on the
-    ! import fields. This simply means that the timestamps on the Fields in the
-    ! importState are checked against the stopTime on the Component's 
-    ! internalClock. Consequenty, this model starts out with forcing fields
-    ! at the future stopTime, as it does its forward stepping from currentTime
-    ! to stopTime.
+    ! This is the routine that enforces the complex time dependence on the
+    ! import fields. 
+    !
+    ! The implicit leap-frog scheme with the ATM component requires import 
+    ! fields from ATM to be at stopTime. The explicit coupling with the OCN
+    ! component means that import fields from OCN are checked against the
+    ! currTime.
     
     ! local variables
     type(ESMF_Clock)        :: clock
-    type(ESMF_Time)         :: time
+    type(ESMF_Time)         :: currTime, stopTime
     type(ESMF_State)        :: importState
-    logical                 :: allCurrent
+    logical                 :: isAtTimeFlag
+    type(ESMF_Field)        :: field
 
     rc = ESMF_SUCCESS
     
@@ -424,24 +447,80 @@ module ICE
       file=__FILE__)) &
       return  ! bail out
 
-    ! get the current time out of the clock
-    call ESMF_ClockGet(clock, stopTime=time, rc=rc)
+    ! get the current and stop time out of the clock
+    call ESMF_ClockGet(clock, currTime=currTime, stopTime=stopTime, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
-    ! check that Fields in the importState show correct timestamp
-    allCurrent = NUOPC_StateIsAtTime(importState, time, rc=rc)
+    ! ensure fields from ATM are at stopTime
+    call ESMF_StateGet(importState, field=field, itemName="pmsl", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
-    if (.not.allCurrent) then
-      !TODO: introduce and use INCOMPATIBILITY return codes!!!!
+    isAtTimeFlag = NUOPC_IsAtTime(field, time=stopTime, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    if (.not.isAtTimeFlag) then
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
       call ESMF_LogSetError(ESMF_RC_ARG_BAD, &
-        msg="NUOPC INCOMPATIBILITY DETECTED: Import Fields not at current time", &
+        msg="NUOPC INCOMPATIBILITY DETECTED: "// &
+        "Import Field 'pmsl' not at correct time", &
+        line=__LINE__, &
+        file=__FILE__, &
+        rcToReturn=rc)
+      return  ! bail out
+    endif
+    call ESMF_StateGet(importState, field=field, itemName="rsns", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    isAtTimeFlag = NUOPC_IsAtTime(field, time=stopTime, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    if (.not.isAtTimeFlag) then
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      call ESMF_LogSetError(ESMF_RC_ARG_BAD, &
+        msg="NUOPC INCOMPATIBILITY DETECTED: "// &
+        "Import Field 'rsns' not at correct time", &
+        line=__LINE__, &
+        file=__FILE__, &
+        rcToReturn=rc)
+      return  ! bail out
+    endif
+    
+    ! ensure fields from OCN are at currTime
+    call ESMF_StateGet(importState, field=field, itemName="sst", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    isAtTimeFlag = NUOPC_IsAtTime(field, time=currTime, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    if (.not.isAtTimeFlag) then
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      call ESMF_LogSetError(ESMF_RC_ARG_BAD, &
+        msg="NUOPC INCOMPATIBILITY DETECTED: "// &
+        "Import Field 'sss' not at correct time", &
         line=__LINE__, &
         file=__FILE__, &
         rcToReturn=rc)

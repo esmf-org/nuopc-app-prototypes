@@ -428,13 +428,14 @@ module OCN
     ! This is the routine that enforces the complex time dependence on the
     ! import fields. 
     !
-    ! In the simple case, where OCN leap-frogs with ATM & ICE, all of the OCN
+    ! In the simple case, where OCN leap-frogs with ATM & ICE, _all_ of the OCN
     ! import fiels must come into here with timestamps at the stopTime of the 
     ! Component's internalClock. 
     !
     ! In the more complex case, OCN leap-frogs with ATM, but has an explicit
-    ! dependency on ICE. Here the timestamps on the fields need to be chacked
-    ! individually.
+    ! dependency on ICE. Here the timestamps on the fields need to be checked
+    ! individually. Import fields from ATM are checked against stopTime, while
+    ! fields from ICE are checked against currTime
     
     ! local variables
     type(ESMF_Clock)        :: clock
@@ -454,7 +455,7 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
 
-    ! get the current time out of the clock
+    ! get the current and stop time out of the clock
     call ESMF_ClockGet(clock, currTime=currTime, stopTime=stopTime, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
