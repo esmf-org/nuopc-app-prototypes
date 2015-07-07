@@ -190,6 +190,20 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
       
+    ! SetServices for ocn2ice
+    call NUOPC_DriverAddComp(driver, srcCompLabel="OCN", dstCompLabel="ICE", &
+      compSetServicesRoutine=cplSS, comp=connector, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
     ! SetServices for ice2atm
     call NUOPC_DriverAddComp(driver, srcCompLabel="ICE", dstCompLabel="ATM", &
       compSetServicesRoutine=cplSS, comp=connector, rc=rc)
@@ -204,7 +218,7 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
       
-    ! SetServices for ice2atm
+    ! SetServices for ice2ocn
     call NUOPC_DriverAddComp(driver, srcCompLabel="ICE", dstCompLabel="OCN", &
       compSetServicesRoutine=cplSS, comp=connector, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -293,6 +307,12 @@ module ESM
       return  ! bail out
     call NUOPC_DriverAddRunElement(driver, slot=1, &
       srcCompLabel="ATM", dstCompLabel="ICE", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_DriverAddRunElement(driver, slot=1, &
+      srcCompLabel="OCN", dstCompLabel="ICE", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
