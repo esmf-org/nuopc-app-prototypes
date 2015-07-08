@@ -217,49 +217,42 @@ module ESM
     integer, intent(out) :: rc
     
     ! local variables
-    integer                       :: localrc
-    type(ESMF_Time)               :: startTime
-    type(ESMF_Time)               :: stopTime
-    type(ESMF_TimeInterval)       :: timeStep
+    integer                             :: localrc
+    type(NUOPC_FreeFormat)              :: runSeqFF
+    character(len=NUOPC_FreeFormatLen)  :: runSequence(7)
+    integer                             :: i
 
     rc = ESMF_SUCCESS
     
-    ! Replace the default RunSequence to allow specific phaseLabels to be used
-    call NUOPC_DriverNewRunSequence(driver, slotCount=1, rc=rc)
+    ! set up run sequence in free format
+    data runSequence/&
+      "@900", &
+      "  ATM -> OCN", &
+      "  OCN -> ATM", &
+      "  OCN -> ATM custom", &
+      "  ATM", &
+      "  OCN", &
+      "@"/
+    
+    runSeqFF=NUOPC_FreeFormatCreate(runSequence, capacity=10, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    ! atm2ocn      
-    call NUOPC_DriverAddRunElement(driver, slot=1, &
-      srcCompLabel="ATM", dstCompLabel="OCN", rc=rc)
+    
+    call NUOPC_FreeFormatPrint(runSeqFF, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    ! ocn2atm
-    ! - generic for timestamp propagation
-    call NUOPC_DriverAddRunElement(driver, slot=1, &
-      srcCompLabel="OCN", dstCompLabel="ATM", rc=rc)
+    
+    call NUOPC_DriverIngestRunSequence(driver, runSeqFF, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-     ! - custom for testing
-    call NUOPC_DriverAddRunElement(driver, slot=1, &
-      srcCompLabel="OCN", dstCompLabel="ATM", phaseLabel="custom", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    ! atm
-    call NUOPC_DriverAddRunElement(driver, slot=1, compLabel="ATM", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    ! ocn
-    call NUOPC_DriverAddRunElement(driver, slot=1, compLabel="OCN", rc=rc)
+    
+    call NUOPC_FreeFormatDestroy(runSeqFF, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
