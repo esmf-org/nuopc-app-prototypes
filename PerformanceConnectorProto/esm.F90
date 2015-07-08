@@ -68,7 +68,6 @@ module ESM
     integer, intent(out) :: rc
     
     ! local variables
-    integer                       :: localrc
     type(ESMF_Grid)               :: grid
     type(ESMF_Field)              :: field
     type(ESMF_Time)               :: startTime
@@ -217,7 +216,6 @@ module ESM
     integer, intent(out) :: rc
     
     ! local variables
-    integer                             :: localrc
     type(NUOPC_FreeFormat)              :: runSeqFF
     character(len=NUOPC_FreeFormatLen)  :: runSequence(7)
     integer                             :: i
