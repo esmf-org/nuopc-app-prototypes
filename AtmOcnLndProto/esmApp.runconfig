@@ -21,8 +21,13 @@ runSeq::
     @
 ::
 
-# Attributes for Driver
+# Attributes for components
+
 driverAttributes::
-  Verbosity = max
-  Profiling = 0
+  Verbosity = 0
+  Profiling = 1
+::
+
+ocnAttributes::
+  Verbosity = 0
 ::

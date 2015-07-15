@@ -89,7 +89,7 @@ module ESM
     type(ESMF_TimeInterval)       :: timeStep
     type(ESMF_Clock)              :: internalClock
     type(ESMF_Config)             :: config
-    type(NUOPC_FreeFormat)        :: driverAttrFF
+    type(NUOPC_FreeFormat)        :: attrFF
     
 character(ESMF_MAXSTR)            :: attrList(3)
 
@@ -102,15 +102,14 @@ character(ESMF_MAXSTR)            :: attrList(3)
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    driverAttrFF = NUOPC_FreeFormatCreate(config, label="driverAttributes::", &
-      rc=rc)
+    attrFF = NUOPC_FreeFormatCreate(config, label="driverAttributes::", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
       
 #if 1
-    call NUOPC_FreeFormatPrint(driverAttrFF, rc=rc)
+    call NUOPC_FreeFormatPrint(attrFF, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -118,14 +117,14 @@ character(ESMF_MAXSTR)            :: attrList(3)
 #endif
 
     ! ingest FreeFormat driver attributes
-    call NUOPC_CompAttributeIngest(driver, driverAttrFF, rc=rc)
+    call NUOPC_CompAttributeIngest(driver, attrFF, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
     ! clean-up
-    call NUOPC_FreeFormatDestroy(driverAttrFF, rc=rc)
+    call NUOPC_FreeFormatDestroy(attrFF, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -137,14 +136,14 @@ character(ESMF_MAXSTR)            :: attrList(3)
 !    specific to an AttPack
   
 ! dump all the Attributes to stdout
-call NUOPC_CompAttributeEgest(driver, driverAttrFF, rc=rc)
+call NUOPC_CompAttributeEgest(driver, attrFF, rc=rc)
 if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
   line=__LINE__, &
   file=__FILE__)) &
   return  ! bail out
 
 print *, "start dump --------"
-call NUOPC_FreeFormatPrint(driverAttrFF, rc=rc)
+call NUOPC_FreeFormatPrint(attrFF, rc=rc)
 if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
   line=__LINE__, &
   file=__FILE__)) &
@@ -152,7 +151,7 @@ if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
 print *, "end dump --------"
 
 ! clean-up
-call NUOPC_FreeFormatDestroy(driverAttrFF, rc=rc)
+call NUOPC_FreeFormatDestroy(attrFF, rc=rc)
 if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
   line=__LINE__, &
   file=__FILE__)) &
@@ -166,7 +165,27 @@ if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    ! set default ATM attributes
     call NUOPC_CompAttributeSet(child, name="Verbosity", value="high", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! read ATM attributes from config file into FreeFormat
+    attrFF = NUOPC_FreeFormatCreate(config, label="atmAttributes::", &
+      relaxedflag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! ingest FreeFormat atm attributes
+    call NUOPC_CompAttributeIngest(child, attrFF, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! clean-up
+    call NUOPC_FreeFormatDestroy(attrFF, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -178,7 +197,27 @@ if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    ! set default OCN attributes
     call NUOPC_CompAttributeSet(child, name="Verbosity", value="high", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! read OCN attributes from config file into FreeFormat
+    attrFF = NUOPC_FreeFormatCreate(config, label="ocnAttributes::", &
+      relaxedflag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! ingest FreeFormat ocn attributes
+    call NUOPC_CompAttributeIngest(child, attrFF, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! clean-up
+    call NUOPC_FreeFormatDestroy(attrFF, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -190,7 +229,27 @@ if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    ! set default LND attributes
     call NUOPC_CompAttributeSet(child, name="Verbosity", value="high", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! read LND attributes from config file into FreeFormat
+    attrFF = NUOPC_FreeFormatCreate(config, label="lndAttributes::", &
+      relaxedflag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! ingest FreeFormat lnd attributes
+    call NUOPC_CompAttributeIngest(child, attrFF, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! clean-up
+    call NUOPC_FreeFormatDestroy(attrFF, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
