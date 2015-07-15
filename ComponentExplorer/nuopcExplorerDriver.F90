@@ -271,7 +271,7 @@ module nuopcExplorerDriver
           call ESMF_AttributeGet(compList(i), &
             name="InitializePhaseMap", &
             itemCount=phaseCount, &
-            convention="NUOPC", purpose="General", rc=rc)
+            convention="NUOPC", purpose="Instance", rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
@@ -286,7 +286,7 @@ module nuopcExplorerDriver
             call ESMF_AttributeGet(compList(i), &
               name="InitializePhaseMap", &
               valueList=phaseMap, &
-              convention="NUOPC", purpose="General", rc=rc)
+              convention="NUOPC", purpose="Instance", rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
               line=__LINE__, &
               file=__FILE__)) &
@@ -313,10 +313,8 @@ module nuopcExplorerDriver
             endif
           enddo
           ! step4: replace the full InitializePhaseMap with only the p1 mapping
-          call ESMF_AttributeSet(compList(i), &
-            name="InitializePhaseMap", &
-            valueList=initPhase, &
-            convention="NUOPC", purpose="General", rc=rc)
+          call NUOPC_CompAttributeSet(compList(i), &
+            name="InitializePhaseMap", valueList=initPhase, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
@@ -391,7 +389,7 @@ module nuopcExplorerDriver
             ! report GridComp level attribute: LongName              
             call ESMF_AttributeGet(comp, name="LongName", &
               itemCount=guardCount, isPresent=isPresent, &
-              convention="NUOPC", purpose="General", rc=rc)
+              convention="NUOPC", purpose="Instance", rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
               line=__LINE__, &
               file=__FILE__)) &
@@ -399,7 +397,7 @@ module nuopcExplorerDriver
             if (isPresent .and. guardCount>0) then
               call ESMF_AttributeGet(comp, name="LongName", &
                 value=valueString, &
-                convention="NUOPC", purpose="General", rc=rc)
+                convention="NUOPC", purpose="Instance", rc=rc)
               if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                 line=__LINE__, &
                 file=__FILE__)) &
@@ -417,7 +415,7 @@ module nuopcExplorerDriver
             ! report GridComp level attribute: ShortName              
             call ESMF_AttributeGet(comp, name="ShortName", &
               itemCount=guardCount, isPresent=isPresent, &
-              convention="NUOPC", purpose="General", rc=rc)
+              convention="NUOPC", purpose="Instance", rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
               line=__LINE__, &
               file=__FILE__)) &
@@ -425,7 +423,7 @@ module nuopcExplorerDriver
             if (isPresent .and. guardCount>0) then
               call ESMF_AttributeGet(comp, name="ShortName", &
                 value=valueString, &
-                convention="NUOPC", purpose="General", rc=rc)
+                convention="NUOPC", purpose="Instance", rc=rc)
               if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                 line=__LINE__, &
                 file=__FILE__)) &
@@ -443,7 +441,7 @@ module nuopcExplorerDriver
             ! report GridComp level attribute: Description              
             call ESMF_AttributeGet(comp, name="Description", &
               itemCount=guardCount, isPresent=isPresent, &
-              convention="NUOPC", purpose="General", rc=rc)
+              convention="NUOPC", purpose="Instance", rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
               line=__LINE__, &
               file=__FILE__)) &
@@ -451,7 +449,7 @@ module nuopcExplorerDriver
             if (isPresent .and. guardCount>0) then
               call ESMF_AttributeGet(comp, name="Description", &
                 value=valueString, &
-                convention="NUOPC", purpose="General", rc=rc)
+                convention="NUOPC", purpose="Instance", rc=rc)
               if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                 line=__LINE__, &
                 file=__FILE__)) &

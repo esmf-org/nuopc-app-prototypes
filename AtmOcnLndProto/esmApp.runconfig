@@ -20,3 +20,9 @@ runSeq::
       @
     @
 ::
+
+# Attributes for Driver
+driverAttributes::
+  Verbosity = max
+  Profiling = 0
+::

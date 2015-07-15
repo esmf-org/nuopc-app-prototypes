@@ -339,9 +339,8 @@ module ICE
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-      call ESMF_AttributeSet(field, &
-        name="Updated", value="true", &
-        convention="NUOPC", purpose="General", rc=rc)
+      call NUOPC_AttributeSet(field, &
+        name="Updated", value="true", rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
@@ -352,9 +351,8 @@ module ICE
       ! initializing its data:
       ! -> set InitializeDataComplete Component Attribute to "true", indicating
       ! to the driver that this Component has fully initialized its data
-      call ESMF_AttributeSet(model, &
-        name="InitializeDataComplete", value="true", &
-        convention="NUOPC", purpose="General", rc=rc)
+      call NUOPC_CompAttributeSet(model, &
+        name="InitializeDataComplete", value="true", rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &

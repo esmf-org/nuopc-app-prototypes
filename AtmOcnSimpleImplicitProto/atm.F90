@@ -281,9 +281,8 @@ module ATM
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-      call ESMF_AttributeSet(field, &
-        name="Updated", value="true", &
-        convention="NUOPC", purpose="General", rc=rc)
+      call NUOPC_AttributeSet(field, &
+        name="Updated", value="true", rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
@@ -298,9 +297,8 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call ESMF_AttributeSet(field, &
-      name="Updated", value="true", &
-      convention="NUOPC", purpose="General", rc=rc)
+    call NUOPC_AttributeSet(field, &
+      name="Updated", value="true", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -311,9 +309,8 @@ module ATM
       ! This simple ATM component is only concerned with marking Fields in
       ! the exportState as "Updated". Once that is done, it is considered
       ! fully data initialized:
-      call ESMF_AttributeSet(model, &
-        name="InitializeDataComplete", value="true", &
-        convention="NUOPC", purpose="General", rc=rc)
+      call NUOPC_CompAttributeSet(model, &
+        name="InitializeDataComplete", value="true", rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
