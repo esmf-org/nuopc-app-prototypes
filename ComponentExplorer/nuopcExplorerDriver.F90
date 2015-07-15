@@ -69,9 +69,8 @@ module nuopcExplorerDriver
       return  ! bail out
       
     ! see if initialize phases need to be filtered
-    !TODO: not using convention & purpose here can cause AttributeUpdate failures
-    call ESMF_AttributeGet(driver, name="filter_initialize_phases", &
-      value=filter_initialize_phases, convention="gjt", purpose="gjt", rc=rc)
+    call NUOPC_CompAttributeGet(driver, &
+      name="filter_initialize_phases", value=filter_initialize_phases, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -202,9 +201,8 @@ module nuopcExplorerDriver
       return  ! bail out
     
     ! see if compliance checking is enabled
-    !TODO: not using convention & purpose here can cause AttributeUpdate failures
-    call ESMF_AttributeGet(driver, name="enable_compliance_check", &
-      value=enable_compliance_check, convention="gjt", purpose="gjt", rc=rc)
+    call NUOPC_CompAttributeGet(driver, &
+      name="enable_compliance_check", value=enable_compliance_check, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -527,7 +525,7 @@ module nuopcExplorerDriver
 
     call ESMF_AttributeGet(field, name=trim(attributeName), &
       itemCount=guardCount, isPresent=isPresent, &
-      convention="NUOPC", purpose="General", rc=rc)
+      convention="NUOPC", purpose="Instance", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, &
       msg=ESMF_LOGERR_PASSTHRU, line=__LINE__, &
       file=__FILE__)) &
@@ -535,7 +533,7 @@ module nuopcExplorerDriver
     if (isPresent .and. guardCount>0) then
       call ESMF_AttributeGet(field, name=trim(attributeName), &
         value=valueString, &
-        convention="NUOPC", purpose="General", rc=rc)
+        convention="NUOPC", purpose="Instance", rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, &
         msg=ESMF_LOGERR_PASSTHRU, line=__LINE__, &
         file=__FILE__)) &
