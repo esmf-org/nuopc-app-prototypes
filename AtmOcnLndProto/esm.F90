@@ -91,9 +91,6 @@ module ESM
     type(ESMF_Config)             :: config
     type(NUOPC_FreeFormat)        :: attrFF
     
-character(ESMF_MAXSTR)            :: attrList(3)
-
-
     rc = ESMF_SUCCESS
     
     ! read free format driver attributes
