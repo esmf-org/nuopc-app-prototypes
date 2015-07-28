@@ -286,9 +286,25 @@ module OCN
     type(ESMF_Time)               :: time
     type(ESMF_Field)              :: field
     logical                       :: neededCurrent
+    character(len=20)             :: valueString
+    integer                       :: verbosity
 
     rc = ESMF_SUCCESS
     
+    ! determine verbosity
+    call NUOPC_CompAttributeGet(model, name="Verbosity", value=valueString, &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    verbosity = NUOPC_Convert(valueString, specialStringList=(/"max"/), &
+      specialValueList=(/255/), rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! the OCN needs valid ATM export Fields to initialize its internal state
 
     ! query the Component for its clock, importState and exportState
@@ -320,19 +336,23 @@ module OCN
       return  ! bail out
       
     if (.not.neededCurrent) then
-      call ESMF_LogWrite("OCN - Initialize-Data-Dependency NOT YET SATISFIED!!!", &
-        ESMF_LOGMSG_INFO, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
+      if (btest(verbosity,1)) then
+        call ESMF_LogWrite("OCN - Initialize-Data-Dependency NOT YET SATISFIED!!!", &
+          ESMF_LOGMSG_INFO, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+      endif
     else
-      call ESMF_LogWrite("OCN - Initialize-Data-Dependency SATISFIED!!!", &
-        ESMF_LOGMSG_INFO, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
+      if (btest(verbosity,1)) then
+        call ESMF_LogWrite("OCN - Initialize-Data-Dependency SATISFIED!!!", &
+          ESMF_LOGMSG_INFO, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+      endif
       
       ! -> set Updated Field Attribute to "true", indicating to the IPDv02p5
       ! generic code to set the timestamp for this Field
