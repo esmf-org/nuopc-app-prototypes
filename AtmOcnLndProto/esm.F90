@@ -106,11 +106,13 @@ module ESM
       return  ! bail out
       
 #if 1
+    print *, "-- start FreeFormatPrint(attrFF) of read in attributes --------"
     call NUOPC_FreeFormatPrint(attrFF, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    print *, "---- end FreeFormatPrint(attrFF) of read in attributes --------"
 #endif
 
     ! ingest FreeFormat driver attributes
@@ -127,32 +129,29 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
   
-#if 0
+#if 1
 
-! -> right now does not work because I cannot get to the list of Attributes 
-!    specific to an AttPack
-  
-! dump all the Attributes to stdout
-call NUOPC_CompAttributeEgest(driver, attrFF, rc=rc)
-if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-  line=__LINE__, &
-  file=__FILE__)) &
-  return  ! bail out
+    ! pull out all the Attributes defined on the Driver in FreeFormat
+    call NUOPC_CompAttributeEgest(driver, attrFF, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 
-print *, "start dump --------"
-call NUOPC_FreeFormatPrint(attrFF, rc=rc)
-if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-  line=__LINE__, &
-  file=__FILE__)) &
-  return  ! bail out
-print *, "end dump --------"
+    print *, "-- start FreeFormatPrint(attrFF) of egested attributes --------"
+    call NUOPC_FreeFormatPrint(attrFF, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    print *, "---- end FreeFormatPrint(attrFF) of egested attributes --------"
 
-! clean-up
-call NUOPC_FreeFormatDestroy(attrFF, rc=rc)
-if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-  line=__LINE__, &
-  file=__FILE__)) &
-  return  ! bail out
+    ! clean-up
+    call NUOPC_FreeFormatDestroy(attrFF, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
     
 #endif
 
