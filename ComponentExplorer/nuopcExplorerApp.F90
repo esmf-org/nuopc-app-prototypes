@@ -47,7 +47,10 @@ program explorerApp
   logical                 :: enable_finalize
   
   character(len=80)       :: enable_compliance_check
+  character(len=80)       :: enable_field_mirroring
   
+  type(ESMF_State) :: importState, exportState
+
   ! Initialize ESMF
   call ESMF_Initialize(defaultCalKind=ESMF_CALKIND_GREGORIAN, &
     logkindflag=ESMF_LOGKIND_MULTI, vm=vm, rc=rc)
@@ -284,6 +287,13 @@ program explorerApp
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
+
+  call ESMF_ConfigGetAttribute(config, enable_field_mirroring, &
+    label="enable_field_mirroring:", rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
   
   call ESMF_ConfigDestroy(config, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -298,25 +308,39 @@ program explorerApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
   
+
   ! Set Attributes on Driver
-  call NUOPC_CompAttributeAdd(driver, &
-    attrList=(/"filter_initialize_phases", "enable_compliance_check "/), rc=rc)
+  call ESMF_AttributeAdd(driver, &
+    convention="compexplorer", purpose="compexplorer", &
+    attrList=(/"filter_initialize_phases", &
+               "enable_compliance_check ", &
+               "enable_field_mirroring  "/), rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  call NUOPC_CompAttributeSet(driver, &
+  call ESMF_AttributeSet(driver, &
+    convention="compexplorer", purpose="compexplorer", &
     name="filter_initialize_phases", value=filter_initialize_phases, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  call NUOPC_CompAttributeSet(driver, &
+  call ESMF_AttributeSet(driver, &
+    convention="compexplorer", purpose="compexplorer", &
     name="enable_compliance_check", value=enable_compliance_check, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  call ESMF_AttributeSet(driver, &
+    convention="compexplorer", purpose="compexplorer", &
+    name="enable_field_mirroring", value=enable_field_mirroring, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
   
   ! SetServices
   call ESMF_GridCompSetServices(driver, explorerDriverSS, userRc=urc, &
@@ -329,7 +353,15 @@ program explorerApp
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+  call NUOPC_CompAttributeSet(driver, name="CompLabel", &
+    value="explorerDriver", rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
   
+
   if (trim(enable_compliance_check)=="yes") then
     ! Explicitly register compliance IC for Driver
     !TODO: future versions of ESMF/NUOPC may provide RUNTIME environemnt to 
@@ -357,8 +389,23 @@ program explorerApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
+  importState = ESMF_StateCreate(name="explorerDriver Import State", &
+     stateintent=ESMF_STATEINTENT_IMPORT, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+  exportState = ESMF_StateCreate(name="explorerDriver Export State", &
+     stateintent=ESMF_STATEINTENT_EXPORT, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
   ! Call Driver Initialize, with Clock to set Driver internal Clock
-  call ESMF_GridCompInitialize(driver, clock=clock, userRc=urc, rc=rc)
+  call ESMF_GridCompInitialize(driver, importState=importState, &
+    exportState=exportState, clock=clock, userRc=urc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &

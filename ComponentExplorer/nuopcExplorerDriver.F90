@@ -17,15 +17,20 @@ module nuopcExplorerDriver
   use NUOPC_Driver, &
     driver_routine_SS             => SetServices, &
     driver_label_SetModelServices => label_SetModelServices, &
-    driver_label_ModifyInitializePhaseMap => label_ModifyInitializePhaseMap
+    driver_label_ModifyInitializePhaseMap => label_ModifyInitializePhaseMap, &
+    driver_label_SetRunSequence => label_SetRunSequence
   
   use NUOPC_Compliance_Model, only: registerIC
+  use NUOPC_Compliance_Connector, only :  registerIC_Connector => registerIC
+  use NUOPC_Compliance_Driver, only:      registerIC_Driver => registerIC
     
 #ifdef FRONT_COMP
   use FRONT_COMP, only: compSS => SetServices
 #elif (defined FRONT_H_COMP)
   use compFront, only: compSS => SetServices
 #endif
+
+  use NUOPC_Connector, only: cplSS => SetServices
 
   implicit none
   
@@ -42,6 +47,8 @@ module nuopcExplorerDriver
     integer, intent(out) :: rc
     
     character(len=80)       :: filter_initialize_phases
+    character(len=80)       :: enable_field_mirroring
+    integer                 :: urc
 
     rc = ESMF_SUCCESS
     
@@ -52,9 +59,30 @@ module nuopcExplorerDriver
       file=__FILE__)) &
       return  ! bail out
     
+    call NUOPC_CompSetInternalEntryPoint(driver, ESMF_METHOD_INITIALIZE, &
+      phaseLabelList=(/"IPDv05p1"/), userRoutine=InitializeP1, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! set entry point for an internal initialize phase 2
     call NUOPC_CompSetInternalEntryPoint(driver, ESMF_METHOD_INITIALIZE, &
       phaseLabelList=(/"IPDv00p2"/), userRoutine=InitializeP2, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call NUOPC_CompSetInternalEntryPoint(driver, ESMF_METHOD_INITIALIZE, &
+      phaseLabelList=(/"IPDv05p6"/), userRoutine=RealizeMirroredFields, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call NUOPC_CompSetInternalEntryPoint(driver, ESMF_METHOD_INITIALIZE, &
+      phaseLabelList=(/"IPDv05p8"/), userRoutine=TimestampMirroredFields, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -69,7 +97,8 @@ module nuopcExplorerDriver
       return  ! bail out
       
     ! see if initialize phases need to be filtered
-    call NUOPC_CompAttributeGet(driver, &
+    call ESMF_AttributeGet(driver, &
+      convention="compexplorer", purpose="compexplorer", &
       name="filter_initialize_phases", value=filter_initialize_phases, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -85,6 +114,47 @@ module nuopcExplorerDriver
         return  ! bail out
     endif
     
+    call ESMF_AttributeGet(driver, &
+      convention="compexplorer", purpose="compexplorer", &
+      name="enable_field_mirroring", value=enable_field_mirroring, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    if (trim(enable_field_mirroring)=="yes") then
+
+      ! this run phase just timestamps the export fields
+      call NUOPC_CompSetEntryPoint(driver, ESMF_METHOD_RUN, &
+        phaseLabelList=(/"RunInternal"/), userRoutine=RunInternal, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+      call NUOPC_CompSpecialize(driver, specLabel=driver_label_SetRunSequence, &
+        specRoutine=SetRunSequence, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    end if
+
+#define COMPLIANCE_CHECK_DRIVER
+#ifdef COMPLIANCE_CHECK_DRIVER
+    ! compliance output for driver itself
+    call ESMF_GridCompSetServices(driver, userRoutine=registerIC_Driver, &
+      userRc=urc, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+#endif
+
   end subroutine
 
   !-----------------------------------------------------------------------------
@@ -104,7 +174,9 @@ module nuopcExplorerDriver
     character(len=160)            :: soName
 #endif
     type(ESMF_GridComp)           :: child
+    type(ESMF_CplComp)            :: connector
     character(len=80)             :: enable_compliance_check
+    character(len=80)             :: enable_field_mirroring
 
     rc = ESMF_SUCCESS
     
@@ -192,6 +264,34 @@ module nuopcExplorerDriver
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+    ! set up connector for field mirroring, if enabled
+    call ESMF_AttributeGet(driver, &
+      convention="compexplorer", purpose="compexplorer", &
+      name="enable_field_mirroring", &
+      value=enable_field_mirroring, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    if (trim(enable_field_mirroring)=="yes") then
+
+      call NUOPC_DriverAddComp(driver, srcCompLabel="explorerDriver", &
+        dstCompLabel="Component", compSetServicesRoutine=cplSS, &
+        comp=connector, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      call NUOPC_CompAttributeSet(connector, name="Verbosity", &
+        value="high", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+    endif
     
     ! Use an internal NUOPC Layer call to allow AutoAdd field dictionary entries
     call NUOPC_FieldDictionarySetAutoAdd(.true., rc=rc)
@@ -201,7 +301,8 @@ module nuopcExplorerDriver
       return  ! bail out
     
     ! see if compliance checking is enabled
-    call NUOPC_CompAttributeGet(driver, &
+    call ESMF_AttributeGet(driver, &
+      convention="compexplorer", purpose="compexplorer", &
       name="enable_compliance_check", value=enable_compliance_check, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -221,6 +322,19 @@ module nuopcExplorerDriver
         line=__LINE__, &
         file=__FILE__)) &
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      ! compliance check connector, if present
+      if (trim(enable_field_mirroring)=="yes") then
+        call ESMF_CplCompSetServices(connector, userRoutine=registerIC_Connector, &
+          userRc=urc, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      end if
     endif
 
   end subroutine
@@ -238,8 +352,9 @@ module nuopcExplorerDriver
     integer                       :: phaseCount
     integer                       :: localPet
     character(len=NUOPC_PhaseMapStringLength), allocatable :: phaseMap(:)
-    character(len=NUOPC_PhaseMapStringLength) :: initPhase(2)
+    character(len=NUOPC_PhaseMapStringLength), allocatable :: initPhase(:)
     type(ESMF_GridComp), pointer  :: compList(:)
+    integer                       :: reducedPhaseCount, phaseIdx
 
     rc = ESMF_SUCCESS
     
@@ -300,23 +415,34 @@ module nuopcExplorerDriver
             endif            
           endif
           ! step3: set the initPhase variable to only include the p1 phase map
-          initPhase(:) = ""   ! initialize empty
+          reducedPhaseCount = 0
+          phaseIdx = 1
           do k=1, phaseCount
-            if (index(trim(phaseMap(k)), "p1") > 0) then
-              ! found a p1 mapping
-              initPhase(1) = trim(phaseMap(k))
-            elseif (index(trim(phaseMap(k)), "p2") > 0) then
-              ! found a p1 mapping
-              initPhase(2) = trim(phaseMap(k))
+            if ( index(trim(phaseMap(k)), "p1")       > 0 .or. &
+              index(trim(phaseMap(k)), "p2")       > 0 .or. &
+              index(trim(phaseMap(k)), "IPDv05p3") > 0 .or. &
+              index(trim(phaseMap(k)), "IPDv05p4") > 0) then
+              reducedPhaseCount = reducedPhaseCount + 1
             endif
           enddo
-          ! step4: replace the full InitializePhaseMap with only the p1 mapping
+          allocate(initPhase(reducedPhaseCount))
+          initPhase(:) = ""   ! initialize empty
+          do k=1, phaseCount
+            if ( index(trim(phaseMap(k)), "p1")       > 0 .or. &
+              index(trim(phaseMap(k)), "p2")       > 0 .or. &
+              index(trim(phaseMap(k)), "IPDv05p3") > 0 .or. &
+              index(trim(phaseMap(k)), "IPDv05p4") > 0) then
+              initPhase(phaseIdx) = trim(phaseMap(k))
+              phaseIdx = phaseIdx + 1
+            endif
+          enddo          ! step4: replace the full InitializePhaseMap with only the p1 mapping
           call NUOPC_CompAttributeSet(compList(i), &
             name="InitializePhaseMap", valueList=initPhase, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
+          deallocate(initPhase)
         endif
       endif
     enddo
@@ -326,6 +452,74 @@ module nuopcExplorerDriver
     
   end subroutine
   
+
+  subroutine InitializeP1(driver, importState, exportState, clock, rc)
+    type(ESMF_GridComp)  :: driver
+    type(ESMF_State)     :: importState, exportState
+    type(ESMF_Clock)     :: clock
+    integer, intent(out) :: rc
+
+    character(len=80)  :: enable_field_mirroring
+    type(ESMF_GridComp) :: comp
+    type(ESMF_State)   :: compImport, compExport
+
+    rc = ESMF_SUCCESS
+    !print *, "Inside nuopcExplorerDriver.InitializeP1"
+
+    call ESMF_AttributeGet(driver, name="enable_field_mirroring", &
+      convention="compexplorer", purpose="compexplorer", &
+      value=enable_field_mirroring, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    if (trim(enable_field_mirroring)=="yes") then
+      call NUOPC_DriverGetComp(driver, compLabel="Component", &
+        comp=comp, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+      call ESMF_GridCompGet(comp, importState=compImport, &
+        exportState=compExport, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+      call NUOPC_AttributeSet(compImport, "FieldTransferPolicy", &
+        "transferAll", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      call NUOPC_AttributeSet(compExport, "FieldTransferPolicy", &
+        "transferAll", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+      ! set driver's own import/export to accept field transfers
+      call NUOPC_AttributeSet(importState, "FieldTransferPolicy", &
+        "transferAll", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      call NUOPC_AttributeSet(exportState, "FieldTransferPolicy", &
+        "transferAll", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+    end if
+  end subroutine
+
+
   !-----------------------------------------------------------------------------
 
   subroutine InitializeP2(driver, importState, exportState, clock, rc)
@@ -507,6 +701,141 @@ module nuopcExplorerDriver
     
   end subroutine
   
+  subroutine RealizeMirroredFields(driver, importState, exportState, clock, rc)
+    type(ESMF_GridComp)  :: driver
+    type(ESMF_State)     :: importState, exportState
+    type(ESMF_Clock)     :: clock
+    integer, intent(out) :: rc
+
+    character(len=80)      :: enable_field_mirroring, statename
+    integer                :: i, itemCount, stat
+    character(ESMF_MAXSTR) :: transferGeom
+    character(ESMF_MAXSTR), allocatable :: itemNameList(:)
+    type(ESMF_StateItem_Flag), allocatable :: itemTypeList(:)
+    type(ESMF_Field)       :: field
+
+    rc = ESMF_SUCCESS
+
+    !print *, "Inside RealizeMirroredFields"
+
+    ! realize mirrored fields that have accepted grid from other comp
+
+    call ESMF_AttributeGet(driver, name="enable_field_mirroring", &
+      convention="compexplorer", purpose="compexplorer", &
+      value=enable_field_mirroring, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    if (trim(enable_field_mirroring)/="yes") return
+
+    call ESMF_StateGet(exportState, name=statename, itemCount=itemCount, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=__FILE__)) return  ! bail out
+
+    allocate(itemNameList(itemCount),stat=stat)
+    if (ESMF_LogFoundAllocError(statusToCheck=stat, &
+      msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=__FILE__, rcToReturn=rc)) &
+      return  ! bail out
+
+    allocate(itemTypeList(itemCount),stat=stat)
+    if (ESMF_LogFoundAllocError(statusToCheck=stat, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=__FILE__, rcToReturn=rc)) &
+      return  ! bail out
+
+    call ESMF_StateGet(exportState, itemNameList=itemNameList, &
+      itemTypeList=itemTypeList, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! WARNING: does not currently deal with nested states or field bundles
+    do i=lbound(itemNameList,1), ubound(itemNameList,1)
+      if (itemTypeList(i)==ESMF_STATEITEM_FIELD) then
+
+        ! TODO: condition on NUOPC_StateIsFieldConnected first
+        ! NUOPC_StateIsFieldConnected(state, fieldName=fieldNameList(i))
+
+        call ESMF_StateGet(exportState, &
+          itemNameList(i), field, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+
+        call NUOPC_FieldAttributeGet(field, name="TransferActionGeomObject", &
+          value=transferGeom, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+
+        if (trim(transferGeom)=="accept") then
+          print *, "COMPLETING FIELD: ", itemNameList(i)
+          ! grid already set by connector
+          call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+        end if
+
+      end if
+    end do
+
+    deallocate(itemNameList)
+    deallocate(itemTypeList)
+
+  end subroutine
+
+
+  subroutine TimestampMirroredFields(driver, importState, exportState, clock, rc)
+    type(ESMF_GridComp)  :: driver
+    type(ESMF_State)     :: importState, exportState
+    type(ESMF_Clock)     :: clock
+    integer, intent(out) :: rc
+
+    character(len=80)      :: enable_field_mirroring, statename
+    integer                :: i, itemCount, stat
+    character(ESMF_MAXSTR) :: transferGeom
+    character(ESMF_MAXSTR), allocatable :: itemNameList(:)
+    type(ESMF_StateItem_Flag), allocatable :: itemTypeList(:)
+    type(ESMF_Field)       :: field
+
+    rc = ESMF_SUCCESS
+
+    !print *, "Inside TimestampMirroredFields"
+
+    ! timestamp mirrored fields
+
+    call ESMF_AttributeGet(driver, name="enable_field_mirroring", &
+      convention="compexplorer", purpose="compexplorer", &
+      value=enable_field_mirroring, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    if (trim(enable_field_mirroring)/="yes") return
+
+    call NUOPC_StateSetTimestamp(exportState, clock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeSet(driver, name="InitializeDataComplete", &
+      value="true", convention="NUOPC",  purpose="Instance", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+  end subroutine
+
   !-----------------------------------------------------------------------------
 
   subroutine exploreField(field, attributeName, rc)
@@ -656,6 +985,66 @@ module nuopcExplorerDriver
       enddo  
     
     endif
+  end subroutine
+
+  subroutine RunInternal(driver, importState, exportState, clock, rc)
+    type(ESMF_GridComp)  :: driver
+    type(ESMF_State)     :: importState, exportState
+    type(ESMF_Clock)     :: clock
+    integer, intent(out) :: rc
+
+    type(ESMF_Clock)     :: internalClock
+
+    rc = ESMF_SUCCESS
+
+    ! update timestamp on all the export Fields
+    call ESMF_GridCompGet(driver, clock=internalClock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_StateSetTimestamp(exportState, internalClock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=__FILE__)) &
+      return  ! bail out
+
+  end subroutine
+
+  subroutine SetRunSequence(driver, rc)
+    type(ESMF_GridComp)  :: driver
+    integer, intent(out) :: rc
+
+    rc = ESMF_SUCCESS
+
+    !print *, "Resetting run sequence"
+
+    ! Replace the default RunSequence with a customized one
+    call NUOPC_DriverNewRunSequence(driver, slotCount=1, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call NUOPC_DriverAddRunElement(driver, slot=1, &
+      compLabel="explorerDriver", phaseLabel="RunInternal", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call NUOPC_DriverAddRunElement(driver, slot=1, &
+      srcCompLabel="explorerDriver", dstCompLabel="Component", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call NUOPC_DriverAddRunElement(driver, slot=1, &
+      compLabel="Component", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
   end subroutine
 
   !-----------------------------------------------------------------------------
