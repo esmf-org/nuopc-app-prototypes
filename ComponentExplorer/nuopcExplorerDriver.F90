@@ -174,7 +174,7 @@ module nuopcExplorerDriver
     character(len=160)            :: soName
 #endif
     type(ESMF_GridComp)           :: child
-    type(ESMF_CplComp)            :: connector
+    type(ESMF_CplComp)            :: drv2comp, comp2drv
     character(len=80)             :: enable_compliance_check
     character(len=80)             :: enable_field_mirroring
 
@@ -279,12 +279,26 @@ module nuopcExplorerDriver
 
       call NUOPC_DriverAddComp(driver, srcCompLabel="explorerDriver", &
         dstCompLabel="Component", compSetServicesRoutine=cplSS, &
-        comp=connector, rc=rc)
+        comp=drv2comp, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-      call NUOPC_CompAttributeSet(connector, name="Verbosity", &
+      call NUOPC_CompAttributeSet(drv2comp, name="Verbosity", &
+        value="high", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+      call NUOPC_DriverAddComp(driver, srcCompLabel="Component", &
+        dstCompLabel="explorerDriver", compSetServicesRoutine=cplSS, &
+        comp=comp2drv, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      call NUOPC_CompAttributeSet(comp2drv, name="Verbosity", &
         value="high", rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
@@ -324,7 +338,17 @@ module nuopcExplorerDriver
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       ! compliance check connector, if present
       if (trim(enable_field_mirroring)=="yes") then
-        call ESMF_CplCompSetServices(connector, userRoutine=registerIC_Connector, &
+        call ESMF_CplCompSetServices(drv2comp, userRoutine=registerIC_Connector, &
+          userRc=urc, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        call ESMF_CplCompSetServices(comp2drv, userRoutine=registerIC_Connector, &
           userRc=urc, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
           line=__LINE__, &
@@ -726,11 +750,37 @@ module nuopcExplorerDriver
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
-      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      return ! bail out
 
     if (trim(enable_field_mirroring)/="yes") return
 
-    call ESMF_StateGet(exportState, name=statename, itemCount=itemCount, rc=rc)
+    call MirrorFieldsInState(importState, rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return ! bail out
+
+    call MirrorFieldsInState(exportState, rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return ! bail out
+
+  end subroutine
+
+  subroutine MirrorFieldsInState(state, rc)
+    type(ESMF_State), intent(in) :: state
+    integer, intent(out) :: rc
+
+    integer                :: i, itemCount, stat
+    character(ESMF_MAXSTR) :: transferGeom
+    character(ESMF_MAXSTR), allocatable :: itemNameList(:)
+    type(ESMF_StateItem_Flag), allocatable :: itemTypeList(:)
+    type(ESMF_Field)       :: field
+
+    rc = ESMF_SUCCESS
+
+    call ESMF_StateGet(state, itemCount=itemCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=__FILE__)) return  ! bail out
 
@@ -745,7 +795,7 @@ module nuopcExplorerDriver
       line=__LINE__, file=__FILE__, rcToReturn=rc)) &
       return  ! bail out
 
-    call ESMF_StateGet(exportState, itemNameList=itemNameList, &
+    call ESMF_StateGet(state, itemNameList=itemNameList, &
       itemTypeList=itemTypeList, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -759,7 +809,7 @@ module nuopcExplorerDriver
         ! TODO: condition on NUOPC_StateIsFieldConnected first
         ! NUOPC_StateIsFieldConnected(state, fieldName=fieldNameList(i))
 
-        call ESMF_StateGet(exportState, &
+        call ESMF_StateGet(state, &
           itemNameList(i), field, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
           line=__LINE__, &
@@ -773,6 +823,8 @@ module nuopcExplorerDriver
           file=__FILE__)) &
           return  ! bail out
 
+        print *, "EXAMINING FIELD: ", itemNameList(i), trim(transferGeom)
+
         if (trim(transferGeom)=="accept") then
           print *, "COMPLETING FIELD: ", itemNameList(i)
           ! grid already set by connector
@@ -781,6 +833,8 @@ module nuopcExplorerDriver
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
+        else
+            print *, "NOT COMPLETING FIELD: ", itemNameList(i), trim(transferGeom)
         end if
 
       end if
@@ -1033,6 +1087,13 @@ module nuopcExplorerDriver
 
     call NUOPC_DriverAddRunElement(driver, slot=1, &
       srcCompLabel="explorerDriver", dstCompLabel="Component", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call NUOPC_DriverAddRunElement(driver, slot=1, &
+      srcCompLabel="Component", dstCompLabel="explorerDriver", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
