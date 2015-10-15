@@ -18,7 +18,8 @@ module nuopcExplorerDriver
         driver_routine_SS             => SetServices, &
         driver_label_SetModelServices => label_SetModelServices, &
         driver_label_ModifyInitializePhaseMap => label_ModifyInitializePhaseMap, &
-        driver_label_SetRunSequence => label_SetRunSequence
+        driver_label_SetRunSequence => label_SetRunSequence, &
+        driver_label_SetRunClock => label_SetRunClock
   
     use NUOPC_Compliance_Model, only: registerIC
     use NUOPC_Compliance_Connector, only :  registerIC_Connector => registerIC
@@ -145,6 +146,7 @@ contains
                 line=__LINE__, &
                 file=__FILE__)) &
                 return  ! bail out
+
         end if
 
 #define COMPLIANCE_CHECK_DRIVER
@@ -882,6 +884,12 @@ contains
 
         if (trim(enable_field_mirroring)/="yes") return
 
+        call NUOPC_StateSetTimestamp(importState, clock, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
         call NUOPC_StateSetTimestamp(exportState, clock, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
@@ -1063,6 +1071,10 @@ contains
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, file=__FILE__)) &
             return  ! bail out
+        call NUOPC_StateSetTimestamp(importState, internalClock, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, file=__FILE__)) &
+            return  ! bail out
         call NUOPC_StateSetTimestamp(exportState, internalClock, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, file=__FILE__)) &
@@ -1152,7 +1164,7 @@ contains
                     return  ! bail out
                 ! go through all of the entries in the cplList
                 do j=1, cplListSize
-	                ! switch from default regrid to redist
+                    ! switch from default regrid to redist
                     cplList(j) = trim(cplList(j))//":REMAPMETHOD=redist"
                 enddo
                 ! store the modified cplList in CplList attribute of connector i
