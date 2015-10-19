@@ -787,6 +787,12 @@ contains
         type(ESMF_StateItem_Flag), allocatable :: itemTypeList(:)
         type(ESMF_Field)       :: field
 
+        type(ESMF_Grid)        :: grid
+        type(ESMF_DistGrid)    :: distgrid
+        integer, allocatable   :: minIndexPTile(:,:), maxIndexPTile(:,:)
+        integer                :: dimCount
+        character(len=80)      :: valueString
+
         rc = ESMF_SUCCESS
 
         call ESMF_StateGet(state, itemCount=itemCount, rc=rc)
@@ -832,18 +838,75 @@ contains
                     file=__FILE__)) &
                     return  ! bail out
 
-                print *, "EXAMINING FIELD: ", itemNameList(i), trim(transferGeom)
-
                 if (trim(transferGeom)=="accept") then
-                    print *, "COMPLETING FIELD: ", itemNameList(i)
+!                    print *, "COMPLETING FIELD: ", itemNameList(i)
+                    call ESMF_LogWrite("Completing mirrored field: "//itemNameList(i), &
+                        ESMF_LOGMSG_INFO, rc=rc)
+                    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                        line=__LINE__, &
+                        file=__FILE__)) &
+                        return  ! bail out
+
                     ! grid already set by connector
                     call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
                     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                         line=__LINE__, &
                         file=__FILE__)) &
                         return  ! bail out
+#define DEBUG_DISTGRID
+#ifdef DEBUG_DISTGRID
+
+                    call ESMF_FieldGet(field, grid=grid, rc=rc)
+                    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                        line=__LINE__, &
+                        file=__FILE__)) &
+                        return  ! bail out
+                    call ESMF_GridGet(grid, distgrid=distgrid, rc=rc)
+                    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                        line=__LINE__, &
+                        file=__FILE__)) &
+                        return  ! bail out
+                    call ESMF_DistGridGet(distgrid, dimCount=dimCount, rc=rc)
+                    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                        line=__LINE__, &
+                        file=__FILE__)) &
+                        return  ! bail out
+
+                    allocate(minIndexPTile(dimCount,1), maxIndexPTile(dimCount,1))
+
+                    call ESMF_DistGridGet(distgrid, minIndexPTile=minIndexPTile, &
+                        maxIndexPTile=maxIndexPTile, rc=rc)
+                    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                        line=__LINE__, &
+                        file=__FILE__)) &
+                        return  ! bail out
+
+                    write(valueString, *) "DistGrid minIndexPTile(:,1) = ", minIndexPTile(:,1)
+                    call ESMF_LogWrite(valueString, ESMF_LOGMSG_INFO, rc=rc)
+                    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                        line=__LINE__, &
+                        file=__FILE__)) &
+                        return  ! bail out
+
+                    write(valueString, *) "DistGrid maxIndexPTile(:,1) = ", maxIndexPTile(:,1)
+                    call ESMF_LogWrite(valueString, ESMF_LOGMSG_INFO, rc=rc)
+                    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                        line=__LINE__, &
+                        file=__FILE__)) &
+                        return  ! bail out
+
+                    deallocate(minIndexPTile)
+                    deallocate(maxIndexPTile)
+
+#endif
                 else
-                    print *, "NOT COMPLETING FIELD: ", itemNameList(i), trim(transferGeom)
+                    !print *, "NOT COMPLETING FIELD: ", itemNameList(i), trim(transferGeom)
+                    call ESMF_LogWrite("CANNOT complete mirrored field: "//itemNameList(i), &
+                        ESMF_LOGMSG_INFO, rc=rc)
+                    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                        line=__LINE__, &
+                        file=__FILE__)) &
+                        return  ! bail out
                 end if
 
             end if
@@ -1066,7 +1129,7 @@ contains
 
         rc = ESMF_SUCCESS
 
-        ! update timestamp on all the export Fields
+        ! update timestamp on all the import & export Fields
         call ESMF_GridCompGet(driver, clock=internalClock, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, file=__FILE__)) &
