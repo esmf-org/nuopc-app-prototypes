@@ -791,7 +791,10 @@ contains
         type(ESMF_DistGrid)    :: distgrid
         integer, allocatable   :: minIndexPTile(:,:), maxIndexPTile(:,:)
         integer                :: dimCount
-        character(len=80)      :: valueString
+        character(len=80)      :: valueString, attrString
+        logical                :: isPresent
+        type(ESMF_AttPack)     :: attpack
+        integer, pointer       :: ungriddedLBound(:), ungriddedUBound(:)
 
         rc = ESMF_SUCCESS
 
@@ -839,20 +842,101 @@ contains
                     return  ! bail out
 
                 if (trim(transferGeom)=="accept") then
-!                    print *, "COMPLETING FIELD: ", itemNameList(i)
+
                     call ESMF_LogWrite("Completing mirrored field: "//itemNameList(i), &
                         ESMF_LOGMSG_INFO, rc=rc)
                     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-                        line=__LINE__, &
-                        file=__FILE__)) &
+                        line=__LINE__, file=__FILE__)) &
                         return  ! bail out
 
-                    ! grid already set by connector
-                    call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
+                    nullify(ungriddedLBound)
+                    nullify(ungriddedUBound)
+
+                    call ESMF_AttributeGetAttPack(field, attpack=attpack, &
+                      convention="NUOPC", purpose="Instance", isPresent=isPresent, rc=rc)
                     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-                        line=__LINE__, &
-                        file=__FILE__)) &
+                        line=__LINE__, file=__FILE__)) &
                         return  ! bail out
+                    if (.not. isPresent) then
+                      ! attpack not present
+                      call ESMF_LogWrite("Field level attpack NOT present!", &
+                          ESMF_LOGMSG_WARNING, rc=rc)
+                      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                        line=__LINE__, file=__FILE__)) &
+                        return  ! bail out
+                    else
+                      ! retrieve ungridded dimension bounds and mirror
+                      ! match those as well
+                      call ESMF_AttributeGet(field, name="UngriddedLBound", &
+                        attpack=attpack, itemCount=itemCount, isPresent=isPresent, &
+                        attnestflag=ESMF_ATTNEST_ON, rc=rc)
+                      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                        line=__LINE__, file=__FILE__)) &
+                        return  ! bail out
+
+                      if (isPresent .and. itemCount > 0) then
+                        allocate(ungriddedLBound(itemCount),stat=stat)
+                        if (ESMF_LogFoundAllocError(statusToCheck=stat, &
+                          msg="Allocation of internal ungriddedLBound failed.", &
+                          line=__LINE__, file=__FILE__, rcToReturn=rc)) &
+                          return  ! bail out
+
+                        call ESMF_AttributeGet(field, &
+                          name="UngriddedLBound", valueList=ungriddedLBound, &
+                          convention="NUOPC", purpose="Instance", &
+                          attnestflag=ESMF_ATTNEST_ON, rc=rc)
+                        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                          line=__LINE__, &
+                          file=__FILE__)) &
+                          return  ! bail out
+
+                        !print *, "UNGRIDDED LBOUND = ", ungriddedLBound
+                      endif
+
+                      call ESMF_AttributeGet(field, name="UngriddedUBound", &
+                        attpack=attpack, itemCount=itemCount, isPresent=isPresent, &
+                        attnestflag=ESMF_ATTNEST_ON, rc=rc)
+                      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                        line=__LINE__, file=__FILE__)) &
+                        return  ! bail out
+
+                      if (isPresent .and. itemCount > 0) then
+                        allocate(ungriddedUBound(itemCount),stat=stat)
+                        if (ESMF_LogFoundAllocError(statusToCheck=stat, &
+                          msg="Allocation of internal ungriddedUBound failed.", &
+                          line=__LINE__, file=__FILE__, rcToReturn=rc)) &
+                          return  ! bail out
+
+                        call ESMF_AttributeGet(field, &
+                          name="UngriddedUBound", valueList=ungriddedUBound, &
+                          convention="NUOPC", purpose="Instance", &
+                          attnestflag=ESMF_ATTNEST_ON, rc=rc)
+                        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                          line=__LINE__, &
+                          file=__FILE__)) &
+                          return  ! bail out
+
+                        !print *, "UNGRIDDED UBOUND = ", ungriddedUBound
+                      endif
+                    endif
+
+                    if (associated(ungriddedLBound) .and. &
+                        associated(ungriddedUBound)) then
+                      call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, &
+                        ungriddedLBound=ungriddedLBound, &
+                        ungriddedUBound=ungriddedUBound, &
+                        rc=rc)
+                      deallocate(ungriddedLBound)
+                      deallocate(ungriddedUBound)
+                    else
+                      call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
+                    endif
+
+                    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                          line=__LINE__, &
+                          file=__FILE__)) &
+                          return  ! bail out
+
 #define DEBUG_DISTGRID
 #ifdef DEBUG_DISTGRID
 
