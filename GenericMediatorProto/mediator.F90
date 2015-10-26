@@ -128,14 +128,14 @@ module Mediator
     
     ! Fields from ModelA
     !   use namespace in the importState
-    call NUOPC_StateNamespaceAdd(importState, namespace="ModelA", &
+    call NUOPC_AddNamespace(importState, namespace="ModelA", &
       nestedState=frModelA, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     !   advertise fields in the nested state
-    call newNUOPC_StateAdvertiseFields(frModelA, &
+    call NUOPC_Advertise(frModelA, &
       StandardNames=(/ &
       "sea_surface_temperature"/), &
       TransferOfferGeomObject="cannot provide", rc=rc)
@@ -146,14 +146,14 @@ module Mediator
     
     ! Fields to ModelA
     !   use namespace in the exportState
-    call NUOPC_StateNamespaceAdd(exportState, namespace="ModelA", &
+    call NUOPC_AddNamespace(exportState, namespace="ModelA", &
       nestedState=toModelA, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     !   advertise fields in the nested state
-    call newNUOPC_StateAdvertiseFields(toModelA, &
+    call NUOPC_Advertise(toModelA, &
       StandardNames=(/ &
       "air_pressure_at_sea_level          ", &
       "surface_net_downward_shortwave_flux"/), &
@@ -165,14 +165,14 @@ module Mediator
     
     ! Fields from ModelB
     !   use namespace in the importState
-    call NUOPC_StateNamespaceAdd(importState, namespace="ModelB", &
+    call NUOPC_AddNamespace(importState, namespace="ModelB", &
       nestedState=frModelB, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     !   advertise fields in the nested state
-    call newNUOPC_StateAdvertiseFields(frModelB, &
+    call NUOPC_Advertise(frModelB, &
       StandardNames=(/ &
       "air_pressure_at_sea_level          ", &
       "surface_net_downward_shortwave_flux"/), &
@@ -184,14 +184,14 @@ module Mediator
     
     ! Fields to ModelB
     !   use namespace in the exportState
-    call NUOPC_StateNamespaceAdd(exportState, namespace="ModelB", &
+    call NUOPC_AddNamespace(exportState, namespace="ModelB", &
       nestedState=toModelB, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     !   advertise fields in the nested state
-    call newNUOPC_StateAdvertiseFields(toModelB, &
+    call NUOPC_Advertise(toModelB, &
       StandardNames=(/ &
       "sea_surface_temperature"/), &
       TransferOfferGeomObject="cannot provide", rc=rc)
@@ -200,32 +200,6 @@ module Mediator
       file=__FILE__)) &
       return  ! bail out
     
-    contains ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    
-    subroutine newNUOPC_StateAdvertiseFields(state, StandardNames, &
-      ! The ESMF master already contains this changed interface -> can be 
-      ! removed here once the latest ESMF snapshot is used.
-      TransferOfferGeomObject, rc)
-      type(ESMF_State), intent(inout)         :: state
-      character(*),     intent(in)            :: StandardNames(:)
-      character(*),     intent(in),  optional :: TransferOfferGeomObject
-      integer,          intent(out), optional :: rc
-      ! local variables
-      integer                 :: i
-    
-      if (present(rc)) rc = ESMF_SUCCESS
-
-      do i=1, size(StandardNames)
-        call NUOPC_StateAdvertiseField(state, StandardName=StandardNames(i), &
-          TransferOfferGeomObject=TransferOfferGeomObject, rc=rc)
-        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=__LINE__, &
-          file=__FILE__)) &
-          return  ! bail out
-      enddo
-      
-    end subroutine
-
   end subroutine
   
   !-----------------------------------------------------------------------------
@@ -296,7 +270,7 @@ module Mediator
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
-          call NUOPC_FieldAttributeGet(field, name="Connected", &
+          call NUOPC_GetAttribute(field, name="Connected", &
             value=connectedValue, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
@@ -304,13 +278,13 @@ module Mediator
             return  ! bail out
           if (connectedValue=="false") then
             ! remove the field from the state
-            call ESMF_StateRemove(state, itemNameList(item), rc=rc)
+            call ESMF_StateRemove(state, (/itemNameList(item)/), rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
               line=__LINE__, &
               file=__FILE__)) &
               return  ! bail out
           else
-            call NUOPC_FieldAttributeGet(field, name="TransferActionGeomObject", &
+            call NUOPC_GetAttribute(field, name="TransferActionGeomObject", &
               value=transferAction, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
               line=__LINE__, &
@@ -409,7 +383,7 @@ module Mediator
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
-          call NUOPC_FieldAttributeGet(field, name="TransferActionGeomObject", &
+          call NUOPC_GetAttribute(field, name="TransferActionGeomObject", &
             value=transferAction, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
@@ -654,7 +628,7 @@ module Mediator
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
-          call NUOPC_FieldAttributeGet(field, name="TransferActionGeomObject", &
+          call NUOPC_GetAttribute(field, name="TransferActionGeomObject", &
             value=transferAction, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &

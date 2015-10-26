@@ -522,13 +522,13 @@ contains
                 file=__FILE__)) &
                 return  ! bail out
 
-            call NUOPC_AttributeSet(compImport, "FieldTransferPolicy", &
+            call NUOPC_SetAttribute(compImport, "FieldTransferPolicy", &
                 "transferAll", rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                 line=__LINE__, &
                 file=__FILE__)) &
                 return  ! bail out
-            call NUOPC_AttributeSet(compExport, "FieldTransferPolicy", &
+            call NUOPC_SetAttribute(compExport, "FieldTransferPolicy", &
                 "transferAll", rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                 line=__LINE__, &
@@ -536,13 +536,13 @@ contains
                 return  ! bail out
 
             ! set driver's own import/export to accept field transfers
-            call NUOPC_AttributeSet(importState, "FieldTransferPolicy", &
+            call NUOPC_SetAttribute(importState, "FieldTransferPolicy", &
                 "transferAll", rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                 line=__LINE__, &
                 file=__FILE__)) &
                 return  ! bail out
-            call NUOPC_AttributeSet(exportState, "FieldTransferPolicy", &
+            call NUOPC_SetAttribute(exportState, "FieldTransferPolicy", &
                 "transferAll", rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                 line=__LINE__, &
@@ -824,8 +824,8 @@ contains
         do i=lbound(itemNameList,1), ubound(itemNameList,1)
             if (itemTypeList(i)==ESMF_STATEITEM_FIELD) then
 
-                ! TODO: condition on NUOPC_StateIsFieldConnected first
-                ! NUOPC_StateIsFieldConnected(state, fieldName=fieldNameList(i))
+                ! TODO: condition on NUOPC_IsConnected first
+                ! NUOPC_IsConnected(state, fieldName=fieldNameList(i))
 
                 call ESMF_StateGet(state, &
                     itemNameList(i), field, rc=rc)
@@ -834,7 +834,7 @@ contains
                     file=__FILE__)) &
                     return  ! bail out
 
-                call NUOPC_FieldAttributeGet(field, name="TransferActionGeomObject", &
+                call NUOPC_GetAttribute(field, name="TransferActionGeomObject", &
                     value=transferGeom, rc=rc)
                 if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                     line=__LINE__, &

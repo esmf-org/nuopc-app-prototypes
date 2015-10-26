@@ -150,7 +150,7 @@ module OCN
     rc = ESMF_SUCCESS
 
     ! importable field: air_pressure_at_sea_level
-    call NUOPC_StateAdvertiseField(importState, &
+    call NUOPC_Advertise(importState, &
       StandardName="air_pressure_at_sea_level", name="pmsl", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -158,7 +158,7 @@ module OCN
       return  ! bail out
     
     ! importable field: surface_net_downward_shortwave_flux
-    call NUOPC_StateAdvertiseField(importState, &
+    call NUOPC_Advertise(importState, &
       StandardName="surface_net_downward_shortwave_flux", name="rsns", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -166,7 +166,7 @@ module OCN
       return  ! bail out
 
     ! exportable field: sea_surface_temperature
-    call NUOPC_StateAdvertiseField(exportState, &
+    call NUOPC_Advertise(exportState, &
       StandardName="sea_surface_temperature", name="sst", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -201,7 +201,7 @@ module OCN
     rc = ESMF_SUCCESS
     
     ! create a Grid object for Fields
-    gridIn = NUOPC_GridCreateSimpleXY(10._ESMF_KIND_R8, 20._ESMF_KIND_R8, &
+    gridIn = NUOPC_CreateSimpleXYGrid(10._ESMF_KIND_R8, 20._ESMF_KIND_R8, &
       100._ESMF_KIND_R8, 200._ESMF_KIND_R8, 100, 10, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -455,7 +455,7 @@ module OCN
       return  ! bail out
     
     ! check that Fields in the importState show correct timestamp
-    allCorrectTime = NUOPC_StateIsAtTime(importState, time+timeStep/2, rc=rc)
+    allCorrectTime = NUOPC_IsAtTime(importState, time+timeStep/2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -554,7 +554,7 @@ module OCN
       return  ! bail out
     
     ! check that Fields in the importState show correct timestamp
-    allCorrectTime = NUOPC_StateIsAtTime(importState, time+timeStep, rc=rc)
+    allCorrectTime = NUOPC_IsAtTime(importState, time+timeStep, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

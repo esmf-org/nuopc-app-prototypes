@@ -123,7 +123,7 @@ module IOComp
     rc = ESMF_SUCCESS
 
     ! importable field: air_pressure_at_sea_level
-    call NUOPC_StateAdvertiseField(importState, &
+    call NUOPC_Advertise(importState, &
       StandardName="air_pressure_at_sea_level", name="pmsl", &
       TransferOfferGeomObject="cannot provide", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -133,7 +133,7 @@ module IOComp
     
 #ifdef SECONDFIELD
     ! importable field: surface_net_downward_shortwave_flux
-    call NUOPC_StateAdvertiseField(importState, &
+    call NUOPC_Advertise(importState, &
       StandardName="surface_net_downward_shortwave_flux", name="rsns", &
       TransferOfferGeomObject="cannot provide", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -212,7 +212,7 @@ module IOComp
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
-          call NUOPC_FieldAttributeGet(field, name="Connected", &
+          call NUOPC_GetAttribute(field, name="Connected", &
             value=connectedValue, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
@@ -226,7 +226,7 @@ module IOComp
               file=__FILE__)) &
               return  ! bail out
           else
-            call NUOPC_FieldAttributeGet(field, name="TransferActionGeomObject", &
+            call NUOPC_GetAttribute(field, name="TransferActionGeomObject", &
               value=transferAction, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
               line=__LINE__, &
@@ -325,7 +325,7 @@ module IOComp
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
-          call NUOPC_FieldAttributeGet(field, name="TransferActionGeomObject", &
+          call NUOPC_GetAttribute(field, name="TransferActionGeomObject", &
             value=transferAction, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
@@ -570,7 +570,7 @@ module IOComp
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
-          call NUOPC_FieldAttributeGet(field, name="TransferActionGeomObject", &
+          call NUOPC_GetAttribute(field, name="TransferActionGeomObject", &
             value=transferAction, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &

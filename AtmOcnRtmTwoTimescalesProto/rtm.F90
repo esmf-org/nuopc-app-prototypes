@@ -68,7 +68,7 @@ module RTM
     rc = ESMF_SUCCESS
 
     ! importable field: field_to_rtm
-    call NUOPC_StateAdvertiseField(importState, &
+    call NUOPC_Advertise(importState, &
       StandardName="field_to_rtm", name="ftr", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -76,7 +76,7 @@ module RTM
       return  ! bail out
 
     ! exportable field: field_from_rtm
-    call NUOPC_StateAdvertiseField(exportState, &
+    call NUOPC_Advertise(exportState, &
       StandardName="field_from_rtm", name="ffr", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -102,7 +102,7 @@ module RTM
     rc = ESMF_SUCCESS
     
     ! create a Grid object for Fields
-    gridIn = NUOPC_GridCreateSimpleXY(10._ESMF_KIND_R8, 20._ESMF_KIND_R8, &
+    gridIn = NUOPC_CreateSimpleXYGrid(10._ESMF_KIND_R8, 20._ESMF_KIND_R8, &
       100._ESMF_KIND_R8, 200._ESMF_KIND_R8, 10, 100, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &

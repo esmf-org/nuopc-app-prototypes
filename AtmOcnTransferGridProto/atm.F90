@@ -116,7 +116,7 @@ module ATM
     rc = ESMF_SUCCESS
     
     ! importable field: sea_surface_temperature
-    call NUOPC_StateAdvertiseField(importState, &
+    call NUOPC_Advertise(importState, &
       StandardName="sea_surface_temperature", name="sst", &
       TransferOfferGeomObject="can provide", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -125,7 +125,7 @@ module ATM
       return  ! bail out
 
     ! exportable field: air_pressure_at_sea_level
-    call NUOPC_StateAdvertiseField(exportState, &
+    call NUOPC_Advertise(exportState, &
       StandardName="air_pressure_at_sea_level", name="pmsl", &
       TransferOfferGeomObject="cannot provide", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -134,7 +134,7 @@ module ATM
       return  ! bail out
     
     ! exportable field: surface_net_downward_shortwave_flux
-    call NUOPC_StateAdvertiseField(exportState, &
+    call NUOPC_Advertise(exportState, &
       StandardName="surface_net_downward_shortwave_flux", name="rsns", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -200,7 +200,7 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_FieldAttributeGet(field, name="TransferActionGeomObject", &
+    call NUOPC_GetAttribute(field, name="TransferActionGeomObject", &
       value=transferAction, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -541,7 +541,7 @@ module ATM
         return  ! bail out
     endif
     ! set "Updated"
-    call NUOPC_FieldAttributeSet(field, name="Updated", value="true", rc=rc)
+    call NUOPC_SetAttribute(field, name="Updated", value="true", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -581,7 +581,7 @@ module ATM
         return  ! bail out
     endif
     ! set "Updated"
-    call NUOPC_FieldAttributeSet(field, name="Updated", value="true", rc=rc)
+    call NUOPC_SetAttribute(field, name="Updated", value="true", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

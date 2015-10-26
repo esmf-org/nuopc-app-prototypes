@@ -68,7 +68,7 @@ module ModelComp
     rc = ESMF_SUCCESS
     
     ! exportable field: air_pressure_at_sea_level
-    call NUOPC_StateAdvertiseField(exportState, &
+    call NUOPC_Advertise(exportState, &
       StandardName="air_pressure_at_sea_level", name="pmsl", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -77,7 +77,7 @@ module ModelComp
     
 #ifdef SECONDFIELD
     ! exportable field: surface_net_downward_shortwave_flux
-    call NUOPC_StateAdvertiseField(exportState, &
+    call NUOPC_Advertise(exportState, &
       StandardName="surface_net_downward_shortwave_flux", name="rsns", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -104,9 +104,9 @@ module ModelComp
     rc = ESMF_SUCCESS
     
     ! create a Grid object for Fields
-    gridOut = NUOPC_GridCreateSimpleSph(0._ESMF_KIND_R8, -60._ESMF_KIND_R8, &
+    gridOut = NUOPC_CreateSimpleSphGrid(0._ESMF_KIND_R8, -60._ESMF_KIND_R8, &
       360._ESMF_KIND_R8, 80._ESMF_KIND_R8, 200, 300, &
-      scheme=ESMF_REGRID_SCHEME_FULL3D, rc=rc)
+      regional=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

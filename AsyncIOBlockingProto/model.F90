@@ -68,7 +68,7 @@ module ModelComp
     rc = ESMF_SUCCESS
     
     ! exportable field: air_pressure_at_sea_level
-    call NUOPC_StateAdvertiseField(exportState, &
+    call NUOPC_Advertise(exportState, &
       StandardName="air_pressure_at_sea_level", name="pmsl", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -119,9 +119,9 @@ module ModelComp
     endif
    
     ! create a Grid object for Fields
-    gridOut = NUOPC_GridCreateSimpleSph(0._ESMF_KIND_R8, -60._ESMF_KIND_R8, &
+    gridOut = NUOPC_CreateSimpleSphGrid(0._ESMF_KIND_R8, -60._ESMF_KIND_R8, &
       360._ESMF_KIND_R8, 80._ESMF_KIND_R8, gridDims(1), gridDims(2), &
-      scheme=ESMF_REGRID_SCHEME_FULL3D, rc=rc)
+      regional=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

@@ -85,7 +85,7 @@ module MED
     do i=1, atmCount
       write (iString,*) i
       ! add a namespace to the importState
-      call NUOPC_StateNamespaceAdd(importState, &
+      call NUOPC_AddNamespace(importState, &
         namespace="ATM"//trim(adjustl(iString)), &
         nestedStateName="NestedState-ATM"//trim(adjustl(iString)), &
         nestedState=state, rc=rc)
@@ -94,14 +94,14 @@ module MED
         file=__FILE__)) &
         return  ! bail out
       ! importable field: air_pressure_at_sea_level
-      call NUOPC_StateAdvertiseField(state, &
+      call NUOPC_Advertise(state, &
         StandardName="air_pressure_at_sea_level", name="pmsl", rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
       ! importable field: surface_net_downward_shortwave_flux
-      call NUOPC_StateAdvertiseField(state, &
+      call NUOPC_Advertise(state, &
         StandardName="surface_net_downward_shortwave_flux", name="rsns", rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
@@ -110,14 +110,14 @@ module MED
         
 #define DEEP_TEST_off
 #ifdef DEEP_TEST
-      call NUOPC_StateNamespaceAdd(state, &
+      call NUOPC_AddNamespace(state, &
         namespace="deep-"//trim(adjustl(iString)), nestedState=deepState, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
       ! importable field: air_pressure_at_sea_level
-      call NUOPC_StateAdvertiseField(deepState, &
+      call NUOPC_Advertise(deepState, &
         StandardName="air_pressure_at_sea_level", name="pmsl", rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
@@ -129,7 +129,7 @@ module MED
 
 #define FLAT_TEST_off
 #ifdef FLAT_TEST
-    call NUOPC_StateAdvertiseField(importState, &
+    call NUOPC_Advertise(importState, &
       StandardName="air_pressure_at_sea_level", name="pmsl", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -143,7 +143,7 @@ module MED
     do i=1, atmCount
       write (iString,*) i
       ! add a namespace to the exportState
-      call NUOPC_StateNamespaceAdd(exportState, &
+      call NUOPC_AddNamespace(exportState, &
         namespace="ATM"//trim(adjustl(iString)), &
         nestedStateName="NestedState-ATM"//trim(adjustl(iString)), &
         nestedState=state, rc=rc)
@@ -152,7 +152,7 @@ module MED
         file=__FILE__)) &
         return  ! bail out
       ! exportable field: sea_surface_temperature
-      call NUOPC_StateAdvertiseField(state, &
+      call NUOPC_Advertise(state, &
         StandardName="sea_surface_temperature", name="sst", rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
@@ -161,7 +161,7 @@ module MED
     enddo
 #else
     ! exportable field: air_pressure_at_sea_level
-    call NUOPC_StateAdvertiseField(exportState, &
+    call NUOPC_Advertise(exportState, &
       StandardName="sea_surface_temperature", name="sst", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -190,9 +190,9 @@ module MED
     rc = ESMF_SUCCESS
     
     ! create a Grid object for Fields
-    gridIn = NUOPC_GridCreateSimpleSph(0._ESMF_KIND_R8, -70._ESMF_KIND_R8, &
+    gridIn = NUOPC_CreateSimpleSphGrid(0._ESMF_KIND_R8, -70._ESMF_KIND_R8, &
       360._ESMF_KIND_R8, 80._ESMF_KIND_R8, 50, 30, &
-      scheme=ESMF_REGRID_SCHEME_FULL3D, rc=rc)
+      regional=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

@@ -85,7 +85,7 @@ module OCN
     ! Import Fields
     do i=1, importFieldCount
       write(fieldName, "(A, I3.3)") "field_atm2ocn_", i
-      call NUOPC_StateAdvertiseField(importState, &
+      call NUOPC_Advertise(importState, &
         StandardName=fieldName, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
@@ -96,7 +96,7 @@ module OCN
     ! Export Fields
     do i=1, exportFieldCount
       write(fieldName, "(A, I3.3)") "field_ocn2atm_", i
-      call NUOPC_StateAdvertiseField(exportState, &
+      call NUOPC_Advertise(exportState, &
         StandardName=fieldName, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
@@ -122,7 +122,7 @@ module OCN
     rc = ESMF_SUCCESS
     
     ! create a Grid object for Fields
-    gridIn = NUOPC_GridCreateSimpleXY(10._ESMF_KIND_R8, 20._ESMF_KIND_R8, &
+    gridIn = NUOPC_CreateSimpleXYGrid(10._ESMF_KIND_R8, 20._ESMF_KIND_R8, &
       100._ESMF_KIND_R8, 200._ESMF_KIND_R8, 10, 100, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &

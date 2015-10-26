@@ -128,7 +128,7 @@ module advectDiffComp
       return  ! bail out
     
     ! exportable field: density
-    call NUOPC_StateAdvertiseField(exportState, &
+    call NUOPC_Advertise(exportState, &
       StandardName="density", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -138,7 +138,7 @@ module advectDiffComp
     if (nestingGeneration == 1) then
       ! Child Domain
       ! importable field: density
-      call NUOPC_StateAdvertiseField(importState, &
+      call NUOPC_Advertise(importState, &
         StandardName="density", rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &

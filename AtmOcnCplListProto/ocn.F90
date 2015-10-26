@@ -75,7 +75,7 @@ module OCN
     rc = ESMF_SUCCESS
 
     ! importable field: air_pressure_at_sea_level
-    call NUOPC_StateAdvertiseField(importState, &
+    call NUOPC_Advertise(importState, &
       StandardName="air_pressure_at_sea_level", name="pmsl", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -83,7 +83,7 @@ module OCN
       return  ! bail out
     
     ! importable field: surface_net_downward_shortwave_flux
-    call NUOPC_StateAdvertiseField(importState, &
+    call NUOPC_Advertise(importState, &
       StandardName="surface_net_downward_shortwave_flux", name="rsns", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -91,7 +91,7 @@ module OCN
       return  ! bail out
 
     ! exportable field: sea_surface_temperature
-    call NUOPC_StateAdvertiseField(exportState, &
+    call NUOPC_Advertise(exportState, &
       StandardName="sea_surface_temperature", name="sst", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -118,9 +118,9 @@ module OCN
     rc = ESMF_SUCCESS
     
     ! create a Grid object for Fields
-    gridIn = NUOPC_GridCreateSimpleSph(0._ESMF_KIND_R8, -80._ESMF_KIND_R8, &
+    gridIn = NUOPC_CreateSimpleSphGrid(0._ESMF_KIND_R8, -80._ESMF_KIND_R8, &
       360._ESMF_KIND_R8, 60._ESMF_KIND_R8, 80, 30, &
-      scheme=ESMF_REGRID_SCHEME_FULL3D, rc=rc)
+      regional=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

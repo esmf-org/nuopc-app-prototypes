@@ -165,7 +165,7 @@ module MED
     rc = ESMF_SUCCESS
     
     ! importable field: sea_surface_temperature
-    call NUOPC_StateAdvertiseField(importState, &
+    call NUOPC_Advertise(importState, &
       StandardName="sea_surface_temperature", name="sst", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -173,7 +173,7 @@ module MED
       return  ! bail out
       
     ! importable field: air_pressure_at_sea_level
-    call NUOPC_StateAdvertiseField(importState, &
+    call NUOPC_Advertise(importState, &
       StandardName="air_pressure_at_sea_level", name="pmsl", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -181,7 +181,7 @@ module MED
       return  ! bail out
     
     ! importable field: surface_net_downward_shortwave_flux
-    call NUOPC_StateAdvertiseField(importState, &
+    call NUOPC_Advertise(importState, &
       StandardName="surface_net_downward_shortwave_flux", name="rsns", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -189,7 +189,7 @@ module MED
       return  ! bail out
 
     ! exportable field: sea_surface_temperature
-    call NUOPC_StateAdvertiseField(exportState, &
+    call NUOPC_Advertise(exportState, &
       StandardName="sea_surface_temperature", name="sst", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -197,7 +197,7 @@ module MED
       return  ! bail out
 
     ! exportable field: air_pressure_at_sea_level
-    call NUOPC_StateAdvertiseField(exportState, &
+    call NUOPC_Advertise(exportState, &
       StandardName="air_pressure_at_sea_level", name="pmsl", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -205,7 +205,7 @@ module MED
       return  ! bail out
     
     ! exportable field: surface_net_downward_shortwave_flux
-    call NUOPC_StateAdvertiseField(exportState, &
+    call NUOPC_Advertise(exportState, &
       StandardName="surface_net_downward_shortwave_flux", name="rsns", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -233,7 +233,7 @@ module MED
     rc = ESMF_SUCCESS
     
     ! create a Grid object for Fields
-    gridIn = NUOPC_GridCreateSimpleXY(10._ESMF_KIND_R8, 20._ESMF_KIND_R8, &
+    gridIn = NUOPC_CreateSimpleXYGrid(10._ESMF_KIND_R8, 20._ESMF_KIND_R8, &
       100._ESMF_KIND_R8, 200._ESMF_KIND_R8, 20, 200, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -557,13 +557,13 @@ module MED
       return  ! bail out
 
     ! check fields from OCN to be at startTime of the driver Clock
-    if (NUOPC_StateIsFieldConnected(importState, fieldName="sst")) then
+    if (NUOPC_IsConnected(importState, fieldName="sst")) then
       call ESMF_StateGet(importState, itemName="sst", field=field, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-      atCorrectTime = NUOPC_FieldIsAtTime(field, startTime, rc=rc)
+      atCorrectTime = NUOPC_IsAtTime(field, startTime, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
@@ -618,13 +618,13 @@ module MED
       return  ! bail out
 
     ! check fields from ATM to be at stopTime
-    if (NUOPC_StateIsFieldConnected(importState, fieldName="pmsl")) then
+    if (NUOPC_IsConnected(importState, fieldName="pmsl")) then
       call ESMF_StateGet(importState, itemName="pmsl", field=field, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-      atCorrectTime = NUOPC_FieldIsAtTime(field, stopTime, rc=rc)
+      atCorrectTime = NUOPC_IsAtTime(field, stopTime, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
