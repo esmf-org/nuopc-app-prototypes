@@ -424,7 +424,7 @@ module advectDiffComp
       return
       
     ! exportable field: density
-    call NUOPC_StateRealizeField(exportState, field=is%wrap%field, rc=rc)
+    call NUOPC_Realize(exportState, field=is%wrap%field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -445,7 +445,7 @@ module advectDiffComp
       enddo
     else
       ! importable field: density
-      call NUOPC_StateRealizeField(importState, field=is%wrap%fieldTrans, rc=rc)
+      call NUOPC_Realize(importState, field=is%wrap%fieldTrans, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
@@ -795,7 +795,7 @@ module advectDiffComp
         line=__LINE__, &
         file=__FILE__)) &
         return
-      call NUOPC_StateWrite(exportState, filePrefix=trim(name)//"_export_", &
+      call NUOPC_Write(exportState, filePrefix=trim(name)//"_export_", &
         timeslice=is%wrap%slice, overwrite=.true., relaxedFlag=.true., rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &

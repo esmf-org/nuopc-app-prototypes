@@ -127,7 +127,7 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_StateRealizeField(importState, field=field, rc=rc)
+    call NUOPC_Realize(importState, field=field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -140,7 +140,7 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_StateRealizeField(exportState, field=field, rc=rc)
+    call NUOPC_Realize(exportState, field=field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -175,7 +175,7 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_StateRealizeField(exportState, field=field, rc=rc)
+    call NUOPC_Realize(exportState, field=field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -293,14 +293,14 @@ module ATM
     endif
     
     ! write out the Fields in the importState
-    call NUOPC_StateWrite(importState, filePrefix="field_atm_import_", &
+    call NUOPC_Write(importState, filePrefix="field_atm_import_", &
       timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     ! write out the Fields in the exportState
-    call NUOPC_StateWrite(exportState, filePrefix="field_atm_export_", &
+    call NUOPC_Write(exportState, filePrefix="field_atm_export_", &
       timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &

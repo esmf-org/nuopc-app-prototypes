@@ -1031,13 +1031,13 @@ contains
 
         if (trim(enable_field_mirroring)/="yes") return
 
-        call NUOPC_StateSetTimestamp(importState, clock, rc=rc)
+        call NUOPC_UpdateTimestamp(importState, clock, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
             call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-        call NUOPC_StateSetTimestamp(exportState, clock, rc=rc)
+        call NUOPC_UpdateTimestamp(exportState, clock, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
@@ -1218,11 +1218,11 @@ contains
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, file=__FILE__)) &
             return  ! bail out
-        call NUOPC_StateSetTimestamp(importState, internalClock, rc=rc)
+        call NUOPC_UpdateTimestamp(importState, internalClock, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, file=__FILE__)) &
             return  ! bail out
-        call NUOPC_StateSetTimestamp(exportState, internalClock, rc=rc)
+        call NUOPC_UpdateTimestamp(exportState, internalClock, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, file=__FILE__)) &
             return  ! bail out

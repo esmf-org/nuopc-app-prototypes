@@ -207,7 +207,7 @@ module MED
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_StateRealizeField(importState, field=field, rc=rc)
+    call NUOPC_Realize(importState, field=field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -220,7 +220,7 @@ module MED
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_StateRealizeField(importState, field=field, rc=rc)
+    call NUOPC_Realize(importState, field=field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -233,7 +233,7 @@ module MED
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_StateRealizeField(importState, field=field, rc=rc)
+    call NUOPC_Realize(importState, field=field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -246,7 +246,7 @@ module MED
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_StateRealizeField(exportState, field=field, rc=rc)
+    call NUOPC_Realize(exportState, field=field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -259,7 +259,7 @@ module MED
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_StateRealizeField(exportState, field=field, rc=rc)
+    call NUOPC_Realize(exportState, field=field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -272,7 +272,7 @@ module MED
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_StateRealizeField(exportState, field=field, rc=rc)
+    call NUOPC_Realize(exportState, field=field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -285,7 +285,7 @@ module MED
     ! the Fields in the importState, indicating to the first Run method that
     ! all is good.
     
-    call NUOPC_StateSetTimestamp(importState, clock=clock, rc=rc) 
+    call NUOPC_UpdateTimestamp(importState, clock=clock, rc=rc) 
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -516,7 +516,7 @@ module MED
       return  ! bail out
 
     ! update timestamp on export Fields
-    call NUOPC_StateSetTimestamp(exportState, clock, rc=rc)
+    call NUOPC_UpdateTimestamp(exportState, clock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
