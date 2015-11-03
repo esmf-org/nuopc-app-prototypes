@@ -255,8 +255,8 @@ module OCN
 
     ! HERE THE MODEL ADVANCES: currTime -> currTime + timeStep
     
-    call NUOPC_ClockPrintCurrTime(clock, &
-      "------>Advancing OCN from: ", rc=rc)
+    call ESMF_ClockPrint(clock, options="currTime", &
+      preString="------>Advancing OCN from: ", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -268,8 +268,8 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
     
-    call NUOPC_TimePrint(currTime + timeStep, &
-      "--------------------------------> to: ", rc=rc)
+    call ESMF_TimePrint(currTime + timeStep, &
+      preString="--------------------------------> to: ", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

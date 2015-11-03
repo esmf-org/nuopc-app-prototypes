@@ -213,7 +213,7 @@ module OCN
     ! will come in by one internal timeStep advanced. This goes until the
     ! stopTime of the internal Clock has been reached.
     
-    call NUOPC_ClockPrintCurrTime(clock, &
+    call ESMF_ClockPrint(clock, options=currTime, ESMF_ClockPrint(clock, &
       "------>Advancing OCN from: ", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &

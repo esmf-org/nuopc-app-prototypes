@@ -205,14 +205,14 @@ module ModelComp
 
     ! HERE THE MODEL ADVANCES: currTime -> currTime + timeStep
 #ifdef PRINT    
-    call NUOPC_ClockPrintCurrTime(clock, &
+    call ESMF_ClockPrint(clock, options=currTime, ESMF_ClockPrint(clock, &
       "------>Advancing Model from: ", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
-    call NUOPC_ClockPrintStopTime(clock, &
+    call ESMF_ClockPrint(clock, options=stopTime, &
       "--------------------------------> to: ", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &

@@ -692,8 +692,8 @@ module Mediator
 
     ! HERE THE MEDIATOR ADVANCES: currTime -> currTime + timeStep
     
-    call NUOPC_ClockPrintCurrTime(clock, &
-      "------>Advancing Mediator from: ", rc=rc)
+    call ESMF_ClockPrint(clock, options="currTime", &
+      preString="------>Advancing Mediator from: ", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -727,8 +727,8 @@ module Mediator
     print *, "item counts for: frModelA, toModelA, frModelB, toModelB:", &
       itemCount
     
-    call NUOPC_ClockPrintStopTime(clock, &
-      "--------------------------------> to: ", rc=rc)
+    call ESMF_ClockPrint(clock, options="stopTime", &
+      preString="--------------------------------> to: ", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

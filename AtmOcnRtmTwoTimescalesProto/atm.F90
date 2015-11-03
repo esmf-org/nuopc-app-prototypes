@@ -250,15 +250,15 @@ module ATM
     ! currTime + timeStep is equal to the stopTime of the internal Clock
     ! for this call of the ModelAdvance() routine.
     
-    call NUOPC_ClockPrintCurrTime(clock, &
-      "------>Advancing ATM from: ", rc=rc)
+    call ESMF_ClockPrint(clock, options="currTime", &
+      preString="------>Advancing ATM from: ", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
-    call NUOPC_ClockPrintStopTime(clock, &
-      "--------------------------------> to: ", rc=rc)
+    call ESMF_ClockPrint(clock, options="stopTime", &
+      preString="--------------------------------> to: ", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

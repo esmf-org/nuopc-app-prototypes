@@ -255,15 +255,15 @@ module MED
     !
     ! Where the timeStep is equal to the parent timeStep.
     
-    call NUOPC_ClockPrintCurrTime(clock, &
-      "-------->MED Advance() mediating for: ", rc=rc)
+    call ESMF_ClockPrint(clock, options="currTime", &
+      preString="-------->MED Advance() mediating for: ", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
-    call NUOPC_ClockPrintStopTime(clock, &
-      "----------------> model time step to: ", rc=rc)
+    call ESMF_ClockPrint(clock, options="stopTime", &
+      preString="----------------> model time step to: ", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

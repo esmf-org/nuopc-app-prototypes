@@ -679,7 +679,7 @@ module IOComp
     ! HERE THE MODEL ADVANCES: currTime -> currTime + timeStep
     
 #ifdef PRINT    
-    call NUOPC_ClockPrintCurrTime(clock, &
+    call ESMF_ClockPrint(clock, options=currTime, ESMF_ClockPrint(clock, &
       "------>Advancing IO from: ", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
