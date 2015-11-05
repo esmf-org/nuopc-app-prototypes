@@ -298,7 +298,7 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    verbosity = NUOPC_ConvertStringToInt(valueString, &
+    verbosity = ESMF_UtilString2Int(valueString, &
       specialStringList=(/"max"/), specialValueList=(/255/), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
