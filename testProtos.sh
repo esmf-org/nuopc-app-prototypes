@@ -173,6 +173,7 @@ TestSelectProto           AtmOcnSelectProto            esmApp
 TestProto AtmOcnSimpleImplicitProto      esmApp
 TestProto AtmOcnIceSimpleImplicitProto   esmApp
 TestProto AtmOcnTransferGridProto        esmApp
+TestProto AtmOcnTransferLocStreamProto   esmApp
 #  ComponentExplorer
 TestProto DriverInDriverProto            mainApp
 TestProto GenericMediatorProto           app
