@@ -112,15 +112,16 @@ module OCN
     type(ESMF_Field)            :: field
     type(ESMF_Grid)             :: gridIn
     type(ESMF_Grid)             :: gridOut
-    real(ESMF_KIND_R8), pointer :: dataPtr(:,:), lonPtr(:,:), latPtr(:,:)
+    real(ESMF_KIND_R8), pointer :: dataPtr(:,:), lonPtr(:), latPtr(:)
     integer                     :: i,j
 
     rc = ESMF_SUCCESS
     
     ! create a Grid object for Fields
-    gridIn = NUOPC_CreateSimpleSphGrid(0._ESMF_KIND_R8, -80._ESMF_KIND_R8, &
-      360._ESMF_KIND_R8, 60._ESMF_KIND_R8, 80, 30, &
-      regional=.true., rc=rc)
+    gridIn = ESMF_GridCreate1PeriDimUfrm(maxIndex=(/80, 30/), &
+      minCoord=(/0._ESMF_KIND_R8, -80._ESMF_KIND_R8/), &
+      maxCoord=(/360._ESMF_KIND_R8-real(360./80., ESMF_KIND_R8), &
+      60._ESMF_KIND_R8/), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -184,7 +185,7 @@ module OCN
       return  ! bail out
     do j=lbound(dataPtr,2),ubound(dataPtr,2)
     do i=lbound(dataPtr,1),ubound(dataPtr,1)
-      dataPtr(i,j) = sin(3.1416*lonPtr(i,j)/180.) * cos(3.1416*latPtr(i,j)/180.)
+      dataPtr(i,j) = sin(3.1416*lonPtr(i)/180.) * cos(3.1416*latPtr(j)/180.)
     enddo
     enddo
 

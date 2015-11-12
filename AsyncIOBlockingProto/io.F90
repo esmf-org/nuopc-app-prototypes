@@ -256,9 +256,9 @@ module IOComp
               endif
              
               ! create a Grid object for Fields
-              gridIn = NUOPC_CreateSimpleSphGrid(0._ESMF_KIND_R8, -60._ESMF_KIND_R8, &
-                360._ESMF_KIND_R8, 80._ESMF_KIND_R8, gridDims(1), gridDims(2), &
-                regional=.true., rc=rc)
+              gridIn = ESMF_GridCreate1PeriDimUfrm(maxIndex=gridDims, &
+                minCoord=(/0._ESMF_KIND_R8, -60._ESMF_KIND_R8/), &
+                maxCoord=(/360._ESMF_KIND_R8, 80._ESMF_KIND_R8/), rc=rc)
               if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                 line=__LINE__, &
                 file=__FILE__)) &

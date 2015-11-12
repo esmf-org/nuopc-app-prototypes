@@ -185,8 +185,10 @@ module driverChildComp
     rc = ESMF_SUCCESS
     
     ! create a Grid object for Fields
-    gridIn = NUOPC_CreateSimpleXYGrid(10._ESMF_KIND_R8, 20._ESMF_KIND_R8, &
-      100._ESMF_KIND_R8, 200._ESMF_KIND_R8, 10, 100, rc)
+    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/10, 100/), &
+      minCoord=(/10._ESMF_KIND_R8, 20._ESMF_KIND_R8/), &
+      maxCoord=(/100._ESMF_KIND_R8, 200._ESMF_KIND_R8/), &
+      coordSys=ESMF_COORDSYS_CART, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

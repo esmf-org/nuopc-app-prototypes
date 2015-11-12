@@ -190,9 +190,9 @@ module MED
     rc = ESMF_SUCCESS
     
     ! create a Grid object for Fields
-    gridIn = NUOPC_CreateSimpleSphGrid(0._ESMF_KIND_R8, -70._ESMF_KIND_R8, &
-      360._ESMF_KIND_R8, 80._ESMF_KIND_R8, 50, 30, &
-      regional=.true., rc=rc)
+    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/50, 30/), &
+      minCoord=(/0._ESMF_KIND_R8, -70._ESMF_KIND_R8/), &
+      maxCoord=(/360._ESMF_KIND_R8, 80._ESMF_KIND_R8/), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

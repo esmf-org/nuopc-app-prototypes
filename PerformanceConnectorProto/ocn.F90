@@ -122,8 +122,10 @@ module OCN
     rc = ESMF_SUCCESS
     
     ! create a Grid object for Fields
-    gridIn = NUOPC_CreateSimpleXYGrid(10._ESMF_KIND_R8, 20._ESMF_KIND_R8, &
-      100._ESMF_KIND_R8, 200._ESMF_KIND_R8, 10, 100, rc)
+    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/10, 100/), &
+      minCoord=(/10._ESMF_KIND_R8, 20._ESMF_KIND_R8/), &
+      maxCoord=(/100._ESMF_KIND_R8, 200._ESMF_KIND_R8/), &
+      coordSys=ESMF_COORDSYS_CART, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -213,8 +215,8 @@ module OCN
     ! will come in by one internal timeStep advanced. This goes until the
     ! stopTime of the internal Clock has been reached.
     
-    call ESMF_ClockPrint(clock, options=currTime, ESMF_ClockPrint(clock, &
-      "------>Advancing OCN from: ", rc=rc)
+    call ESMF_ClockPrint(clock, options="currTime", &
+      preString="------>Advancing OCN from: ", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -226,8 +228,8 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
     
-    call NUOPC_TimePrint(currTime + timeStep, &
-      "--------------------------------> to: ", rc=rc)
+    call ESMF_TimePrint(currTime + timeStep, &
+      preString="--------------------------------> to: ", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

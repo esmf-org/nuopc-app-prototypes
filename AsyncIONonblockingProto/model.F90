@@ -98,15 +98,15 @@ module ModelComp
     ! local variables    
     type(ESMF_Field)            :: field
     type(ESMF_Grid)             :: gridOut
-    real(ESMF_KIND_R8), pointer :: dataPtr(:,:), lonPtr(:,:), latPtr(:,:)
+    real(ESMF_KIND_R8), pointer :: dataPtr(:,:), lonPtr(:), latPtr(:)
     integer                     :: i,j
     
     rc = ESMF_SUCCESS
     
     ! create a Grid object for Fields
-    gridOut = NUOPC_CreateSimpleSphGrid(0._ESMF_KIND_R8, -60._ESMF_KIND_R8, &
-      360._ESMF_KIND_R8, 80._ESMF_KIND_R8, 200, 300, &
-      regional=.true., rc=rc)
+    gridOut = ESMF_GridCreate1PeriDimUfrm(maxIndex=(/200, 300/), &
+      minCoord=(/0._ESMF_KIND_R8, -60._ESMF_KIND_R8/), &
+      maxCoord=(/360._ESMF_KIND_R8, 80._ESMF_KIND_R8/), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -143,7 +143,7 @@ module ModelComp
       return  ! bail out
     do j=lbound(dataPtr,2),ubound(dataPtr,2)
     do i=lbound(dataPtr,1),ubound(dataPtr,1)
-      dataPtr(i,j) = sin(2*3.1416*lonPtr(i,j)/180.) * cos(3.1416*latPtr(i,j)/180.)
+      dataPtr(i,j) = sin(2*3.1416*lonPtr(i)/180.) * cos(3.1416*latPtr(j)/180.)
     enddo
     enddo
 
@@ -169,7 +169,7 @@ module ModelComp
       return  ! bail out
     do j=lbound(dataPtr,2),ubound(dataPtr,2)
     do i=lbound(dataPtr,1),ubound(dataPtr,1)
-      dataPtr(i,j) = sin(3.1416*lonPtr(i,j)/180.) * cos(2*3.1416*latPtr(i,j)/180.)
+      dataPtr(i,j) = sin(3.1416*lonPtr(i)/180.) * cos(2*3.1416*latPtr(j)/180.)
     enddo
     enddo
 #endif
@@ -188,7 +188,7 @@ module ModelComp
     type(ESMF_Field)            :: field
     type(ESMF_Grid)             :: grid
     type(ESMF_StateItem_Flag)   :: itemType
-    real(ESMF_KIND_R8), pointer :: dataPtr(:,:), lonPtr(:,:), latPtr(:,:)
+    real(ESMF_KIND_R8), pointer :: dataPtr(:,:), lonPtr(:), latPtr(:)
     integer                     :: i,j, k
     integer, save               :: slice=1
     integer, parameter          :: kWaste=40
@@ -257,8 +257,8 @@ module ModelComp
       ! dummy calculation to make the export field more interesting
       do j=lbound(dataPtr,2),ubound(dataPtr,2)
       do i=lbound(dataPtr,1),ubound(dataPtr,1)
-        dataPtr(i,j) = sin(0.31416*slice+2*3.1416*lonPtr(i,j)/180.) &
-          * cos(0.31416*slice+3.1416*latPtr(i,j)/180.)
+        dataPtr(i,j) = sin(0.31416*slice+2*3.1416*lonPtr(i)/180.) &
+          * cos(0.31416*slice+3.1416*latPtr(j)/180.)
       enddo
       enddo
       enddo
@@ -303,8 +303,8 @@ module ModelComp
       ! dummy calculation to make the export field more interesting
       do j=lbound(dataPtr,2),ubound(dataPtr,2)
       do i=lbound(dataPtr,1),ubound(dataPtr,1)
-        dataPtr(i,j) = sin(0.31416*slice+3.1416*lonPtr(i,j)/180.) &
-          * cos(0.31416*slice+2*3.1416*latPtr(i,j)/180.)
+        dataPtr(i,j) = sin(0.31416*slice+3.1416*lonPtr(i)/180.) &
+          * cos(0.31416*slice+2*3.1416*latPtr(j)/180.)
       enddo
       enddo
       enddo
