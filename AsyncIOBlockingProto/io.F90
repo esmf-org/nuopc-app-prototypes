@@ -257,8 +257,9 @@ module IOComp
              
               ! create a Grid object for Fields
               gridIn = ESMF_GridCreate1PeriDimUfrm(maxIndex=gridDims, &
-                minCoord=(/0._ESMF_KIND_R8, -60._ESMF_KIND_R8/), &
-                maxCoord=(/360._ESMF_KIND_R8, 80._ESMF_KIND_R8/), rc=rc)
+                minCornerCoord=(/0._ESMF_KIND_R8, -60._ESMF_KIND_R8/), &
+                maxCornerCoord=(/360._ESMF_KIND_R8, 80._ESMF_KIND_R8/), &
+                staggerLocList=(/ESMF_STAGGERLOC_CENTER/), rc=rc)
               if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                 line=__LINE__, &
                 file=__FILE__)) &

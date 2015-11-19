@@ -124,9 +124,10 @@ module OCN
     
     ! create a Grid object for Fields
     gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/100, 20/), &
-      minCoord=(/10._ESMF_KIND_R8, 20._ESMF_KIND_R8/), &
-      maxCoord=(/100._ESMF_KIND_R8, 200._ESMF_KIND_R8/), &
-      coordSys=ESMF_COORDSYS_CART, rc=rc)
+      minCornerCoord=(/10._ESMF_KIND_R8, 20._ESMF_KIND_R8/), &
+      maxCornerCoord=(/100._ESMF_KIND_R8, 200._ESMF_KIND_R8/), &
+      coordSys=ESMF_COORDSYS_CART, staggerLocList=(/ESMF_STAGGERLOC_CENTER/), &
+      rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
