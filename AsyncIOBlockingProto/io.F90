@@ -703,7 +703,7 @@ module IOComp
 
     ! write out the Fields in the importState
 #ifdef SINGLEFILE
-    call NUOPC_Write(importState, filePrefix="field_", &
+    call NUOPC_Write(importState, fileNamePrefix="field_", &
       timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -711,7 +711,7 @@ module IOComp
       return  ! bail out
 #else
     write (sChar,"(i5.5)") slice
-    call NUOPC_Write(importState, filePrefix="field_"//trim(sChar)//"_", &
+    call NUOPC_Write(importState, fileNamePrefix="field_"//trim(sChar)//"_", &
       overwrite=.true., relaxedFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &

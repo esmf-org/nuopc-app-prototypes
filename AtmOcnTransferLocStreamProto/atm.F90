@@ -510,13 +510,8 @@ call ESMF_LocStreamPrint(locStream, rc=rc)
     real(kind=ESMF_KIND_R8),  pointer :: dataPtr(:)
     integer                           :: i, j
     integer                           :: localDe, localDeCount
-    logical                           :: ioCapable
 
     rc = ESMF_SUCCESS
-
-    ! determine whether ESMF I/O capabilities are present
-    ioCapable = (ESMF_IO_PIO_PRESENT .and. &
-      (ESMF_IO_NETCDF_PRESENT .or. ESMF_IO_PNETCDF_PRESENT))
 
     ! query the Component for its exportState
     call NUOPC_ModelGet(model, exportState=exportState, rc=rc)
@@ -548,14 +543,12 @@ call ESMF_LocStreamPrint(locStream, rc=rc)
       enddo
     enddo
     ! output to file
-    if (ioCapable) then
-      call ESMF_FieldWrite(field, file="field_pmsl_init.nc", &
-        status=ESMF_FILESTATUS_REPLACE, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-    endif
+    call NUOPC_Write(field, fileName="field_pmsl_init.nc", &
+      status=ESMF_FILESTATUS_REPLACE, relaxedflag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
     ! set "Updated"
     call NUOPC_SetAttribute(field, name="Updated", value="true", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -588,14 +581,12 @@ call ESMF_LocStreamPrint(locStream, rc=rc)
       enddo
     enddo
     ! output to file
-    if (ioCapable) then
-      call ESMF_FieldWrite(field, file="field_rsns_init.nc", &
-        status=ESMF_FILESTATUS_REPLACE, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-    endif
+    call NUOPC_Write(field, fileName="field_rsns_init.nc", &
+      status=ESMF_FILESTATUS_REPLACE, relaxedflag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
     ! set "Updated"
     call NUOPC_SetAttribute(field, name="Updated", value="true", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &

@@ -664,7 +664,7 @@ module IOComp
 #endif
 
     ! write out the Fields in the importState
-    call NUOPC_Write(importState, filePrefix="field_", &
+    call NUOPC_Write(importState, fileNamePrefix="field_", &
       timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &

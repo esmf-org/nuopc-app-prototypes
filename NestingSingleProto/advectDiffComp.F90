@@ -710,7 +710,7 @@ module advectDiffComp
         line=__LINE__, &
         file=__FILE__)) &
         return
-      call NUOPC_Write(exportState, filePrefix=trim(name)//"_export_", &
+      call NUOPC_Write(exportState, fileNamePrefix=trim(name)//"_export_", &
         timeslice=is%wrap%slice, overwrite=.true., relaxedFlag=.true., rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &

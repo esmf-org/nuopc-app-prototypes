@@ -309,14 +309,14 @@ module OCN
     endif
     
     ! write out the Fields in the importState
-    call NUOPC_Write(importState, filePrefix="field_ocn_import_", &
+    call NUOPC_Write(importState, fileNamePrefix="field_ocn_import_", &
       timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     ! write out the Fields in the exportState
-    call NUOPC_Write(exportState, filePrefix="field_ocn_export_", &
+    call NUOPC_Write(exportState, fileNamePrefix="field_ocn_export_", &
       timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
