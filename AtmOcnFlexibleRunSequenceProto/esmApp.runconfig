@@ -5,13 +5,30 @@
 # Encoding the run sequence
 runSeq::
     @1800             # 30min time step 
-      ATM -> MED
-      OCN -> MED
       MED
       MED -> ATM
       MED -> OCN
       ATM
       OCN
+      ATM -> MED
+      OCN -> MED
+      MED
+    @
+::
+
+# Encoding the run sequence
+#runSeq::
+    @1800             # 30min time step 
+      MED
+      MED -> ATM
+      ATM
+      ATM -> MED
+      MED
+      MED
+      MED -> OCN
+      OCN
+      OCN -> MED
+      MED
     @
 ::
 
@@ -19,5 +36,5 @@ runSeq::
 
 driverAttributes::
   Verbosity = 0
-  Profiling = 1
+  Profiling = 0
 ::

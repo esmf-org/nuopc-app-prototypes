@@ -6,9 +6,8 @@ module MED
 
   use ESMF
   use NUOPC
-  use NUOPC_Mediator, only: &
-    model_routine_SS    => SetServices, &
-    model_label_Advance => label_Advance
+  use NUOPC_Mediator, &
+    inherit_SS    => SetServices
   
   implicit none
   
@@ -27,7 +26,7 @@ module MED
     rc = ESMF_SUCCESS
     
     ! the NUOPC model component will register the generic methods
-    call NUOPC_CompDerive(mediator, model_routine_SS, rc=rc)
+    call NUOPC_CompDerive(mediator, inherit_SS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -48,13 +47,41 @@ module MED
       return  ! bail out
     
     ! attach specializing method(s)
-    call NUOPC_CompSpecialize(mediator, specLabel=model_label_Advance, &
+    call NUOPC_CompSpecialize(mediator, specLabel=label_Advance, &
       specRoutine=MediatorAdvance, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
+    ! attach specializing method(s)
+    ! -> NUOPC specializes by default --->>> first need to remove the default
+    call ESMF_MethodRemove(mediator, label_CheckImport, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompSpecialize(mediator, specLabel=label_CheckImport, &
+      specRoutine=NUOPC_NoOp, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! attach specializing method(s)
+    ! -> NUOPC specializes by default --->>> first need to remove the default
+    call ESMF_MethodRemove(mediator, label_SetRunClock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompSpecialize(mediator, specLabel=label_SetRunClock, &
+      specRoutine=SetRunClock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
   end subroutine
   
   !-----------------------------------------------------------------------------
@@ -273,5 +300,49 @@ module MED
       return  ! bail out
      
   end subroutine
+
+  !-----------------------------------------------------------------------------
+
+  subroutine SetRunClock(mediator, rc)
+    type(ESMF_GridComp)  :: mediator
+    integer, intent(out) :: rc
+    
+    ! local variables
+    type(ESMF_Clock)              :: mediatorClock, driverClock
+    type(ESMF_Time)               :: currTime
+
+    rc = ESMF_SUCCESS
+    
+    ! query the Mediator for clocks
+    call NUOPC_MediatorGet(mediator, mediatorClock=mediatorClock, &
+      driverClock=driverClock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    ! set the mediatorClock to have the current start time as the driverClock
+    call ESMF_ClockGet(driverClock, currTime=currTime, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_ClockSet(mediatorClock, currTime=currTime, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+    ! check and set the component clock against the driver clock
+    call NUOPC_CompCheckSetClock(mediator, driverClock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, &
+      msg="NUOPC INCOMPATIBILITY DETECTED: between model and driver clocks", &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+  end subroutine
+
+  !-----------------------------------------------------------------------------
 
 end module
