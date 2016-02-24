@@ -1,0 +1,23 @@
+###############################################
+####  esmApp Run-Time Configuration File  #####
+###############################################
+
+# Encoding the run sequence
+runSeq::
+    @1800             # 30min time step 
+      ATM -> MED
+      OCN -> MED
+      MED
+      MED -> ATM
+      MED -> OCN
+      ATM
+      OCN
+    @
+::
+
+# Attributes for components
+
+driverAttributes::
+  Verbosity = 0
+  Profiling = 1
+::
