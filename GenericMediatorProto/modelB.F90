@@ -68,6 +68,14 @@ module ModelB
     
     rc = ESMF_SUCCESS
 
+    ! exportable field: PINT
+    call NUOPC_Advertise(exportState, &
+      StandardName="PINT", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! exportable field: air_pressure_at_sea_level
     call NUOPC_Advertise(exportState, &
       StandardName="air_pressure_at_sea_level", rc=rc)
@@ -140,6 +148,19 @@ module ModelB
     enddo
       
     gridOut = gridIn ! for now out same as in
+
+    ! exportable field: PINT
+    field = ESMF_FieldCreate(name="PINT", &
+      grid=gridIn, typekind=ESMF_TYPEKIND_R8, ungriddedLBound=(/1/), ungriddedUBound=(/35/), rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_Realize(exportState, field=field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 
     ! exportable field: air_pressure_at_sea_level
     field = ESMF_FieldCreate(name="air_pressure_at_sea_level", &

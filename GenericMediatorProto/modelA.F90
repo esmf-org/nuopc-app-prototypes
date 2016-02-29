@@ -68,6 +68,14 @@ module ModelA
     
     rc = ESMF_SUCCESS
 
+    ! importable field: PINT
+    call NUOPC_Advertise(importState, &
+      StandardName="PINT", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
     ! importable field: air_pressure_at_sea_level
     call NUOPC_Advertise(importState, &
       StandardName="air_pressure_at_sea_level", rc=rc)
@@ -141,6 +149,19 @@ module ModelA
       
     gridOut = gridIn ! for now out same as in
 
+    ! importable field: PINT
+    field = ESMF_FieldCreate(name="PINT", &
+      grid=gridIn, typekind=ESMF_TYPEKIND_R8,  ungriddedLBound=(/1/), ungriddedUBound=(/35/), rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_Realize(importState, field=field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
     ! importable field: air_pressure_at_sea_level
     field = ESMF_FieldCreate(name="air_pressure_at_sea_level", &
       grid=gridIn, typekind=ESMF_TYPEKIND_R8, rc=rc)
