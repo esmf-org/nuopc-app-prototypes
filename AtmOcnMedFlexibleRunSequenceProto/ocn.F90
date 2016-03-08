@@ -6,10 +6,7 @@ module OCN
 
   use ESMF
   use NUOPC
-  use NUOPC_Model, &
-    model_routine_SS      => SetServices, &
-    model_label_SetClock  => label_SetClock, &
-    model_label_Advance   => label_Advance
+  use NUOPC_Model, inheritModel => SetServices
   
   implicit none
   
@@ -28,7 +25,7 @@ module OCN
     rc = ESMF_SUCCESS
     
     ! the NUOPC model component will register the generic methods
-    call NUOPC_CompDerive(model, model_routine_SS, rc=rc)
+    call NUOPC_CompDerive(model, inheritModel, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -49,14 +46,28 @@ module OCN
       return  ! bail out
     
     ! attach specializing method(s)
-    call NUOPC_CompSpecialize(model, specLabel=model_label_SetClock, &
+    call NUOPC_CompSpecialize(model, specLabel=label_SetClock, &
       specRoutine=SetClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSpecialize(model, specLabel=model_label_Advance, &
+    call NUOPC_CompSpecialize(model, specLabel=label_Advance, &
       specRoutine=ModelAdvance, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! attach specializing method(s)
+    ! -> NUOPC specializes by default --->>> first need to remove the default
+    call ESMF_MethodRemove(model, label_CheckImport, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompSpecialize(model, specLabel=label_CheckImport, &
+      specRoutine=CheckImport, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -257,5 +268,100 @@ module OCN
       return  ! bail out
 
   end subroutine
+
+  !-----------------------------------------------------------------------------
+
+  subroutine CheckImport(model, rc)
+    type(ESMF_GridComp)   :: model
+    integer, intent(out)  :: rc
+    
+    ! local variables
+    type(ESMF_Clock)                :: clock
+    type(ESMF_Time)                 :: currTime, invalidTime
+    type(ESMF_State)                :: importState
+    logical                         :: timeCheck
+    type(ESMF_Field),       pointer :: fieldList(:)
+    integer                         :: i
+    
+    rc = ESMF_SUCCESS
+
+    ! query the Component for its clock and importState
+    call ESMF_GridCompGet(model, clock=clock, importState=importState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    ! get the current time out of the clock
+    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! set up invalid time (by convention)
+    call ESMF_TimeSet(invalidTime, yy=99999999, mm=01, dd=01, &
+      h=00, m=00, s=00, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+    ! Loop through all the field in the importState, and test whether they
+    ! are at invalidTime (ignore them for now), or at currTime. Any other
+    ! time coming in would flag an incompatibility.
+    
+    call NUOPC_GetStateMemberLists(importState, fieldList=fieldList, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    do i=1, size(fieldList)
+      timeCheck = NUOPC_IsAtTime(fieldList(i), invalidTime, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      if (timeCheck) then
+        ! The field is at invalidTime
+
+        ! -> In a real application mark the field with a flag as invalid 
+        !    so the actual model code can act accordingly.
+
+        ! Here for purpose of demonstration just log a message and continue on.
+      
+        call ESMF_LogWrite("OCN: detected import field at invalidTime", &
+          ESMF_LOGMSG_INFO, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+      else
+        ! The field is NOT at invalidTime -> it must then be at currTime or it
+        ! is incompatible!
+      
+        ! check that Fields in the importState show correct timestamp
+        timeCheck = NUOPC_IsAtTime(fieldList(i), currTime, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+        if (.not.timeCheck) then
+          !TODO: introduce and use INCOMPATIBILITY return codes!!!!
+          call ESMF_LogSetError(ESMF_RC_ARG_BAD, &
+            msg="NUOPC INCOMPATIBILITY DETECTED: "//&
+            "Import Field not at current time", &
+            line=__LINE__, file=__FILE__, &
+            rcToReturn=rc)
+          return  ! bail out
+        endif
+      
+      endif
+    enddo
+    
+  end subroutine
+    
+  !-----------------------------------------------------------------------------
 
 end module

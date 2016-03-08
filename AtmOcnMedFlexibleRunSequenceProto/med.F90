@@ -6,14 +6,18 @@ module MED
 
   use ESMF
   use NUOPC
-  use NUOPC_Mediator, &
-    inherit_SS    => SetServices
+  use NUOPC_Mediator, inheritMediator    => SetServices
   
   implicit none
   
   private
   
   public SetServices
+  
+  interface NUOPCplus_UpdateTimestamp
+    module procedure NUOPCplus_UpdateTimestampS
+    module procedure NUOPCplus_UpdateTimestampF
+  end interface
   
   !-----------------------------------------------------------------------------
   contains
@@ -26,7 +30,7 @@ module MED
     rc = ESMF_SUCCESS
     
     ! the NUOPC model component will register the generic methods
-    call NUOPC_CompDerive(mediator, inherit_SS, rc=rc)
+    call NUOPC_CompDerive(mediator, inheritMediator, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -82,6 +86,17 @@ module MED
       file=__FILE__)) &
       return  ! bail out
 
+#define TEST_WITH_CONDITIONAL_SENDING_FIELDS_on
+#ifdef TEST_WITH_CONDITIONAL_SENDING_FIELDS_on
+    ! attach specializing method(s)
+    call NUOPC_CompSpecialize(mediator, specLabel=label_TimestampExport, &
+      specRoutine=TimestampExport, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
   end subroutine
   
   !-----------------------------------------------------------------------------
@@ -92,7 +107,12 @@ module MED
     type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
     
+    ! local variables    
+    type(ESMF_State)     :: state
+
     rc = ESMF_SUCCESS
+
+    ! do NOT use namespaces for import:
     
     ! importable field: sea_surface_temperature
     call NUOPC_Advertise(importState, &
@@ -118,8 +138,16 @@ module MED
       file=__FILE__)) &
       return  ! bail out
 
-    ! exportable field: sea_surface_temperature
-    call NUOPC_Advertise(exportState, &
+    ! DO use namespaces for export to ATM:
+    call NUOPC_AddNamespace(exportState, &
+      namespace="ATM", nestedState=state, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! exportable field to ATM: sea_surface_temperature
+    call NUOPC_Advertise(state, &
       StandardName="sea_surface_temperature", name="sst", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -156,6 +184,7 @@ module MED
     type(ESMF_Field)        :: field
     type(ESMF_Grid)         :: gridIn
     type(ESMF_Grid)         :: gridOut
+    type(ESMF_State)        :: state
     
     rc = ESMF_SUCCESS
     
@@ -217,7 +246,13 @@ module MED
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_Realize(exportState, field=field, rc=rc)
+    ! need to get ATM nestedState first because of namespace
+    call ESMF_StateGet(exportState, itemName="ATM", nestedState=state, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_Realize(state, field=field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -279,7 +314,7 @@ module MED
     ! held by Fields in the exportState.
     
     ! After this routine returns the generic Mediator will correctly
-    ! timestamp the export Fields and update the Mediator Clock to:
+    ! timestamp the export Fields at currTime, and update the Mediator Clock to:
     !
     !       currTime -> currTime + timeStep
     !
@@ -337,6 +372,152 @@ module MED
     call NUOPC_CompCheckSetClock(mediator, driverClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, &
       msg="NUOPC INCOMPATIBILITY DETECTED: between model and driver clocks", &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+  end subroutine
+
+  !-----------------------------------------------------------------------------
+
+  subroutine TimestampExport(mediator, rc)
+    type(ESMF_GridComp)   :: mediator
+    integer, intent(out)  :: rc
+    
+    ! local variables
+    type(ESMF_Clock)        :: clock
+    type(ESMF_Time)         :: currTime, invalidTime
+    type(ESMF_TimeInterval) :: timeStep
+    type(ESMF_State)        :: exportState, state
+    character(ESMF_MAXSTR)  :: name
+    integer                 :: yy, mm, dd, h, m, s, ms, us, ns
+
+    rc = ESMF_SUCCESS
+
+    ! query the Component for info
+    call ESMF_GridCompGet(mediator, name=name, clock=clock, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) &
+      return  ! bail out
+      
+    ! get info out of clock
+    call ESMF_ClockGet(clock, currTime=currTime, timeStep=timeStep, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) &
+      return  ! bail out
+      
+    ! recalc currTime for which mediation really happened, i.e. one timeStep
+    ! ago (because label_TimestampExport is called _after_ MED Clock is stepped 
+    ! forward!).
+    currTime = currTime - timeStep
+
+    ! Here is where the TEST_WITH_CONDITIONAL_SENDING_FIELDS_on magic is 
+    ! really implemented. For purpose of demonstraction, every time that the
+    ! currTime is 30mins past the hour, ONLY send valid fields over to the 
+    ! ATM component. All other times valid fields are sent to ALL components.
+    
+    call ESMF_TimeGet(currTime, &
+      yy=yy, mm=mm, dd=dd, h=h, m=m, s=s, ms=ms, us=us, ns=ns, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+    if (m==30) then
+      ! 30min past the hour -> only send valid fields to ATM
+      
+      ! FIRST: invalidate all of the fields in the exportState, because the
+      ! generic mediator code will have applied currTime stamp on all of 
+      ! them already.
+      call ESMF_TimeSet(invalidTime, yy=99999999, mm=01, dd=01, &
+        h=00, m=00, s=00, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      call NUOPCplus_UpdateTimestamp(exportState, invalidTime, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, file=trim(name)//":"//__FILE__)) &
+        return  ! bail out
+
+      ! SECOND: get ATM namespace nestedState and only update field in there
+      call ESMF_StateGet(exportState, itemName="ATM", nestedState=state, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      ! update timestamp on the ATM nestedState
+      call NUOPCplus_UpdateTimestamp(state, currTime, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, file=trim(name)//":"//__FILE__)) &
+        return  ! bail out
+    
+    else
+      ! other times send valid fields to ALL components
+
+      ! update timestamp on full exportState
+      call NUOPCplus_UpdateTimestamp(exportState, currTime, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, file=trim(name)//":"//__FILE__)) &
+        return  ! bail out
+      
+    endif
+    
+  end subroutine
+
+  !-----------------------------------------------------------------------------
+
+  subroutine NUOPCplus_UpdateTimestampS(state, time, rc)
+    type(ESMF_State)      :: state
+    type(ESMF_Time)       :: time
+    integer, intent(out)  :: rc
+
+    ! local variables
+    integer               :: i
+    type(ESMF_Field),       pointer       :: fieldList(:)
+
+    rc = ESMF_SUCCESS
+
+    call NUOPC_GetStateMemberLists(state, fieldList=fieldList, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    do i=1, size(fieldList)
+      call NUOPCplus_UpdateTimestamp(fieldList(i), time, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    enddo
+    
+  end subroutine
+
+  !-----------------------------------------------------------------------------
+
+  subroutine NUOPCplus_UpdateTimestampF(field, time, rc)
+    type(ESMF_Field)      :: field
+    type(ESMF_Time)       :: time
+    integer, intent(out)  :: rc
+
+    ! local variables
+    integer               :: yy, mm, dd, h, m, s, ms, us, ns
+
+    rc = ESMF_SUCCESS
+    
+    call ESMF_TimeGet(time, yy=yy, mm=mm, dd=dd, h=h, m=m, s=s, ms=ms, us=us, &
+      ns=ns, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_AttributeSet(field, &
+      name="TimeStamp", valueList=(/yy,mm,dd,h,m,s,ms,us,ns/), &
+      convention="NUOPC", purpose="Instance", &
+      attnestflag=ESMF_ATTNEST_ON, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out

@@ -6,10 +6,7 @@ module ESM
 
   use ESMF
   use NUOPC
-  use NUOPC_Driver, &
-    driver_routine_SS             => SetServices, &
-    driver_label_SetModelServices => label_SetModelServices, &
-    driver_label_SetRunSequence   => label_SetRunSequence
+  use NUOPC_Driver, inheritDriver => SetServices
   
   use ATM, only: atmSS => SetServices
   use OCN, only: ocnSS => SetServices
@@ -36,20 +33,20 @@ module ESM
     rc = ESMF_SUCCESS
     
     ! NUOPC_Driver registers the generic methods
-    call NUOPC_CompDerive(driver, driver_routine_SS, rc=rc)
+    call NUOPC_CompDerive(driver, inheritDriver, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
       
     ! attach specializing method(s)
-    call NUOPC_CompSpecialize(driver, specLabel=driver_label_SetModelServices, &
+    call NUOPC_CompSpecialize(driver, specLabel=label_SetModelServices, &
       specRoutine=SetModelServices, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSpecialize(driver, specLabel=driver_label_SetRunSequence, &
+    call NUOPC_CompSpecialize(driver, specLabel=label_SetRunSequence, &
       specRoutine=SetRunSequence, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &

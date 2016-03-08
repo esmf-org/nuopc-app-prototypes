@@ -6,9 +6,7 @@ module ATM
 
   use ESMF
   use NUOPC
-  use NUOPC_Model, &
-    model_routine_SS    => SetServices, &
-    model_label_Advance => label_Advance
+  use NUOPC_Model, inheritModel => SetServices
   
   implicit none
   
@@ -27,7 +25,7 @@ module ATM
     rc = ESMF_SUCCESS
     
     ! the NUOPC model component will register the generic methods
-    call NUOPC_CompDerive(model, model_routine_SS, rc=rc)
+    call NUOPC_CompDerive(model, inheritModel, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -48,7 +46,7 @@ module ATM
       return  ! bail out
     
     ! attach specializing method(s)
-    call NUOPC_CompSpecialize(model, specLabel=model_label_Advance, &
+    call NUOPC_CompSpecialize(model, specLabel=label_Advance, &
       specRoutine=ModelAdvance, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
