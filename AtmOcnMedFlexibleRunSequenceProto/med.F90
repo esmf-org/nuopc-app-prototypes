@@ -478,7 +478,8 @@ module MED
     type(ESMF_Field),       pointer       :: fieldList(:)
 
     rc = ESMF_SUCCESS
-
+    
+    nullify(fieldList)
     call NUOPC_GetStateMemberLists(state, fieldList=fieldList, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &

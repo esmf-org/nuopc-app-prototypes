@@ -311,6 +311,7 @@ module OCN
     ! are at invalidTime (ignore them for now), or at currTime. Any other
     ! time coming in would flag an incompatibility.
     
+    nullify(fieldList)
     call NUOPC_GetStateMemberLists(importState, fieldList=fieldList, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
