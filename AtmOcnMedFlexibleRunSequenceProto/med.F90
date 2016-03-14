@@ -486,13 +486,15 @@ module MED
       file=__FILE__)) &
       return  ! bail out
 
-    do i=1, size(fieldList)
-      call NUOPCplus_UpdateTimestamp(fieldList(i), time, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-    enddo
+    if (associated(fieldList)) then
+      do i=1, size(fieldList)
+        call NUOPCplus_UpdateTimestamp(fieldList(i), time, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+      enddo
+    endif
     
   end subroutine
 
