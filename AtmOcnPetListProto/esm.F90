@@ -93,6 +93,27 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     deallocate(petList)
+    
+#define ATTR_TEST_1_off
+#define ATTR_TEST_2_off
+
+#ifdef ATTR_TEST_1_on
+    ! For testing, set an Attribute on ATM component
+    call NUOPC_CompAttributeAdd(child, attrList=(/"mapping_garbage_test"/), &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#ifdef ATTR_TEST_2_on
+    call NUOPC_CompAttributeSet(child, name="mapping_garbage_test", &
+      value="bla", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+#endif
       
     ! SetServices for OCN with petList on second half of PETs
     allocate(petList(petCount/2))
