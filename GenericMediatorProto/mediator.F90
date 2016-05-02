@@ -155,7 +155,6 @@ module Mediator
     !   advertise fields in the nested state
     call NUOPC_Advertise(toModelA, &
       StandardNames=(/ &
-      "PINT                               ", &
       "air_pressure_at_sea_level          ", &
       "surface_net_downward_shortwave_flux"/), &
       TransferOfferGeomObject="cannot provide", rc=rc)
@@ -175,7 +174,6 @@ module Mediator
     !   advertise fields in the nested state
     call NUOPC_Advertise(frModelB, &
       StandardNames=(/ &
-      "PINT                               ", &
       "air_pressure_at_sea_level          ", &
       "surface_net_downward_shortwave_flux"/), &
       TransferOfferGeomObject="cannot provide", rc=rc)
@@ -598,12 +596,11 @@ module Mediator
       type(ESMF_State)  :: state
       integer, optional :: rc
       ! local variables
-      integer                                 :: itemCount, item, stat
+      integer                                 :: itemCount, item
       type(ESMF_Field)                        :: field
       character(len=20)                       :: transferAction
       character(len=80), allocatable          :: itemNameList(:)
       type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
-      integer, pointer                        :: ugLBound(:), ugUBound(:)
     
       if (present(rc)) rc = ESMF_SUCCESS
       
@@ -639,61 +636,12 @@ module Mediator
             return  ! bail out
           if (trim(transferAction)=="accept") then
             ! the Connector instructed the Mediator to accept geom object
-            ! the transferred geom object is already set, allocate memory 
-            ! for data by complete
-            nullify(ugLBound, ugUBound)
-            ! deal with ungriddedLBound
-            call ESMF_AttributeGet(field, name="UngriddedLBound", &
-              convention="NUOPC", purpose="Instance", &
-              itemCount=itemCount, rc=rc)
+            ! the transferred geom object is already set, allocate memory for data by complete
+            call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
               line=__LINE__, &
               file=__FILE__)) &
               return  ! bail out
-            if (itemCount > 0) then
-              allocate(ugLBound(itemCount))
-              call ESMF_AttributeGet(field, name="UngriddedLBound", &
-                convention="NUOPC", purpose="Instance", &
-                valueList=ugLBound, rc=rc)
-              if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-                line=__LINE__, &
-                file=__FILE__)) &
-                return  ! bail out
-            endif
-            ! deal with ungriddedUBound
-            call ESMF_AttributeGet(field, name="UngriddedUBound", &
-              convention="NUOPC", purpose="Instance", &
-              itemCount=itemCount, rc=rc)
-            if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-              line=__LINE__, &
-              file=__FILE__)) &
-              return  ! bail out
-            if (itemCount > 0) then
-              allocate(ugUBound(itemCount))
-              call ESMF_AttributeGet(field, name="UngriddedUBound", &
-                convention="NUOPC", purpose="Instance", &
-                valueList=ugUBound, rc=rc)
-              if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-                line=__LINE__, &
-                file=__FILE__)) &
-                return  ! bail out
-            endif
-
-            if (associated(ugLBound).and.associated(ugUBound)) then
-              call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, &
-                ungriddedLBound=ugLBound, ungriddedUBound=ugUBound, rc=rc)
-              if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-                line=__LINE__, &
-                file=__FILE__)) &
-                return  ! bail out
-              deallocate(ugLBound, ugUBound)
-            else
-              call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
-              if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-                line=__LINE__, &
-                file=__FILE__)) &
-                return  ! bail out
-            endif
           endif
         endif
       enddo

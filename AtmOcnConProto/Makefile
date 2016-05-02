@@ -43,12 +43,12 @@ include $(ESMFMKFILE)
 
 
 # -----------------------------------------------------------------------------
-esmApp: esmApp.o esm.o atm.o ocn.o con.o
+esmApp: esmApp.o esm.o atm.o ocn.o conn.o
 	$(ESMF_F90LINKER) $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS) -o $@ $^ $(ESMF_F90ESMFLINKLIBS)
 
 # module dependencies:
 esmApp.o: esm.o
-esm.o: atm.o ocn.o con.o
+esm.o: atm.o ocn.o conn.o
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -67,4 +67,4 @@ info:
 	@echo ==================================================================
 
 edit:
-	nedit esmApp.F90 esm.F90 atm.F90 ocn.F90 con.F90 &
+	nedit esmApp.F90 esm.F90 atm.F90 ocn.F90 conn.F90 &

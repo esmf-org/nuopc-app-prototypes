@@ -81,12 +81,6 @@ module Driver
 
     rc = ESMF_SUCCESS
     
-    call NUOPC_FieldDictionaryAddEntry(standardName="PINT", canonicalUnits="Pa", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
     ! get the petCount
     call ESMF_GridCompGet(driver, petCount=petCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &

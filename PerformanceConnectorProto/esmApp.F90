@@ -55,8 +55,8 @@ program esmApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
   
-  ! Turn on Profiling in order to get Run Sequence timing info from Driver
-  call NUOPC_CompAttributeSet(esmComp, name="Profiling", value="high", rc=rc)
+  ! Turn on verbosity in order to get Run Sequence timing info from Driver
+  call NUOPC_CompAttributeSet(esmComp, name="Verbosity", value="high", rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
