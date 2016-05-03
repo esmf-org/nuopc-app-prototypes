@@ -43,12 +43,12 @@ include $(ESMFMKFILE)
 
 
 # -----------------------------------------------------------------------------
-asyncIOApp: asyncIOApp.o asyncIODriver.o model.o io.o con.o
+asyncIOApp: asyncIOApp.o asyncIODriver.o model.o io.o conn.o
 	$(ESMF_F90LINKER) $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS) -o $@ $^ $(ESMF_F90ESMFLINKLIBS)
 
 # module dependencies:
 asyncIOApp.o: asyncIODriver.o
-asyncIODriver.o: model.o io.o con.o
+asyncIODriver.o: model.o io.o conn.o
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -67,4 +67,4 @@ info:
 	@echo ==================================================================
 
 edit:
-	nedit asyncIOApp.F90 asyncIODriver.F90 model.F90 io.F90 con.F90 &
+	nedit asyncIOApp.F90 asyncIODriver.F90 model.F90 io.F90 conn.F90 &
