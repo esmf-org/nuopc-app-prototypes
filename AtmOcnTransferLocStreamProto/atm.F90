@@ -116,6 +116,7 @@ module ATM
     rc = ESMF_SUCCESS
     
     ! importable field: sea_surface_temperature
+    ! -> marked as "can provide"
     call NUOPC_Advertise(importState, &
       StandardName="sea_surface_temperature", name="sst", &
       TransferOfferGeomObject="can provide", rc=rc)
@@ -125,6 +126,7 @@ module ATM
       return  ! bail out
 
     ! exportable field: air_pressure_at_sea_level
+    ! -> marked as "cannot provide"
     call NUOPC_Advertise(exportState, &
       StandardName="air_pressure_at_sea_level", name="pmsl", &
       TransferOfferGeomObject="cannot provide", rc=rc)
@@ -135,6 +137,7 @@ module ATM
     
 #if 0
     ! exportable field: surface_net_downward_shortwave_flux
+    ! -> use default, i.e. marked as "will provide"
     call NUOPC_Advertise(exportState, &
       StandardName="surface_net_downward_shortwave_flux", name="rsns", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -270,6 +273,7 @@ module ATM
     type(ESMF_Field)              :: field
     type(ESMF_LocStream)          :: locStream
     integer                       :: localDeCount
+    character(80)                 :: name
     character(160)                :: msgString
 
     type(ESMF_DistGrid)           :: distgrid
@@ -300,6 +304,19 @@ module ATM
     
     ! while this is still an empty field, it does now hold a LocStream with DistGrid
     call ESMF_FieldGet(field, locStream=locStream, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+    ! inspect the LocStream name
+    call ESMF_LocStreamGet(locStream, name=name, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    write (msgString,*) "ATM - InitializeP4: transferred LocStream name = ", name
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -440,6 +457,8 @@ module ATM
     ! local variables
     type(ESMF_Field)              :: field
     type(ESMF_LocStream)          :: locStream
+    character(80)                 :: name
+    character(160)                :: msgString
 
     rc = ESMF_SUCCESS
 
@@ -471,17 +490,6 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
-call ESMF_FieldGet(field, locStream=locStream, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-call ESMF_LocStreamPrint(locStream, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
     ! the transferred LocStream is already set, allocate memory for data by complete
     call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -489,6 +497,25 @@ call ESMF_LocStreamPrint(locStream, rc=rc)
       file=__FILE__)) &
       return  ! bail out
     
+    ! inspect the LocStream name
+    call ESMF_FieldGet(field, locStream=locStream, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LocStreamGet(locStream, name=name, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    write (msgString,*) "ATM - InitializeP5: transferred LocStream name = ", &
+      name
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     call ESMF_LogWrite("ATM - Just completed the 'pmsl' Field", &
       ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &

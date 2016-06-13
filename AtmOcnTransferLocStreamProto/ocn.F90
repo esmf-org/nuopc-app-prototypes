@@ -76,6 +76,7 @@ module OCN
     rc = ESMF_SUCCESS
 
     ! importable field: air_pressure_at_sea_level
+    ! -> use default, i.e. marked as "will provide"
     call NUOPC_Advertise(importState, &
       StandardName="air_pressure_at_sea_level", name="pmsl", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -85,6 +86,7 @@ module OCN
 
 #if 0
     ! importable field: surface_net_downward_shortwave_flux
+    ! -> use default, i.e. marked as "will provide"
     call NUOPC_Advertise(importState, &
       StandardName="surface_net_downward_shortwave_flux", name="rsns", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -94,6 +96,7 @@ module OCN
 #endif
 
     ! exportable field: sea_surface_temperature
+    ! -> use default, i.e. marked as "will provide"
     call NUOPC_Advertise(exportState, &
       StandardName="sea_surface_temperature", name="sst", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
