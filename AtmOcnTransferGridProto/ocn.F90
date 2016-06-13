@@ -76,6 +76,7 @@ module OCN
     rc = ESMF_SUCCESS
 
     ! importable field: air_pressure_at_sea_level
+    ! -> use default, i.e. marked as "will provide"
     call NUOPC_Advertise(importState, &
       StandardName="air_pressure_at_sea_level", name="pmsl", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -84,6 +85,7 @@ module OCN
       return  ! bail out
     
     ! importable field: surface_net_downward_shortwave_flux
+    ! -> use default, i.e. marked as "will provide"
     call NUOPC_Advertise(importState, &
       StandardName="surface_net_downward_shortwave_flux", name="rsns", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -92,6 +94,7 @@ module OCN
       return  ! bail out
 
     ! exportable field: sea_surface_temperature
+    ! -> use default, i.e. marked as "will provide"
     call NUOPC_Advertise(exportState, &
       StandardName="sea_surface_temperature", name="sst", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -119,7 +122,8 @@ module OCN
     
     ! create Grid objects for Fields
     gridIn = ESMF_GridCreate1PeriDim(minIndex=(/1,1/), maxIndex=(/100,150/), &
-      indexflag=ESMF_INDEX_GLOBAL, coordSys=ESMF_COORDSYS_SPH_DEG, rc=rc)
+      indexflag=ESMF_INDEX_GLOBAL, coordSys=ESMF_COORDSYS_SPH_DEG, &
+      name="OCN-Grid", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

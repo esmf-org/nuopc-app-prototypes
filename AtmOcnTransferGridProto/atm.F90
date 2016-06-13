@@ -116,6 +116,7 @@ module ATM
     rc = ESMF_SUCCESS
     
     ! importable field: sea_surface_temperature
+    ! -> marked as "can provide"
     call NUOPC_Advertise(importState, &
       StandardName="sea_surface_temperature", name="sst", &
       TransferOfferGeomObject="can provide", rc=rc)
@@ -125,6 +126,7 @@ module ATM
       return  ! bail out
 
     ! exportable field: air_pressure_at_sea_level
+    ! -> marked as "cannot provide"
     call NUOPC_Advertise(exportState, &
       StandardName="air_pressure_at_sea_level", name="pmsl", &
       TransferOfferGeomObject="cannot provide", rc=rc)
@@ -134,6 +136,7 @@ module ATM
       return  ! bail out
     
     ! exportable field: surface_net_downward_shortwave_flux
+    ! -> use default, i.e. marked as "will provide"
     call NUOPC_Advertise(exportState, &
       StandardName="surface_net_downward_shortwave_flux", name="rsns", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -266,6 +269,7 @@ module ATM
     type(ESMF_Field)              :: field
     type(ESMF_Grid)               :: grid
     integer                       :: localDeCount
+    character(80)                 :: name
     character(160)                :: msgString
 
     type(ESMF_DistGrid)           :: distgrid
@@ -295,6 +299,19 @@ module ATM
     
     ! while this is still an empty field, it does now hold a Grid with DistGrid
     call ESMF_FieldGet(field, grid=grid, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+    ! inspect the Grid name
+    call ESMF_GridGet(grid, name=name, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    write (msgString,*) "ATM - InitializeP4: transferred Grid name = ", name
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -433,6 +450,9 @@ module ATM
     
     ! local variables
     type(ESMF_Field)              :: field
+    type(ESMF_Grid)               :: grid
+    character(80)                 :: name
+    character(160)                :: msgString
 
     rc = ESMF_SUCCESS
 
@@ -471,6 +491,24 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
     
+    ! inspect the Grid name
+    call ESMF_FieldGet(field, grid=grid, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_GridGet(grid, name=name, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    write (msgString,*) "ATM - InitializeP5: transferred Grid name = ", name
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
     call ESMF_LogWrite("ATM - Just completed the 'pmsl' Field", &
       ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
