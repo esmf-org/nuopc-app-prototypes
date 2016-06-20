@@ -5,6 +5,7 @@ program esmApp
   !-----------------------------------------------------------------------------
 
   use ESMF
+  use NUOPC
   use ESM, only: esmSS => SetServices
 
   implicit none
@@ -31,7 +32,7 @@ program esmApp
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    
+
   ! SetServices for the earth system Component
   call ESMF_GridCompSetServices(esmComp, esmSS, userRc=urc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -43,6 +44,12 @@ program esmApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
     
+  call NUOPC_CompAttributeSet(esmComp, name="Profiling", value="0", rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    return  ! bail out
+
   ! Call Initialize for the earth system Component
   call ESMF_GridCompInitialize(esmComp, userRc=urc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
