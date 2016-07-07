@@ -38,6 +38,9 @@ DEP_LINK_OBJS := $(DEP_LINK_OBJS) $(ESMF_DEP_LINK_OBJS)
 DEP_SHRD_PATH := $(DEP_SHRD_PATH) $(addprefix -L, $(ESMF_DEP_SHRD_PATH)) $(addprefix -Wl$(COMMA)-rpath$(COMMA), $(ESMF_DEP_SHRD_PATH))
 DEP_SHRD_LIBS := $(DEP_SHRD_LIBS) $(addprefix -l, $(ESMF_DEP_SHRD_LIBS))
 
+ifneq ($(FRONT_COMP_LABEL)x,x)
+DEP_FRONTS := $(DEP_FRONTS) -DFRONT_COMP_LABEL=$(FRONT_COMP_LABEL)
+endif
 
 ################################################################################
 ################################################################################

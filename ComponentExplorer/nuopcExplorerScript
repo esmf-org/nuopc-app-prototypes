@@ -9,8 +9,9 @@ echo "------------------------"
 
 # - high level error checking
 
-if [ $# != 1 ]; then
-  echo "Usage: nuopcExplorerScript <path/component-mk-file>"
+if [ $# != 1 ] && [$# != 2]; then
+  echo "Usage: nuopcExplorerScript <path/component-mk-file> [<comp-label>]"
+  echo "  The optional <comp-label> will be used as the component label"
   echo "Exiting with error."
   echo
   exit 1
@@ -52,7 +53,7 @@ echo
 # - build explorer application
 
 echo "-- Building the explorer application using the component in the .mk file ..."
-gmake COMP=$1 nuopcExplorerApp
+gmake COMP=$1 nuopcExplorerApp FRONT_COMP_LABEL=$2
 
 if [ $? -eq 0 ]
 then

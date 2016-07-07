@@ -21,14 +21,25 @@ module nuopcExplorerDriver
         driver_label_SetRunSequence => label_SetRunSequence, &
         driver_label_SetRunClock => label_SetRunClock
   
-    use NUOPC_Compliance_Model, only: registerIC
-    use NUOPC_Compliance_Connector, only :  registerIC_Connector => registerIC
-    use NUOPC_Compliance_Driver, only:      registerIC_Driver => registerIC
-    
+!    use NUOPC_Compliance_Model, only: registerIC
+!    use NUOPC_Compliance_Connector, only :  registerIC_Connector => registerIC
+!    use NUOPC_Compliance_Driver, only:      registerIC_Driver => registerIC
+
+
+#define xstr(a) str(a)
+#define str(a) #a
+
 #ifdef FRONT_COMP
   use FRONT_COMP, only: compSS => SetServices
+#ifndef FRONT_COMP_LABEL
+#define FRONT_COMP_LABEL FRONT_COMP    
+#endif
 #elif (defined FRONT_H_COMP)
   use compFront, only: compSS => SetServices
+#endif
+
+#ifndef FRONT_COMP_LABEL
+#define FRONT_COMP_LABEL Component
 #endif
 
     use NUOPC_Connector, only: cplSS => SetServices
@@ -149,7 +160,7 @@ contains
 
         end if
 
-#define COMPLIANCE_CHECK_DRIVER
+#define COMPLIANCE_CHECK_DRIVER__off
 #ifdef COMPLIANCE_CHECK_DRIVER
         ! compliance output for driver itself
         call ESMF_GridCompSetServices(driver, userRoutine=registerIC_Driver, &
@@ -202,7 +213,7 @@ contains
     if (localPet==0) then
       print *, "Exploring a component with Fortran module or C header front..."
     endif
-    call NUOPC_DriverAddComp(driver, "Component", compSS, comp=child, rc=rc)
+    call NUOPC_DriverAddComp(driver, xstr(FRONT_COMP_LABEL), compSS, comp=child, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -214,7 +225,7 @@ contains
       print *, "Exploring a component with a shared object front, known at "// &
         "compile time..."
     endif
-    call NUOPC_DriverAddComp(driver, "Component", &
+    call NUOPC_DriverAddComp(driver, xstr(FRONT_COMP_LABEL), &
       sharedObj="./"//FRONT_SO_COMP, comp=child, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -261,7 +272,7 @@ contains
             file=__FILE__)) &
             return  ! bail out
     
-        call NUOPC_DriverAddComp(driver, "Component", &
+        call NUOPC_DriverAddComp(driver, xstr(FRONT_COMP_LABEL), &
             sharedObj=trim(soName), comp=child, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
@@ -287,7 +298,7 @@ contains
         if (trim(enable_field_mirroring)=="yes") then
 
             call NUOPC_DriverAddComp(driver, srcCompLabel="explorerDriver", &
-                dstCompLabel="Component", compSetServicesRoutine=cplSS, &
+                dstCompLabel=xstr(FRONT_COMP_LABEL), compSetServicesRoutine=cplSS, &
                 comp=drv2comp, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                 line=__LINE__, &
@@ -300,7 +311,7 @@ contains
                 file=__FILE__)) &
                 return  ! bail out
 
-            call NUOPC_DriverAddComp(driver, srcCompLabel="Component", &
+            call NUOPC_DriverAddComp(driver, srcCompLabel=xstr(FRONT_COMP_LABEL), &
                 dstCompLabel="explorerDriver", compSetServicesRoutine=cplSS, &
                 comp=comp2drv, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -335,8 +346,8 @@ contains
             ! Explicitly register compliance IC for Driver
             !TODO: future versions of ESMF/NUOPC may provide RUNTIME environemnt to 
             !TODO: switch NUOPC component specific compliance checking on/off.
-            call ESMF_GridCompSetServices(child, userRoutine=registerIC, &
-                userRc=urc, rc=rc)
+!            call ESMF_GridCompSetServices(child, userRoutine=registerIC, &
+!                userRc=urc, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                 line=__LINE__, &
                 file=__FILE__)) &
@@ -347,8 +358,8 @@ contains
                 call ESMF_Finalize(endflag=ESMF_END_ABORT)
             ! compliance check connector, if present
             if (trim(enable_field_mirroring)=="yes") then
-                call ESMF_CplCompSetServices(drv2comp, userRoutine=registerIC_Connector, &
-                    userRc=urc, rc=rc)
+!                call ESMF_CplCompSetServices(drv2comp, userRoutine=registerIC_Connector, &
+!                    userRc=urc, rc=rc)
                 if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                     line=__LINE__, &
                     file=__FILE__)) &
@@ -357,8 +368,8 @@ contains
                     line=__LINE__, &
                     file=__FILE__)) &
                     call ESMF_Finalize(endflag=ESMF_END_ABORT)
-                call ESMF_CplCompSetServices(comp2drv, userRoutine=registerIC_Connector, &
-                    userRc=urc, rc=rc)
+!                call ESMF_CplCompSetServices(comp2drv, userRoutine=registerIC_Connector, &
+!                    userRc=urc, rc=rc)
                 if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                     line=__LINE__, &
                     file=__FILE__)) &
@@ -508,7 +519,7 @@ contains
             call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
         if (trim(enable_field_mirroring)=="yes") then
-            call NUOPC_DriverGetComp(driver, compLabel="Component", &
+            call NUOPC_DriverGetComp(driver, compLabel=xstr(FRONT_COMP_LABEL), &
                 comp=comp, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                 line=__LINE__, &
@@ -1252,21 +1263,21 @@ contains
             return  ! bail out
 
         call NUOPC_DriverAddRunElement(driver, slot=1, &
-            srcCompLabel="explorerDriver", dstCompLabel="Component", rc=rc)
+            srcCompLabel="explorerDriver", dstCompLabel=xstr(FRONT_COMP_LABEL), rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
 
         call NUOPC_DriverAddRunElement(driver, slot=1, &
-            srcCompLabel="Component", dstCompLabel="explorerDriver", rc=rc)
+            srcCompLabel=xstr(FRONT_COMP_LABEL), dstCompLabel="explorerDriver", rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
 
         call NUOPC_DriverAddRunElement(driver, slot=1, &
-            compLabel="Component", rc=rc)
+            compLabel=xstr(FRONT_COMP_LABEL), rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
