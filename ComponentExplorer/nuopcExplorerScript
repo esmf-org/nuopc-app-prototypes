@@ -9,7 +9,7 @@ echo "------------------------"
 
 # - high level error checking
 
-if [ $# != 1 ] && [$# != 2]; then
+if [ $# != 1 ] && [ $# != 2 ]; then
   echo "Usage: nuopcExplorerScript <path/component-mk-file> [<comp-label>]"
   echo "  The optional <comp-label> will be used as the component label"
   echo "Exiting with error."
