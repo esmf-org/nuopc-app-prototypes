@@ -151,7 +151,8 @@ module ModelB
 
     ! exportable field: PINT
     field = ESMF_FieldCreate(name="PINT", &
-      grid=gridIn, typekind=ESMF_TYPEKIND_R8, ungriddedLBound=(/1/), ungriddedUBound=(/35/), rc=rc)
+      grid=gridIn, typekind=ESMF_TYPEKIND_R8, &
+      ungriddedLBound=(/1/), ungriddedUBound=(/35/), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

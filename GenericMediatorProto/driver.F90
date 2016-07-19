@@ -78,6 +78,7 @@ module Driver
     type(ESMF_Clock)              :: internalClock
     integer                       :: petCount, i
     integer, allocatable          :: petList(:)
+    type(ESMF_CplComp)            :: conn
 
     rc = ESMF_SUCCESS
     
@@ -125,15 +126,25 @@ module Driver
 
     ! SetServices for Connector: Mediator -> ModelA
     call NUOPC_DriverAddComp(driver, srcCompLabel="Mediator", &
-      dstCompLabel="ModelA", compSetServicesRoutine=cplSS, rc=rc)
+      dstCompLabel="ModelA", compSetServicesRoutine=cplSS, comp=conn, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="max", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! SetServices for Connector: ModelA -> Mediator
     call NUOPC_DriverAddComp(driver, srcCompLabel="ModelA", &
-      dstCompLabel="Mediator", compSetServicesRoutine=cplSS, rc=rc)
+      dstCompLabel="Mediator", compSetServicesRoutine=cplSS, comp=conn, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="max", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -141,7 +152,12 @@ module Driver
       
     ! SetServices for Connector: Mediator -> ModelB
     call NUOPC_DriverAddComp(driver, srcCompLabel="Mediator", &
-      dstCompLabel="ModelB", compSetServicesRoutine=cplSS, rc=rc)
+      dstCompLabel="ModelB", compSetServicesRoutine=cplSS, comp=conn, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="max", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -149,7 +165,12 @@ module Driver
       
     ! SetServices for Connector: ModelB -> Mediator
     call NUOPC_DriverAddComp(driver, srcCompLabel="ModelB", &
-      dstCompLabel="Mediator", compSetServicesRoutine=cplSS, rc=rc)
+      dstCompLabel="Mediator", compSetServicesRoutine=cplSS, comp=conn, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="max", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -285,7 +306,7 @@ module Driver
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+#if 1
     do i=1, size(connectorList)
       ! query the cplList for connector i
       call NUOPC_CompAttributeGet(connectorList(i), name="CplList", &
@@ -317,7 +338,7 @@ module Driver
         deallocate(cplList)
       endif
     enddo
-      
+#endif 
     deallocate(connectorList)
     
   end subroutine
