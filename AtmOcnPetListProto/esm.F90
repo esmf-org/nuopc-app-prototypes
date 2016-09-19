@@ -45,7 +45,14 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
+    ! set verbosity on driver
+    call NUOPC_CompAttributeSet(driver, name="Verbosity", value="max", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
   end subroutine
 
   !-----------------------------------------------------------------------------
