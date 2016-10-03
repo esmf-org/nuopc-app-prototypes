@@ -60,13 +60,6 @@ module driverChildComp
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSetInternalEntryPoint(driver, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv01p5"/), userRoutine=InternalInitializeComplete, &
-      rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
     
   end subroutine
 
@@ -387,32 +380,5 @@ module driverChildComp
   end subroutine
   
   !-----------------------------------------------------------------------------
-
-  subroutine InternalInitializeComplete(driver, importState, exportState, &
-    clock, rc)
-    type(ESMF_GridComp)  :: driver
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
-    integer, intent(out) :: rc
-    
-    ! local variables    
-    integer               :: localrc
-    type(ESMF_Clock)      :: internalClock
-    
-    rc = ESMF_SUCCESS
-    
-    ! update timestamp on export Fields
-    call ESMF_GridCompGet(driver, clock=internalClock, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_UpdateTimestamp(exportState, internalClock, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-  end subroutine
   
 end module
