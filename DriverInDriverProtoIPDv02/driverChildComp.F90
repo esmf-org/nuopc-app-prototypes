@@ -47,21 +47,14 @@ module driverChildComp
 
     ! set entry points that driver uses internally to interact with model
     call NUOPC_CompSetInternalEntryPoint(driver, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv01p1"/), userRoutine=InternalInitializeAdvertize, &
+      phaseLabelList=(/"IPDv02p1"/), userRoutine=InternalInitializeAdvertize, &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompSetInternalEntryPoint(driver, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv01p3"/), userRoutine=InternalInitializeRealize, &
-      rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_CompSetInternalEntryPoint(driver, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv01p5"/), userRoutine=InternalInitializeComplete, &
+      phaseLabelList=(/"IPDv02p3"/), userRoutine=InternalInitializeRealize, &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -192,7 +185,7 @@ module driverChildComp
     rc = ESMF_SUCCESS
     
     ! create a Grid object for Fields
-    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/10, 100/), &
+    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/100, 100/), &
       minCornerCoord=(/10._ESMF_KIND_R8, 20._ESMF_KIND_R8/), &
       maxCornerCoord=(/100._ESMF_KIND_R8, 200._ESMF_KIND_R8/), &
       coordSys=ESMF_COORDSYS_CART, staggerLocList=(/ESMF_STAGGERLOC_CENTER/), &
@@ -239,6 +232,14 @@ module driverChildComp
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
+        
+  ! initialize the field with data for debugging
+  call ESMF_FieldFill(field, dataFillScheme="sincos", member=10, step=1, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    return  ! bail out
+        
     else
       ! remove the field from the state
       call ESMF_StateRemove(importState, itemName, rc=rc)
@@ -388,31 +389,4 @@ module driverChildComp
   
   !-----------------------------------------------------------------------------
 
-  subroutine InternalInitializeComplete(driver, importState, exportState, &
-    clock, rc)
-    type(ESMF_GridComp)  :: driver
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
-    integer, intent(out) :: rc
-    
-    ! local variables    
-    integer               :: localrc
-    type(ESMF_Clock)      :: internalClock
-    
-    rc = ESMF_SUCCESS
-    
-    ! update timestamp on export Fields
-    call ESMF_GridCompGet(driver, clock=internalClock, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_UpdateTimestamp(exportState, internalClock, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-  end subroutine
-  
 end module

@@ -7,8 +7,9 @@ module ATM
   use ESMF
   use NUOPC
   use NUOPC_Model, &
-    model_routine_SS    => SetServices, &
-    model_label_Advance => label_Advance
+    model_routine_SS            => SetServices, &
+    model_label_DataInitialize  => label_DataInitialize, &
+    model_label_Advance         => label_Advance
   
   implicit none
   
@@ -33,15 +34,23 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
     
+    ! Provide InitializeP0 to switch to custom IPD version
+    call ESMF_GridCompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
+      userRoutine=InitializeP0, phase=0, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! set entry point for methods that require specific implementation
     call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv00p1"/), userRoutine=InitializeP1, rc=rc)
+      phaseLabelList=(/"IPDv01p1","IPDv02p1"/), userRoutine=InitializeAdvertise, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv00p2"/), userRoutine=InitializeP2, rc=rc)
+      phaseLabelList=(/"IPDv01p3","IPDv02p3"/), userRoutine=InitializeRealize, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -54,12 +63,40 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    call NUOPC_CompSpecialize(model, specLabel=model_label_DataInitialize, &
+      specRoutine=DataInitialize, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
     
   end subroutine
   
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP1(model, importState, exportState, clock, rc)
+  subroutine InitializeP0(gcomp, importState, exportState, clock, rc)
+    type(ESMF_GridComp)   :: gcomp
+    type(ESMF_State)      :: importState, exportState
+    type(ESMF_Clock)      :: clock
+    integer, intent(out)  :: rc
+    
+    rc = ESMF_SUCCESS
+
+    ! Switch to IPDv02 by filtering all other phaseMap entries
+    ! -> currently IPDv02 will cause issues because SST never makes it down 
+    ! -> the component hierarchy.
+    call NUOPC_CompFilterPhaseMap(gcomp, ESMF_METHOD_INITIALIZE, &
+      acceptStringList=(/"IPDv02p"/), rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+  end subroutine
+  
+  !-----------------------------------------------------------------------------
+
+  subroutine InitializeAdvertise(model, importState, exportState, clock, rc)
     type(ESMF_GridComp)  :: model
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
@@ -104,7 +141,7 @@ module ATM
   
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP2(model, importState, exportState, clock, rc)
+  subroutine InitializeRealize(model, importState, exportState, clock, rc)
     type(ESMF_GridComp)  :: model
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
@@ -118,7 +155,7 @@ module ATM
     rc = ESMF_SUCCESS
     
     ! create a Grid object for Fields
-    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/10, 100/), &
+    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/100, 100/), &
       minCornerCoord=(/10._ESMF_KIND_R8, 20._ESMF_KIND_R8/), &
       maxCornerCoord=(/100._ESMF_KIND_R8, 200._ESMF_KIND_R8/), &
       coordSys=ESMF_COORDSYS_CART, staggerLocList=(/ESMF_STAGGERLOC_CENTER/), &
@@ -181,8 +218,9 @@ module ATM
     integer, intent(out) :: rc
     
     ! local variables
-    type(ESMF_Clock)              :: clock
-    type(ESMF_State)              :: importState, exportState
+    type(ESMF_Clock)            :: clock
+    type(ESMF_State)            :: importState, exportState
+    integer, save               :: slice=1
 
     rc = ESMF_SUCCESS
     
@@ -209,12 +247,108 @@ module ATM
       return  ! bail out
     
     call ESMF_ClockPrint(clock, options="stopTime", &
-      preString="--------------------------------> to: ", rc=rc)
+      preString="---------------------> to: ", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 
+    ! write out the Fields in the importState
+    call NUOPC_Write(importState, fileNamePrefix="field_atm_import_", &
+      timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! write out the Fields in the exportState
+    call NUOPC_Write(exportState, fileNamePrefix="field_atm_export_", &
+      timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! advance the time slice counter
+    slice = slice + 1
+
   end subroutine
+
+  !-----------------------------------------------------------------------------
+
+  subroutine DataInitialize(model, rc)
+    type(ESMF_GridComp)   :: model
+    integer, intent(out)  :: rc
+    
+    ! local variables
+    type(ESMF_Clock)              :: clock
+    type(ESMF_State)              :: importState, exportState
+    type(ESMF_Time)               :: time
+    type(ESMF_Field)              :: field
+    logical                       :: neededCurrent
+    integer, save                 :: slice=1
+    
+    rc = ESMF_SUCCESS
+
+    ! query the Component for its clock, importState and exportState
+    call NUOPC_ModelGet(model, modelClock=clock, importState=importState, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_StateGet(importState, field=field, itemName="sst", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! get the current time out of the clock
+    call ESMF_ClockGet(clock, currTime=time, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    neededCurrent = NUOPC_IsAtTime(field, time, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+call ESMF_TimePrint(time, &
+  preString="ATM DataInitialize time: ", rc=rc)
+if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+  line=__LINE__, &
+  file=__FILE__)) &
+  return  ! bail out
+
+    if (neededCurrent) then
+      ! indicate that data initialization is complete (breaking out of init-loop)
+      call NUOPC_CompAttributeSet(model, &
+        name="InitializeDataComplete", value="true", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    endif
+    
+    ! write out the Fields in the importState
+    call NUOPC_Write(importState, fileNamePrefix="field_atm_import_datainit_", &
+      timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    slice = slice+1
+    
+    ! must explicitly set time stamp on all export fields
+    call NUOPC_UpdateTimestamp(exportState, clock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+  end subroutine
+
+  !-----------------------------------------------------------------------------
 
 end module

@@ -7,9 +7,10 @@ module OCN
   use ESMF
   use NUOPC
   use NUOPC_Model, &
-    model_routine_SS      => SetServices, &
-    model_label_SetClock  => label_SetClock, &
-    model_label_Advance   => label_Advance
+    model_routine_SS            => SetServices, &
+    model_label_DataInitialize  => label_DataInitialize, &
+    model_label_SetClock        => label_SetClock, &
+    model_label_Advance         => label_Advance
   
   implicit none
   
@@ -34,15 +35,23 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
     
+    ! Provide InitializeP0 to switch to custom IPD version
+    call ESMF_GridCompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
+      userRoutine=InitializeP0, phase=0, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! set entry point for methods that require specific implementation
     call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv00p1"/), userRoutine=InitializeP1, rc=rc)
+      phaseLabelList=(/"IPDv02p1"/), userRoutine=InitializeAdvertise, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv00p2"/), userRoutine=InitializeP2, rc=rc)
+      phaseLabelList=(/"IPDv02p3"/), userRoutine=InitializeRealize, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -61,12 +70,40 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    call NUOPC_CompSpecialize(model, specLabel=model_label_DataInitialize, &
+      specRoutine=DataInitialize, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 
   end subroutine
   
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP1(model, importState, exportState, clock, rc)
+  subroutine InitializeP0(gcomp, importState, exportState, clock, rc)
+    type(ESMF_GridComp)   :: gcomp
+    type(ESMF_State)      :: importState, exportState
+    type(ESMF_Clock)      :: clock
+    integer, intent(out)  :: rc
+    
+    rc = ESMF_SUCCESS
+
+    ! Switch to IPDv02 by filtering all other phaseMap entries
+    ! -> currently IPDv02 will cause issues because SST never makes it down 
+    ! -> the component hierarchy.
+    call NUOPC_CompFilterPhaseMap(gcomp, ESMF_METHOD_INITIALIZE, &
+      acceptStringList=(/"IPDv02p"/), rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+  end subroutine
+  
+  !-----------------------------------------------------------------------------
+
+  subroutine InitializeAdvertise(model, importState, exportState, clock, rc)
     type(ESMF_GridComp)  :: model
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
@@ -108,7 +145,7 @@ module OCN
   
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP2(model, importState, exportState, clock, rc)
+  subroutine InitializeRealize(model, importState, exportState, clock, rc)
     type(ESMF_GridComp)  :: model
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
@@ -123,9 +160,9 @@ module OCN
     rc = ESMF_SUCCESS
     
     ! create a Grid object for Fields
-    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/100, 10/), &
-      minCornerCoord=(/10._ESMF_KIND_R8, 20._ESMF_KIND_R8/), &
-      maxCornerCoord=(/100._ESMF_KIND_R8, 200._ESMF_KIND_R8/), &
+    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/200, 100/), &
+      minCornerCoord=(/1._ESMF_KIND_R8, 1._ESMF_KIND_R8/), &
+      maxCornerCoord=(/180._ESMF_KIND_R8, 180._ESMF_KIND_R8/), &
       coordSys=ESMF_COORDSYS_CART, staggerLocList=(/ESMF_STAGGERLOC_CENTER/), &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -174,7 +211,7 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-
+    
   end subroutine
   
   !-----------------------------------------------------------------------------
@@ -224,6 +261,8 @@ module OCN
     type(ESMF_State)              :: importState, exportState
     type(ESMF_Time)               :: currTime
     type(ESMF_TimeInterval)       :: timeStep
+    integer, save                 :: step=1
+    type(ESMF_Field)              :: field
 
     rc = ESMF_SUCCESS
     
@@ -258,12 +297,90 @@ module OCN
       return  ! bail out
     
     call ESMF_TimePrint(currTime + timeStep, &
-      preString="--------------------------------> to: ", rc=rc)
+      preString="---------------------> to: ", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 
+    ! update the export field with data
+    call ESMF_StateGet(exportState, field=field, itemName="sst", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out    
+    call ESMF_FieldFill(field, dataFillScheme="sincos", member=1, step=step, &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    step=step+1
+
   end subroutine
+
+  !-----------------------------------------------------------------------------
+
+  subroutine DataInitialize(model, rc)
+    type(ESMF_GridComp)   :: model
+    integer, intent(out)  :: rc
+    
+    ! local variables
+    type(ESMF_Clock)              :: clock
+    type(ESMF_State)              :: importState, exportState
+    type(ESMF_Time)               :: time
+    type(ESMF_Field)              :: field
+    logical                       :: neededCurrent
+    integer, save                 :: slice=1
+    
+    rc = ESMF_SUCCESS
+
+    ! query the Component for its clock, importState and exportState
+    call NUOPC_ModelGet(model, modelClock=clock, importState=importState, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_StateGet(exportState, field=field, itemName="sst", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! initialize the export field with data
+    call ESMF_FieldFill(field, dataFillScheme="sincos", member=1, step=1, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    ! set the update attribute on the field
+    call NUOPC_SetAttribute(field, name="Updated", value="true", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+    ! write out the Fields in the exportState
+    call NUOPC_Write(exportState, fileNamePrefix="field_ocn_export_datainit_", &
+      timeslice=slice, relaxedFlag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! indicate that data initialization is complete (breaking out of init-loop)
+    call NUOPC_CompAttributeSet(model, &
+      name="InitializeDataComplete", value="true", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    slice = slice + 1
+    
+  end subroutine
+
+  !-----------------------------------------------------------------------------
 
 end module

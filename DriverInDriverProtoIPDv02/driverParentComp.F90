@@ -108,6 +108,8 @@ module driverParentComp
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+
 #if 1
 ! turning this connector of will trigger an error in the driverChild
 ! InternalInitializeRealize() routine, detecting that there is no producer
