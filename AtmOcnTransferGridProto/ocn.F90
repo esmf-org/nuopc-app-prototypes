@@ -102,6 +102,15 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
 
+    ! exportable field: sea_surface_salinity
+    ! -> use default, i.e. marked as "will provide"
+    call NUOPC_Advertise(exportState, &
+      StandardName="sea_surface_salinity", name="sss", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
   end subroutine
   
   !-----------------------------------------------------------------------------
@@ -113,79 +122,53 @@ module OCN
     integer, intent(out) :: rc
     
     ! local variables    
-    type(ESMF_Field)                  :: field
     type(ESMF_Grid)                   :: gridIn, gridOut
-    integer                           :: i, j
-    real(kind=ESMF_KIND_R8),  pointer :: lonPtr(:,:), latPtr(:,:)
     
     rc = ESMF_SUCCESS
     
     ! create Grid objects for Fields
-    gridIn = ESMF_GridCreate1PeriDim(minIndex=(/1,1/), maxIndex=(/100,150/), &
-      indexflag=ESMF_INDEX_GLOBAL, coordSys=ESMF_COORDSYS_SPH_DEG, &
-      name="OCN-Grid", rc=rc)
+    gridIn = ESMF_GridCreate1PeriDimUfrm(maxIndex=(/100, 150/), &
+      minCornerCoord=(/0._ESMF_KIND_R8, -60._ESMF_KIND_R8/), &
+      maxCornerCoord=(/360._ESMF_KIND_R8, 80._ESMF_KIND_R8/), &
+      staggerLocList=(/ESMF_STAGGERLOC_CENTER/), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call ESMF_GridAddCoord(gridIn, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call ESMF_GridGetCoord(gridIn, coordDim=1, farrayPtr=lonPtr, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call ESMF_GridGetCoord(gridIn, coordDim=2, farrayPtr=latPtr, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    do j=lbound(lonPtr,2),ubound(lonPtr,2)
-    do i=lbound(lonPtr,1),ubound(lonPtr,1)
-      lonPtr(i,j) = 360./real(100) * (i-1)
-      latPtr(i,j) = 100./real(150) * (j-1) - 50.
-    enddo
-    enddo
       
     gridOut = gridIn ! for now out same as in
 
     ! importable field: air_pressure_at_sea_level
-    field = ESMF_FieldCreate(name="pmsl", grid=gridIn, &
-      typekind=ESMF_TYPEKIND_R8, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_Realize(importState, field=field, rc=rc)
+    call NUOPC_Realize(importState, gridIn, fieldName="pmsl", &
+      typekind=ESMF_TYPEKIND_R8, selection="realize_connected_remove_others", &
+      dataFillScheme="sincos", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
     ! importable field: surface_net_downward_shortwave_flux
-    field = ESMF_FieldCreate(name="rsns", grid=gridIn, &
-      typekind=ESMF_TYPEKIND_R8, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_Realize(importState, field=field, rc=rc)
+    call NUOPC_Realize(importState, gridIn, fieldName="rsns", &
+      typekind=ESMF_TYPEKIND_R8, selection="realize_connected_remove_others", &
+      dataFillScheme="sincos", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 
     ! exportable field: sea_surface_temperature
-    field = ESMF_FieldCreate(name="sst", grid=gridOut, &
-      typekind=ESMF_TYPEKIND_R8, rc=rc)
+    call NUOPC_Realize(exportState, gridOut, fieldName="sst", &
+      typekind=ESMF_TYPEKIND_R8, selection="realize_connected_remove_others", &
+      dataFillScheme="sincos", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_Realize(exportState, field=field, rc=rc)
+
+    ! exportable field: sea_surface_salinity
+    call NUOPC_Realize(exportState, gridOut, fieldName="sss", &
+      typekind=ESMF_TYPEKIND_R8, selection="realize_connected_remove_others", &
+      dataFillScheme="sincos", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -240,6 +223,7 @@ module OCN
     type(ESMF_State)              :: importState, exportState
     type(ESMF_Time)               :: currTime
     type(ESMF_TimeInterval)       :: timeStep
+    integer, save                 :: slice=1
 
     rc = ESMF_SUCCESS
     
@@ -279,6 +263,21 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+    ! write out the Fields in the importState and exportState
+    call NUOPC_Write(importState, fileNamePrefix="field_ocn_import_", &
+      timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_Write(exportState, fileNamePrefix="field_ocn_export_", &
+      timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    slice = slice+1
 
   end subroutine
 
