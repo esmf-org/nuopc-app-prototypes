@@ -35,7 +35,6 @@ module OCN
       return  ! bail out
     
     ! set entry point for methods that require specific implementation
-
     call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
       phaseLabelList=(/"IPDv00p1"/), userRoutine=InitializeAdvertise, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -123,20 +122,35 @@ module OCN
     
     ! local variables    
     type(ESMF_Grid)                   :: gridIn, gridOut
+    integer                           :: deBlockList(2,2,0:1) ! 2 DEs
     
     rc = ESMF_SUCCESS
     
-    ! create Grid objects for Fields
+    ! create Grid objects for import Fields
     gridIn = ESMF_GridCreate1PeriDimUfrm(maxIndex=(/100, 150/), &
       minCornerCoord=(/0._ESMF_KIND_R8, -60._ESMF_KIND_R8/), &
       maxCornerCoord=(/360._ESMF_KIND_R8, 80._ESMF_KIND_R8/), &
-      staggerLocList=(/ESMF_STAGGERLOC_CENTER/), rc=rc)
+      staggerLocList=(/ESMF_STAGGERLOC_CENTER/), name="OCN-GridIn", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
-    gridOut = gridIn ! for now out same as in
+    
+#if 1
+    ! write out the Grid into VTK file for inspection
+    call ESMF_GridWriteVTK(gridIn, staggerloc=ESMF_STAGGERLOC_CENTER, &
+      filename="OCN-GridIn_centers", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LogWrite("Done writing OCN-GridIn_centers VTK", &
+      ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
 
     ! importable field: air_pressure_at_sea_level
     call NUOPC_Realize(importState, gridIn, fieldName="pmsl", &
@@ -156,6 +170,39 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
 
+    ! create Grid objects for export Fields
+    ! DE 0
+    deBlockList(:,1,0) = (/1,1/)      ! min
+    deBlockList(:,2,0) = (/100,20/)   ! max
+    ! DE 1
+    deBlockList(:,1,1) = (/61,31/)      ! min
+    deBlockList(:,2,1) = (/100,120/)   ! max
+    gridOut = ESMF_GridCreate1PeriDimUfrm(maxIndex=(/100, 120/), &
+      minCornerCoord=(/0._ESMF_KIND_R8, -50._ESMF_KIND_R8/), &
+      maxCornerCoord=(/360._ESMF_KIND_R8, 60._ESMF_KIND_R8/), &
+      deBlockList=deBlockList, &
+      staggerLocList=(/ESMF_STAGGERLOC_CENTER/), name="OCN-GridOut", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+#if 0
+    ! write out the Grid into VTK file for inspection
+    call ESMF_GridWriteVTK(gridOut, staggerloc=ESMF_STAGGERLOC_CENTER, &
+      filename="OCN-GridOut_centers", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LogWrite("Done writing OCN-GridOut_centers VTK", &
+      ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
     ! exportable field: sea_surface_temperature
     call NUOPC_Realize(exportState, gridOut, fieldName="sst", &
       typekind=ESMF_TYPEKIND_R8, selection="realize_connected_remove_others", &
@@ -173,7 +220,7 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-
+      
   end subroutine
   
   !-----------------------------------------------------------------------------
@@ -221,6 +268,7 @@ module OCN
     ! local variables
     type(ESMF_Clock)              :: clock
     type(ESMF_State)              :: importState, exportState
+    type(ESMF_Field)              :: field
     type(ESMF_Time)               :: currTime
     type(ESMF_TimeInterval)       :: timeStep
     integer, save                 :: slice=1
@@ -264,6 +312,30 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
 
+    ! - update the export fields
+    call ESMF_StateGet(exportState, itemName="sss", field=field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_FieldFill(field, dataFillScheme="sincos", member=1, step=slice, &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_StateGet(exportState, itemName="sst", field=field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_FieldFill(field, dataFillScheme="sincos", member=2, step=slice, &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! write out the Fields in the importState and exportState
     call NUOPC_Write(importState, fileNamePrefix="field_ocn_import_", &
       timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
@@ -280,5 +352,7 @@ module OCN
     slice = slice+1
 
   end subroutine
+
+  !-----------------------------------------------------------------------------
 
 end module

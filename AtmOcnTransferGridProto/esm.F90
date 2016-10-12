@@ -69,7 +69,9 @@ module ESM
     type(ESMF_TimeInterval)       :: timeStep
     type(ESMF_Clock)              :: internalClock
     integer                       :: petCount, i
+    integer                       :: petCountATM, petCountOCN
     integer, allocatable          :: petList(:)
+    type(ESMF_CplComp)            :: conn
 
     rc = ESMF_SUCCESS
     
@@ -79,10 +81,14 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    
+    ! split up the PETs between ATM and OCN
+    petCountOCN = min(2,petCount/2) ! don't give OCN more than 2 PETs
+    petCountATM = petCount - petCountOCN
 
      ! SetServices for ATM with petList on first half of PETs
-    allocate(petList(petCount/2))
-    do i=1, petCount/2
+    allocate(petList(petCountATM))
+    do i=1, petCountATM
       petList(i) = i-1 ! PET labeling goes from 0 to petCount-1
     enddo
     call NUOPC_DriverAddComp(driver, "ATM", atmSS, petList=petList, rc=rc)
@@ -93,9 +99,9 @@ module ESM
     deallocate(petList)
     
     ! SetServices for OCN with petList on second half of PETs
-    allocate(petList(petCount/2))
-    do i=1, petCount/2
-      petList(i) = petCount/2 + i-1 ! PET labeling goes from 0 to petCount-1
+    allocate(petList(petCountOCN))
+    do i=1, petCountOCN
+      petList(i) = petCountATM + i-1 ! PET labeling goes from 0 to petCount-1
     enddo
     call NUOPC_DriverAddComp(driver, "OCN", ocnSS, petList=petList, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -106,7 +112,12 @@ module ESM
 
     ! SetServices for atm2ocn
     call NUOPC_DriverAddComp(driver, srcCompLabel="ATM", dstCompLabel="OCN", &
-      compSetServicesRoutine=cplSS, rc=rc)
+      compSetServicesRoutine=cplSS, comp=conn, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="0", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -114,12 +125,17 @@ module ESM
       
     ! SetServices for ocn2atm
     call NUOPC_DriverAddComp(driver, srcCompLabel="OCN", dstCompLabel="ATM", &
-      compSetServicesRoutine=cplSS, rc=rc)
+      compSetServicesRoutine=cplSS, comp=conn, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="0", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! set the model clock
     call ESMF_TimeIntervalSet(timeStep, m=15, rc=rc) ! 15 minute steps
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -211,7 +227,13 @@ module ESM
         ! go through all of the entries in the cplList
         do j=1, cplListSize
           if (trim(cplList(j))=="air_pressure_at_sea_level") then
-            ! switch remapping to redist
+            ! switch remapping to redist, b/c holes in index space
+            cplList(j) = trim(cplList(j))//":REMAPMETHOD=redist"
+          elseif (trim(cplList(j))=="sea_surface_salinity") then
+            ! switch remapping to redist, b/c holes in index space
+            cplList(j) = trim(cplList(j))//":REMAPMETHOD=redist"
+          elseif (trim(cplList(j))=="sea_surface_temperature") then
+            ! switch remapping to redist, more efficient anyway 
             cplList(j) = trim(cplList(j))//":REMAPMETHOD=redist"
           endif
         enddo

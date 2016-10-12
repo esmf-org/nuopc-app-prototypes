@@ -33,10 +33,8 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
-    ! set entry point for methods that require specific implementation
 
-    ! -> switching to IPD versions is done in InitializeP0
+    ! -> switching to IPD version that supports GeomObject transfer
     call ESMF_GridCompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
       userRoutine=InitializeP0, phase=0, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -44,6 +42,7 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
+    ! set entry point for methods that require specific implementation
     call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
       phaseLabelList=(/"IPDv03p1"/), userRoutine=InitializeP1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -115,6 +114,16 @@ module ATM
     
     rc = ESMF_SUCCESS
     
+    ! importable field: sea_surface_salinity
+    ! -> marked as "cannot provide"
+    call NUOPC_Advertise(importState, &
+      StandardName="sea_surface_salinity", name="sss", &
+      TransferOfferGeomObject="cannot provide", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! importable field: sea_surface_temperature
     ! -> marked as "can provide"
     call NUOPC_Advertise(importState, &
@@ -165,7 +174,7 @@ module ATM
     gridIn = ESMF_GridCreate1PeriDimUfrm(maxIndex=(/100, 150/), &
       minCornerCoord=(/0._ESMF_KIND_R8, -50._ESMF_KIND_R8/), &
       maxCornerCoord=(/360._ESMF_KIND_R8, 70._ESMF_KIND_R8/), &
-      staggerLocList=(/ESMF_STAGGERLOC_CENTER/), rc=rc)
+      staggerLocList=(/ESMF_STAGGERLOC_CENTER/), name="ATM-Grid", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -217,9 +226,10 @@ module ATM
         return  ! bail out
     endif
 
-    !NOTE: The air_pressure_at_sea_level (pmsl) Field is not realized here
-    !NOTE: because it was marked with TransferOfferGeomObject="cannot provide".
-    !NOTE: It is expected that the Connector will fill in a Grid object for it.
+    !NOTE: The sea_surface_salinity and air_pressure_at_sea_level Fields are
+    !NOTE: not realized here because they were marked with 
+    !NOTE: TransferOfferGeomObject="cannot provide".
+    !NOTE: Expect the Connector to fill in a Grid object for these Fields.
 
     ! exportable field: surface_net_downward_shortwave_flux
     field = ESMF_FieldCreate(name="rsns", grid=gridOut, &
@@ -252,13 +262,12 @@ module ATM
     character(160)                :: msgString
 
     type(ESMF_DistGrid)           :: distgrid
-    integer                       :: dimCount, tileCount, petCount
-    integer                       :: deCountPTile, extraDEs
+    integer                       :: dimCount, tileCount
     integer, allocatable          :: minIndexPTile(:,:), maxIndexPTile(:,:)
-    integer, allocatable          :: regDecompPTile(:,:)
-    integer                       :: i, j
     integer                       :: connectionCount
     type(ESMF_DistGridConnection), allocatable :: connectionList(:)
+    character(ESMF_MAXSTR)        :: transferAction
+    logical                       :: regDecompFlag
 
     rc = ESMF_SUCCESS
     
@@ -312,7 +321,7 @@ module ATM
     
     ! Create a custom DistGrid, based on the minIndex, maxIndex of the 
     ! accepted DistGrid, but with a default regDecomp for the current VM
-    ! that leads to 1DE/PET.
+    ! that leads to 1DE/PET (as long as there are more PETs than tiles).
     
     ! get dimCount and tileCount
     call ESMF_DistGridGet(distgrid, dimCount=dimCount, tileCount=tileCount, &
@@ -343,57 +352,21 @@ module ATM
     enddo
 #endif
 
-    ! construct a default regDecompPTile -> TODO: move this into ESMF as default
-    call ESMF_GridCompGet(model, petCount=petCount, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    allocate(regDecompPTile(dimCount, tileCount))
-    deCountPTile = petCount/tileCount
-    extraDEs = max(0, petCount-deCountPTile)
-    do i=1, tileCount
-      if (i<=extraDEs) then
-        regDecompPTile(1, i) = deCountPTile + 1
-      else
-        regDecompPTile(1, i) = deCountPTile
-      endif
-      do j=2, dimCount
-        regDecompPTile(j, i) = 1
-      enddo
-    enddo
-
     ! create the new DistGrid with the same minIndexPTile and maxIndexPTile,
-    ! but with a default regDecompPTile
+    ! but use default multi-tile regDecomp
+    ! If the default regDecomp is not suitable, a custome one could be set
+    ! up here and used.
     distgrid = ESMF_DistGridCreate(minIndexPTile=minIndexPTile, &
-      maxIndexPTile=maxIndexPTile, regDecompPTile=regDecompPTile, &
-      connectionList=connectionList, rc=rc)
+      maxIndexPTile=maxIndexPTile, connectionList=connectionList, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 
-    ! Create a new Grid on the new DistGrid and swap it in the Field
+    deallocate(minIndexPTile, maxIndexPTile, connectionList)
+
+    ! Create a new Grid on the new DistGrid
     grid = ESMF_GridCreate(distgrid, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call ESMF_FieldEmptySet(field, grid=grid, rc=rc)    
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-      
-    ! Also must swap the Grid for the "sst" Field in the importState
-    
-    ! access the "sst" field in the importState and set the Grid
-    call ESMF_StateGet(importState, field=field, itemName="sst", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call ESMF_FieldEmptySet(field, grid=grid, rc=rc)    
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -413,10 +386,129 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+    ! Swap out the transferred for new Grid in "pmsl" Field
+    call ESMF_FieldEmptySet(field, grid=grid, rc=rc)    
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+    ! Also must swap the Grid for the "sss" Field in the importState
     
-    ! local clean-up
-    deallocate(minIndexPTile, maxIndexPTile, regDecompPTile, connectionList)
-    
+    ! access the "sss" field in the importState and set the Grid
+    call ESMF_StateGet(importState, field=field, itemName="sss", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+!---------- construct a local Grid according to the transferred grid
+    call ESMF_FieldGet(field, grid=grid, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_GridGet(grid, distgrid=distgrid, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_DistGridGet(distgrid, dimCount=dimCount, tileCount=tileCount, &
+      connectionCount=connectionCount, regDecompFlag=regDecompFlag, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    allocate(minIndexPTile(dimCount, tileCount), &
+      maxIndexPTile(dimCount, tileCount))
+    allocate(connectionList(connectionCount))
+    call ESMF_DistGridGet(distgrid, minIndexPTile=minIndexPTile, &
+      maxIndexPTile=maxIndexPTile, connectionList=connectionList, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    if (regDecompFlag) then
+      ! The provider used a regDecomp scheme for DistGrid creation:
+      ! This means that the entire index space is covered (no holes), and
+      ! it the easieast is just to use a regDecomp scheme on the acceptor
+      ! side as well.
+      distgrid = ESMF_DistGridCreate(minIndexPTile=minIndexPTile, &
+        maxIndexPTile=maxIndexPTile, connectionList=connectionList, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      grid = ESMF_GridCreate(distgrid, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      ! swap out the transferred grid for the newly created one
+      call ESMF_FieldEmptySet(field, grid=grid, rc=rc)    
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      call ESMF_LogWrite("ATM - Just set Grid for 'sss' Field", &
+        ESMF_LOGMSG_INFO, rc=rc)
+    else
+      ! The provider did NOT use a regDecomp scheme for DistGrid creation:
+      ! This means that the provider was using deBlock lists to decompose the
+      ! index space, which can lead to holes in the coverage.
+      ! The acceptor side can either ignore holes, and use a regDecomp of the
+      ! entire index space, or also use a deBlock approach to only cover the
+      ! exact index space covered by the provider grid.
+      ! If a regDecomp scheme is used, Redist() between provider side and
+      ! acceptor side is still possible (both ways). It just means that 
+      ! not all src/dst index points send/receive data.
+      ! Using the regDecomp scheme is identical to the regDecompFlag branch
+      ! of this if statement.
+      ! Using the deBlock scheme can either mean that the transferred grid is
+      ! directly used. It just means that the number provider DEs are using a
+      ! default distribution across the acceptor PETs.
+      ! Alternatively the DEs could be distributed differently by constructing
+      ! a deBlockList out of the minIndexPDe and maxIndexPDe arrays here, and
+      ! calling a deBlock DistGridCreate() and then build the Grid on it.
+      ! -> here we just accept the provided Grid without change (same number of
+      ! DEs with the same deBlocks).
+    endif
+    deallocate(minIndexPTile, maxIndexPTile, connectionList)
+  
+    ! Also must swap the Grid for the "sst" Field in the importState
+    ! if transferAction indicates "accept".
+
+    ! access the "sst" field in the importState
+    call ESMF_StateGet(importState, field=field, itemName="sst", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_GetAttribute(field, name="TransferActionGeomObject", &
+      value=transferAction, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    if (trim(transferAction)=="accept") then
+      ! accept the incoming Grid object for the "sst" Field
+      if (regDecompFlag) then
+        ! for a regDecomp scheme, definitely the newly constructed Grid on the
+        ! acceptor side makes a lot more sense.
+        call ESMF_FieldEmptySet(field, grid=grid, rc=rc)    
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+        call ESMF_LogWrite("ATM - Just set Grid for 'sst' Field", &
+          ESMF_LOGMSG_INFO, rc=rc)
+      else
+        ! for deBlock scheme, just keep the provided Grid with the same 
+        ! deBlocks as provider defined.
+      endif
+    endif
+
   end subroutine
     
   !-----------------------------------------------------------------------------
@@ -432,11 +524,12 @@ module ATM
     type(ESMF_Grid)               :: grid
     character(80)                 :: name
     character(160)                :: msgString
+    character(ESMF_MAXSTR)        :: transferAction
 
     rc = ESMF_SUCCESS
 
-    ! access the "sst" field in the importState
-    call ESMF_StateGet(importState, field=field, itemName="sst", rc=rc)
+    ! access the "sss" field in the importState
+    call ESMF_StateGet(importState, field=field, itemName="sss", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -449,12 +542,50 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
     
-    call ESMF_LogWrite("ATM - Just completed the 'sst' Field", &
+    call ESMF_LogWrite("ATM - Just completed the 'sss' Field", &
       ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+    ! access the "sst" field in the importState
+    call ESMF_StateGet(importState, field=field, itemName="sst", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    ! check if the incoming grid was accepted
+    call NUOPC_GetAttribute(field, name="TransferActionGeomObject", &
+      value=transferAction, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    if (trim(transferAction)=="accept") then
+      ! the transferred Grid is already set, allocate memory for data by complete
+      call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      ! log info
+      call ESMF_LogWrite("ATM - Just completed the 'sst' Field", &
+        ESMF_LOGMSG_INFO, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    else
+      ! log info
+      call ESMF_LogWrite("ATM - The 'sst' Field was already complete", &
+        ESMF_LOGMSG_INFO, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    endif
 
     ! access the "pmsl" field in the exportState
     call ESMF_StateGet(exportState, field=field, itemName="pmsl", rc=rc)
@@ -494,7 +625,22 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+#if 1
+    ! write out the Grid into VTK file for inspection
+    call ESMF_GridWriteVTK(grid, staggerloc=ESMF_STAGGERLOC_CENTER, &
+      filename="ATM-accepted-Grid-pmsl_centers", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LogWrite("Done writing ATM-accepted-Grid-pmsl_centers VTK", &
+      ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
   end subroutine
     
   !-----------------------------------------------------------------------------
@@ -606,6 +752,7 @@ module ATM
   end subroutine
 
   !-----------------------------------------------------------------------------
+
   subroutine ModelAdvance(model, rc)
     type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
@@ -613,6 +760,7 @@ module ATM
     ! local variables
     type(ESMF_Clock)              :: clock
     type(ESMF_State)              :: importState, exportState
+    integer, save                 :: slice=1
 
     rc = ESMF_SUCCESS
     
@@ -645,6 +793,23 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
+    ! write out the Fields in the importState and exportState
+    call NUOPC_Write(importState, fileNamePrefix="field_atm_import_", &
+      timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_Write(exportState, fileNamePrefix="field_atm_export_", &
+      timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    slice = slice+1
+
   end subroutine
+
+  !-----------------------------------------------------------------------------
 
 end module
