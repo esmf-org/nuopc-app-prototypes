@@ -153,6 +153,16 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
+    ! exportable field: precipitation_flux
+    ! -> marked as "cannot provide"
+    call NUOPC_Advertise(exportState, &
+      StandardName="precipitation_flux", name="precip", &
+      TransferOfferGeomObject="cannot provide", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
   end subroutine
   
   !-----------------------------------------------------------------------------
@@ -262,7 +272,7 @@ module ATM
     character(160)                :: msgString
 
     type(ESMF_DistGrid)           :: distgrid
-    integer                       :: dimCount, tileCount
+    integer                       :: dimCount, tileCount, arbDimCount
     integer, allocatable          :: minIndexPTile(:,:), maxIndexPTile(:,:)
     integer                       :: connectionCount
     type(ESMF_DistGridConnection), allocatable :: connectionList(:)
@@ -394,7 +404,184 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
       
-    ! Also must swap the Grid for the "sss" Field in the importState
+    ! -- deal with "precip" field in the exportState
+    ! access the  field
+    call ESMF_StateGet(exportState, field=field, itemName="precip", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! construct a local Grid according to the transferred grid
+    call ESMF_FieldGet(field, grid=grid, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_GridGet(grid, distgrid=distgrid, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_DistGridGet(distgrid, dimCount=dimCount, tileCount=tileCount, &
+      connectionCount=connectionCount, regDecompFlag=regDecompFlag, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    allocate(minIndexPTile(dimCount, tileCount), &
+      maxIndexPTile(dimCount, tileCount))
+    allocate(connectionList(connectionCount))
+    call ESMF_DistGridGet(distgrid, minIndexPTile=minIndexPTile, &
+      maxIndexPTile=maxIndexPTile, connectionList=connectionList, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_AttributeGet(field, name="ArbDimCount", value=arbDimCount, &
+      convention="NUOPC", purpose="Instance", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    if (arbDimCount>0) then
+      ! The provider defined an arbDistr grid
+      !
+      ! Need to make a choice here to either represent the grid as an 
+      ! regDecomp grid on the acceptor side, or to stay with arbDistr grid.
+#define PRECIP_REGDECOMP
+
+#ifdef PRECIP_REGDECOMP
+      ! Use a regDecomp representation for the grid
+#if 0
+      !TODO:
+      ! There exists a problem here with arbDistr grid, because the 
+      ! minIndexPTile and maxIndexPTile reported by the grid are now 
+      ! sequentialized 1D, and there is no way currently to query what the
+      ! underlying 2D index space originally looked like!!!!
+      distgrid = ESMF_DistGridCreate(minIndexPTile=minIndexPTile, &
+        maxIndexPTile=maxIndexPTile, connectionList=connectionList, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+#else
+      ! Therefore must hard-code the 2D index space here just for demonstration
+      deallocate(minIndexPTile, maxIndexPTile)
+      allocate(minIndexPTile(2,1), maxIndexPTile(2,1))
+      minIndexPTile(:,1) = (/1,1/)
+      maxIndexPTile(:,1) = (/120,180/)
+      
+      distgrid = ESMF_DistGridCreate(minIndexPTile=minIndexPTile, &
+        maxIndexPTile=maxIndexPTile, connectionList=connectionList, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+#endif
+      ! continue on with regDecomp setup
+      grid = ESMF_GridCreate(distgrid, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      ! swap out the transferred grid for the newly created one
+      call ESMF_FieldEmptySet(field, grid=grid, rc=rc)    
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+#if 0
+      write (msgString,*) "ATM - 'precip' minIndex = ", minIndexPTile, &
+        "maxIndex = ", maxIndexPTile
+      call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+#endif
+      call ESMF_LogWrite("ATM - Just set Grid for 'precip' Field", &
+        ESMF_LOGMSG_INFO, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+#else
+      ! Stick with the arbDistr representation of the grid
+      !TODO: This branch does not currently work!!!
+      !TODO: The problem is that the Connector currently cannot create an 
+      !TODO: arbDistr Grid from an arbDistr Grid. The root issue again
+      !TODO: is that the minIndex/maxIndex of the underlying 2D index space
+      !TODO: has been lost at this point (neither DistGrid nor Grid carry it).
+      !TODO: Once that is fixed, this branch should be operational. 
+      !TODO: Except maybe an issue with multiple DEs/PET. That needs to be 
+      !TODO: investigated once the index space issue has been resolved.
+      call ESMF_GridGet(grid, localDeCount=localDeCount, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      write (msgString,*) &
+        "ATM - InitializeP4: arbDistr: precip localDeCount = ", &
+        localDeCount
+      call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+#endif
+    else
+      ! Not arbDistr grid, so either regDecomp or deBlock grid
+      if (regDecompFlag) then
+        ! The provider used a regDecomp scheme for DistGrid creation:
+        ! This means that the entire index space is covered (no holes), and
+        ! it the easieast is just to use a regDecomp scheme on the acceptor
+        ! side as well.
+        distgrid = ESMF_DistGridCreate(minIndexPTile=minIndexPTile, &
+          maxIndexPTile=maxIndexPTile, connectionList=connectionList, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+        grid = ESMF_GridCreate(distgrid, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+        ! swap out the transferred grid for the newly created one
+        call ESMF_FieldEmptySet(field, grid=grid, rc=rc)    
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+        call ESMF_LogWrite("ATM - Just set regDecomp Grid for 'precip' Field", &
+          ESMF_LOGMSG_INFO, rc=rc)
+      else
+        ! The provider did NOT use a regDecomp scheme for DistGrid creation:
+        ! This means that the provider was using deBlock lists to decompose the
+        ! index space, which can lead to holes in the coverage.
+        ! The acceptor side can either ignore holes, and use a regDecomp of the
+        ! entire index space, or also use a deBlock approach to only cover the
+        ! exact index space covered by the provider grid.
+        ! If a regDecomp scheme is used, Redist() between provider side and
+        ! acceptor side is still possible (both ways). It just means that 
+        ! not all src/dst index points send/receive data.
+        ! Using the regDecomp scheme is identical to the regDecompFlag branch
+        ! of this if statement.
+        ! Using the deBlock scheme can either mean that the transferred grid is
+        ! directly used. It just means that the number provider DEs are using a
+        ! default distribution across the acceptor PETs.
+        ! Alternatively the DEs could be distributed differently by constructing
+        ! a deBlockList out of the minIndexPDe and maxIndexPDe arrays here, and
+        ! calling a deBlock DistGridCreate() and then build the Grid on it.
+        ! -> here we just accept the provided Grid without change (same number of
+        ! DEs with the same deBlocks).
+      endif
+    endif
+    deallocate(minIndexPTile, maxIndexPTile, connectionList)
+     
+    !------------------------------------------------------------------------
+    ! Also must deal with transferred Grids in the importState
     
     ! access the "sss" field in the importState and set the Grid
     call ESMF_StateGet(importState, field=field, itemName="sss", rc=rc)
@@ -403,7 +590,7 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
       
-!---------- construct a local Grid according to the transferred grid
+    ! construct a local Grid according to the transferred grid
     call ESMF_FieldGet(field, grid=grid, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -477,7 +664,8 @@ module ATM
     deallocate(minIndexPTile, maxIndexPTile, connectionList)
   
     ! Also must swap the Grid for the "sst" Field in the importState
-    ! if transferAction indicates "accept".
+    ! if transferAction indicates "accept". Assume that SST is defined on 
+    ! the same grid as SSS.
 
     ! access the "sst" field in the importState
     call ESMF_StateGet(importState, field=field, itemName="sst", rc=rc)
@@ -641,6 +829,41 @@ module ATM
       return  ! bail out
 #endif
 
+    ! access the "precip" field in the exportState
+    call ESMF_StateGet(exportState, field=field, itemName="precip", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    ! the transferred Grid is already set, allocate memory for data by complete
+    call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#if 1
+    call ESMF_FieldGet(field, grid=grid, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! write out the Grid into VTK file for inspection
+    call ESMF_GridWriteVTK(grid, staggerloc=ESMF_STAGGERLOC_CENTER, &
+      filename="ATM-accepted-Grid-precip_centers", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
+    call ESMF_LogWrite("ATM - Just completed the 'precip' Field", &
+      ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
   end subroutine
     
   !-----------------------------------------------------------------------------
@@ -729,6 +952,37 @@ module ATM
     enddo
     ! output to file
     call NUOPC_Write(field, fileName="field_atm_rsns_init.nc", &
+      status=ESMF_FILESTATUS_REPLACE, relaxedflag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! set "Updated"
+    call NUOPC_SetAttribute(field, name="Updated", value="true", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+    ! precipitation_flux
+    call ESMF_StateGet(exportState, field=field, itemName="precip", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! initialize data
+    call ESMF_FieldGet(field, localDeCount=localDeCount, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_FieldFill(field, dataFillScheme="sincos", member=10, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! output to file
+    call NUOPC_Write(field, fileName="field_atm_precip_init.nc", &
       status=ESMF_FILESTATUS_REPLACE, relaxedflag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &

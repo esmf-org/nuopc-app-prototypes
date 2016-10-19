@@ -92,6 +92,15 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
 
+    ! importable field: precipitation_flux
+    ! -> use default, i.e. marked as "will provide"
+    call NUOPC_Advertise(importState, &
+      StandardName="precipitation_flux", name="precip", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! exportable field: sea_surface_temperature
     ! -> use default, i.e. marked as "will provide"
     call NUOPC_Advertise(exportState, &
@@ -121,11 +130,24 @@ module OCN
     integer, intent(out) :: rc
     
     ! local variables    
-    type(ESMF_Grid)                   :: gridIn, gridOut
-    integer                           :: deBlockList(2,2,0:1) ! 2 DEs
+    type(ESMF_Grid)       :: gridIn, gridOut, gridArb, gridAux
+    type(ESMF_DistGrid)   :: distgrid
+    integer               :: deBlockList(2,2,0:1) ! 2 DEs
+    integer               :: arbIndexCount, extra
+    integer, allocatable  :: arbIndexList(:,:)
+    integer               :: iCount, jCount, petCount, localPet, ind, i
+    type(ESMF_Field)      :: fieldArb, fieldAux, sstField
+    real(ESMF_KIND_R8),   pointer :: fptr(:), dataPtr(:)
+    type(ESMF_RouteHandle):: rh
+    real(ESMF_KIND_R8),   pointer :: factorList(:)
+    integer(ESMF_KIND_I4),pointer :: factorIndexList(:,:)
+    type(ESMF_DistGridConnection), allocatable :: connectionList(:)
+    type(ESMF_Array)      :: array
+    integer               :: dimCount, rank
     
     rc = ESMF_SUCCESS
     
+    !--- regDecomp Grid -------------------------------------------------------
     ! create Grid objects for import Fields
     gridIn = ESMF_GridCreate1PeriDimUfrm(maxIndex=(/100, 150/), &
       minCornerCoord=(/0._ESMF_KIND_R8, -60._ESMF_KIND_R8/), &
@@ -135,6 +157,41 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+      
+#if 0
+    ! testing the output of coord arrays
+    ! they are currently written in 2D index space although there is coordinate
+    ! factorization used n the Ufrm() GridCreate. Therefore the coord arrays 
+    ! have replicated dims, and underlying allocation is only 1D. This should
+    ! be changed in the ArrayWrite() where Arrays with replicated dims should
+    ! write out only the non-degenerate data, i.e. according to the actual 
+    ! data allocation. -> here that would be a 1D array for each coordiante dim.
+    call ESMF_GridGetCoord(gridIn, coordDim=1, array=array, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_ArrayWrite(array, "array_OCN-gridIn_coord1.nc", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+    call ESMF_ArrayGet(array, rank=rank, dimCount=dimCount, rc=rc)
+    print *, "Array rank=", rank, "  dimCount=", dimCount
+      
+    call ESMF_GridGetCoord(gridIn, coordDim=2, array=array, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_ArrayWrite(array, "array_OCN-gridIn_coord2.nc", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+      
     
 #if 1
     ! write out the Grid into VTK file for inspection
@@ -170,6 +227,7 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
 
+    !--- deBlock Grid -------------------------------------------------------
     ! create Grid objects for export Fields
     ! DE 0
     deBlockList(:,1,0) = (/1,1/)      ! min
@@ -189,6 +247,9 @@ module OCN
     
 #if 0
     ! write out the Grid into VTK file for inspection
+    ! -> This currently only works if there are no holes in the index space
+    ! -> coverage. If the deBlocks do not fully cover the index space, the
+    ! -> GridToMesh conversion fails: therefore no VTK output of regrid.
     call ESMF_GridWriteVTK(gridOut, staggerloc=ESMF_STAGGERLOC_CENTER, &
       filename="OCN-GridOut_centers", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -220,7 +281,211 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    
+    !--- arbDistr Grid -------------------------------------------------------
+    ! set up the index space
+    iCount = 120
+    jCount = 180
+    ! set up arbitrary distribution scheme
+    call ESMF_GridCompGet(model, petCount=petCount, localPet=localPet, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    arbIndexCount = (iCount*jCount)/petCount
+    extra = (iCount*jCount) - arbIndexCount*petCount
+    ! add extra elements to the last PET
+    if (localPet==petCount-1) arbIndexCount = arbIndexCount + extra
+    ! distributed via "card dealing" scheme across the PETs
+    allocate(arbIndexList(arbIndexCount,2))
+    ind = localPet
+    do i=1, arbIndexCount
+      arbIndexList(i,1)=ind/jCount + 1
+      arbIndexList(i,2)=mod(ind,jCount)+1
+      ind = ind + petCount
+    enddo
+    if (localPet == petCount-1) then
+      ind = iCount*jCount-extra+1
+      do i=arbIndexCount-extra+1,arbIndexCount
+        arbIndexList(i,1)=ind/jCount+1
+        arbIndexList(i,2)=mod(ind,jCount)+1
+        ind = ind + 1
+      enddo
+    endif
+    
+    ! create the grid
+    gridArb = ESMF_GridCreate1PeriDim(maxIndex=(/iCount, jCount/), &
+      arbIndexCount=arbIndexCount, arbIndexList=arbIndexList, &
+      name="OCN-GridArb", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! add the center stagger coordinates
+    call ESMF_GridAddCoord(gridArb, staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! fill longitudes
+    call ESMF_GridGetCoord(gridArb, coordDim=1, farrayPtr=fptr, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    do i=lbound(fptr,1),ubound(fptr,1)
+      fptr(i) = real((arbIndexList(i,1)-1)) * 360.0 / real(iCount)
+    enddo
       
+    ! fill latitudes
+    call ESMF_GridGetCoord(gridArb, coordDim=2, farrayPtr=fptr, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    do i=lbound(fptr,1),ubound(fptr,1)
+      fptr(i) = real((arbIndexList(i,2)-1)) * 160.0 / real(jCount) - 80.0
+    enddo
+    
+    ! create a field on the grid
+    fieldArb = ESMF_FieldCreate(gridArb, typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! fill the field with some easy to visualize data
+    call ESMF_FieldFill(fieldArb, dataFillScheme="sincos", member=2, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! write the field out to file, which will be 1d and with the arbitrary order
+    call ESMF_FieldWrite(fieldArb, fileName="field_gridArb.nc", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! create an auxiliary regDecomp grid with the same index space as gridArb
+    ! periodic along i (must set here explicitly to match the gridArb
+    ! ESMF_GridCreate1PeriDim() from above).
+    allocate(connectionList(1))
+    call ESMF_DistGridConnectionSet(connection=connectionList(1), &
+      tileIndexA=1, tileIndexB=1, positionVector=(/iCount, 0/), rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    distgrid = ESMF_DistGridCreate(minIndex=(/1, 1/), &
+      maxIndex=(/iCount, jCount/), connectionList=connectionList, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    gridAux = ESMF_GridCreate(gridArb, distgrid=distgrid, &
+      name="OCN-GridAux", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#if 1
+    ! since this is simple regDecomp grid, it can be written to VTK
+    call ESMF_GridWriteVTK(gridAux, staggerloc=ESMF_STAGGERLOC_CENTER, &
+      filename="OCN-GridAux_centers", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+    ! ceate an auxiliary field on gridAux to be used in RegridStore
+    fieldAux = ESMF_FieldCreate(gridAux, typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+#if 0
+    ! test the fieldAux
+    call ESMF_FieldFill(fieldAux, dataFillScheme="sincos", member=3, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_FieldWrite(fieldAux, fileName="field_gridAux.nc", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
+    ! pull out the sst field from exportState for testing regridding to it
+    call ESMF_StateGet(exportState, itemName="sst", field=sstField, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! compute sparse matrix (factorList and factorIndexList) for a substitute
+    ! call to RegridStore(), neither side is arbDistr
+    call ESMF_FieldRegridStore(fieldAux, sstField, factorList=factorList, &
+      factorIndexList=factorIndexList, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    ! now use the regrid sparse matrix (factorList and factorIndexList) from
+    ! above to precompute the routehandle for the arbDistr case. This works
+    ! because the index space is identical.
+    call ESMF_FieldSMMStore(fieldArb, sstField, factorList=factorList, &
+      factorIndexList=factorIndexList, routehandle=rh, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! for final test fill the arbDistr side with identifiable data
+    call ESMF_FieldFill(fieldArb, dataFillScheme="sincos", member=5, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! execute the sparse matrix to do the regrid (could have called FieldRegrid
+    ! for clarity if desired)
+    call ESMF_FieldSMM(fieldArb, sstField, routehandle=rh, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! finally write the destination side (which is located in the exportState)
+    ! to file for inspection
+    call NUOPC_Write(exportState, fileNamePrefix="field_ocn_export_init_", &
+      relaxedFlag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+
+    ! -->> use the arbDistr grid for "precip" field in the importState
+    ! This is to test how a arbDistr grid gets handled during the transfer
+    ! protocol. Search for "precip" in the ATM component to see the other side.
+
+    ! importable field: surface_net_downward_shortwave_flux
+    call NUOPC_Realize(importState, gridArb, fieldName="precip", &
+      typekind=ESMF_TYPEKIND_R8, selection="realize_connected_remove_others", &
+      dataFillScheme="sincos", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
   end subroutine
   
   !-----------------------------------------------------------------------------

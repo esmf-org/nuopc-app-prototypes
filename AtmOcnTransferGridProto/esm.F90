@@ -229,6 +229,9 @@ module ESM
           if (trim(cplList(j))=="air_pressure_at_sea_level") then
             ! switch remapping to redist, b/c holes in index space
             cplList(j) = trim(cplList(j))//":REMAPMETHOD=redist"
+          elseif (trim(cplList(j))=="precipitation_flux") then
+            ! switch remapping to redist, b/c arbDistr Grid
+            cplList(j) = trim(cplList(j))//":REMAPMETHOD=redist"
           elseif (trim(cplList(j))=="sea_surface_salinity") then
             ! switch remapping to redist, b/c holes in index space
             cplList(j) = trim(cplList(j))//":REMAPMETHOD=redist"
