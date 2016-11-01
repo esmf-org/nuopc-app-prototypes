@@ -282,7 +282,7 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
     
-    !--- arbDistr Grid -------------------------------------------------------
+    !--- arbDistr Grid: for precip field below -------------------------------
     ! set up the index space
     iCount = 120
     jCount = 180
@@ -372,7 +372,9 @@ module OCN
 
     ! create an auxiliary regDecomp grid with the same index space as gridArb
     ! periodic along i (must set here explicitly to match the gridArb
-    ! ESMF_GridCreate1PeriDim() from above).
+    ! ESMF_GridCreate1PeriDim() from above). In the long run,
+    ! an arbDistr Grid will actually store a regDecomp auxiliary DistGrid 
+    ! internally which holds the correct connections.
     allocate(connectionList(1))
     call ESMF_DistGridConnectionSet(connection=connectionList(1), &
       tileIndexA=1, tileIndexB=1, positionVector=(/iCount, 0/), rc=rc)
@@ -386,6 +388,7 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    ! now create a regDecomp grid from arbDistr Grid, with auto redist coords
     gridAux = ESMF_GridCreate(gridArb, distgrid=distgrid, &
       name="OCN-GridAux", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
