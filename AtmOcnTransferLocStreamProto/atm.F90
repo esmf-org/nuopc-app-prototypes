@@ -280,7 +280,6 @@ module ATM
     integer                       :: dimCount, tileCount, petCount
     integer                       :: deCountPTile, extraDEs
     integer, allocatable          :: minIndexPTile(:,:), maxIndexPTile(:,:)
-    integer, allocatable          :: regDecompPTile(:,:)
     integer                       :: i, j
     integer                       :: connectionCount
     type(ESMF_DistGridConnection), allocatable :: connectionList(:)
@@ -339,7 +338,7 @@ module ATM
     
     ! Create a custom DistGrid, based on the minIndex, maxIndex of the 
     ! accepted DistGrid, but with a default regDecomp for the current VM
-    ! that leads to 1DE/PET.
+    ! that leads to 1DE/PET (as long as there are more PETs than tiles).
     
     ! get dimCount and tileCount
     call ESMF_DistGridGet(distgrid, dimCount=dimCount, tileCount=tileCount, &
@@ -370,35 +369,18 @@ module ATM
     enddo
 #endif
 
-    ! construct a default regDecompPTile -> TODO: move this into ESMF as default
-    call ESMF_GridCompGet(model, petCount=petCount, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    allocate(regDecompPTile(dimCount, tileCount))
-    deCountPTile = petCount/tileCount
-    extraDEs = max(0, petCount-deCountPTile)
-    do i=1, tileCount
-      if (i<=extraDEs) then
-        regDecompPTile(1, i) = deCountPTile + 1
-      else
-        regDecompPTile(1, i) = deCountPTile
-      endif
-      do j=2, dimCount
-        regDecompPTile(j, i) = 1
-      enddo
-    enddo
-
     ! create the new DistGrid with the same minIndexPTile and maxIndexPTile,
-    ! but with a default regDecompPTile
+    ! but use default multi-tile regDecomp
+    ! If the default regDecomp is not suitable, a custome one could be set
+    ! up here and used.
     distgrid = ESMF_DistGridCreate(minIndexPTile=minIndexPTile, &
-      maxIndexPTile=maxIndexPTile, regDecompPTile=regDecompPTile, &
-      connectionList=connectionList, rc=rc)
+      maxIndexPTile=maxIndexPTile, connectionList=connectionList, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+    deallocate(minIndexPTile, maxIndexPTile, connectionList)
 
     ! Create a new LocStream on the new DistGrid and swap it in the Field
     locStream = ESMF_LocStreamCreate(distgrid=distgrid, rc=rc)
@@ -440,9 +422,6 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
-    ! local clean-up
-    deallocate(minIndexPTile, maxIndexPTile, regDecompPTile, connectionList)
     
   end subroutine
     
