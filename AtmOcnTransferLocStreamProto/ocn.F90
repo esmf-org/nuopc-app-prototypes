@@ -115,7 +115,6 @@ module OCN
     integer, intent(out) :: rc
     
     ! local variables    
-    type(ESMF_Field)                  :: field
     type(ESMF_LocStream)              :: locStreamIn, locStreamOut
     type(ESMF_VM)                     :: vm
     integer                           :: localPet, petCount, numLocations
@@ -184,13 +183,9 @@ module OCN
     locStreamOut = locStreamIn
 
     ! importable field: air_pressure_at_sea_level
-    field = ESMF_FieldCreate(name="pmsl", locstream=locStreamIn, &
-      typekind=ESMF_TYPEKIND_R8, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_Realize(importState, field=field, rc=rc)
+    call NUOPC_Realize(importState, locStreamIn, fieldName="pmsl", &
+      typekind=ESMF_TYPEKIND_R8, selection="realize_connected_remove_others", &
+      rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -198,13 +193,9 @@ module OCN
     
 #if 0    
     ! importable field: surface_net_downward_shortwave_flux
-    field = ESMF_FieldCreate(name="rsns", locstream=locStreamIn, &
-      typekind=ESMF_TYPEKIND_R8, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_Realize(importState, field=field, rc=rc)
+    call NUOPC_Realize(importState, locStreamIn, fieldName="rsns", &
+      typekind=ESMF_TYPEKIND_R8, selection="realize_connected_remove_others", &
+      rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -212,13 +203,9 @@ module OCN
 #endif
 
     ! exportable field: sea_surface_temperature
-    field = ESMF_FieldCreate(name="sst", locstream=locStreamOut, &
-      typekind=ESMF_TYPEKIND_R8, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_Realize(exportState, field=field, rc=rc)
+    call NUOPC_Realize(exportState, locStreamOut, fieldName="sst", &
+      typekind=ESMF_TYPEKIND_R8, selection="realize_connected_remove_others", &
+      rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
