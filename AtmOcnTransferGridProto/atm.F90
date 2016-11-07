@@ -282,8 +282,9 @@ module ATM
     rc = ESMF_SUCCESS
     
     !NOTE: The air_pressure_at_sea_level (pmsl) Field should now have the
-    !NOTE: accepted Grid available. It is still an empty Field, but with Grid.
-    !NOTE: If the decomposition and distribution of the accepted Grid is to
+    !NOTE: accepted Grid available. It is still an empty Field, but with Grid,
+    !NOTE: that contains a DistGrid with the provider decomposition.
+    !NOTE: If the decomposition and distribution of the provided Grid is to
     !NOTE: be changed on the acceptor side (i.e. the ATM here) then this
     !NOTE: phase of Initialize is the place to do so and make the changes to
     !NOTE: the Grid object that is referenced by the "pmsl" Field.
@@ -405,23 +406,31 @@ module ATM
       return  ! bail out
       
     ! -- deal with "precip" field in the exportState
-    ! access the  field
+    ! access the field
     call ESMF_StateGet(exportState, field=field, itemName="precip", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    ! construct a local Grid according to the transferred grid
+    ! access the grid
     call ESMF_FieldGet(field, grid=grid, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call ESMF_GridGet(grid, distgrid=distgrid, rc=rc)
+    ! log the grid name
+    call ESMF_GridGet(grid, name=name, distgrid=distgrid, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    write (msgString,*) "ATM - InitializeP4: transferred Grid name = ", name
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! get basic information out of the transferred DistGrid
     call ESMF_DistGridGet(distgrid, dimCount=dimCount, tileCount=tileCount, &
       connectionCount=connectionCount, regDecompFlag=regDecompFlag, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -437,48 +446,57 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    ! right now the ArbDimCount is transferred as an attribute on each field
+    ! This should change in the future to be a propoerty that can be natively
+    ! be queried of the transferred Grid, but that is not currently implemented.
     call ESMF_AttributeGet(field, name="ArbDimCount", value=arbDimCount, &
       convention="NUOPC", purpose="Instance", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    ! make decision on whether the incoming Grid is arbDistr or not
     if (arbDimCount>0) then
       ! The provider defined an arbDistr grid
       !
-      ! Need to make a choice here to either represent the grid as an 
-      ! regDecomp grid on the acceptor side, or to stay with arbDistr grid.
+      ! Need to make a choice here to either represent the grid as a
+      ! regDecomp grid on the acceptor side, or to stay with arbDistr grid:
+      !
+      ! Setting the PRECIP_REGDECOMP macro will set up a regDecomp grid on the
+      ! acceptor side.
+      !
+      ! Not setting the PRECIP_REGDECOMP macro will default into keeping the
+      ! original arbDistr Grid.
+      
 #define PRECIP_REGDECOMP
 
 #ifdef PRECIP_REGDECOMP
       ! Use a regDecomp representation for the grid
-#if 0
-      !TODO:
-      ! There exists a problem here with arbDistr grid, because the 
-      ! minIndexPTile and maxIndexPTile reported by the grid are now 
-      ! sequentialized 1D, and there is no way currently to query what the
-      ! underlying 2D index space originally looked like!!!!
+      ! first get tile min/max, only single tile supported for arbDistr Grid
+      deallocate(minIndexPTile,maxIndexPTile)
+      allocate(minIndexPTile(arbDimCount,1),maxIndexPTile(arbDimCount,1))
+      call ESMF_AttributeGet(field, name="MinIndex", &
+        valueList=minIndexPTile(:,1), &
+        convention="NUOPC", purpose="Instance", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      call ESMF_AttributeGet(field, name="MaxIndex", &
+        valueList=maxIndexPTile(:,1), &
+        convention="NUOPC", purpose="Instance", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      ! create default regDecomp DistGrid
       distgrid = ESMF_DistGridCreate(minIndexPTile=minIndexPTile, &
         maxIndexPTile=maxIndexPTile, connectionList=connectionList, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-#else
-      ! Therefore must hard-code the 2D index space here just for demonstration
-      deallocate(minIndexPTile, maxIndexPTile)
-      allocate(minIndexPTile(2,1), maxIndexPTile(2,1))
-      minIndexPTile(:,1) = (/1,1/)
-      maxIndexPTile(:,1) = (/120,180/)
-      
-      distgrid = ESMF_DistGridCreate(minIndexPTile=minIndexPTile, &
-        maxIndexPTile=maxIndexPTile, connectionList=connectionList, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-#endif
-      ! continue on with regDecomp setup
+      ! Create default regDecomp Grid
       grid = ESMF_GridCreate(distgrid, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
@@ -490,7 +508,7 @@ module ATM
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-#if 0
+#if 1
       write (msgString,*) "ATM - 'precip' minIndex = ", minIndexPTile, &
         "maxIndex = ", maxIndexPTile
       call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
@@ -506,15 +524,12 @@ module ATM
         file=__FILE__)) &
         return  ! bail out
 #else
-      ! Stick with the arbDistr representation of the grid
-      !TODO: This branch does not currently work!!!
-      !TODO: The problem is that the Connector currently cannot create an 
-      !TODO: arbDistr Grid from an arbDistr Grid. The root issue again
-      !TODO: is that the minIndex/maxIndex of the underlying 2D index space
-      !TODO: has been lost at this point (neither DistGrid nor Grid carry it).
-      !TODO: Once that is fixed, this branch should be operational. 
-      !TODO: Except maybe an issue with multiple DEs/PET. That needs to be 
-      !TODO: investigated once the index space issue has been resolved.
+      ! Stick with the arbDistr representation of the grid:
+      ! There is nothing to do here if the same number of DEs is kept on the
+      ! acceptor side. Alternatively, the acceptor side could set up a more
+      ! natural number of DEs (maybe same number as acceptor PETs), and then
+      ! redistribute the arbSeqIndexList. Here simply keep the DEs of the
+      ! provider Grid.
       call ESMF_GridGet(grid, localDeCount=localDeCount, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
@@ -574,14 +589,16 @@ module ATM
         ! Alternatively the DEs could be distributed differently by constructing
         ! a deBlockList out of the minIndexPDe and maxIndexPDe arrays here, and
         ! calling a deBlock DistGridCreate() and then build the Grid on it.
-        ! -> here we just accept the provided Grid without change (same number of
-        ! DEs with the same deBlocks).
+        ! -> here we just accept the provided Grid without change (same number 
+        ! of DEs with the same deBlocks).
       endif
     endif
     deallocate(minIndexPTile, maxIndexPTile, connectionList)
      
     !------------------------------------------------------------------------
     ! Also must deal with transferred Grids in the importState
+    call ESMF_LogWrite("ATM - InitializeP4: now dealing with importState", &
+       ESMF_LOGMSG_INFO, rc=rc)
     
     ! access the "sss" field in the importState and set the Grid
     call ESMF_StateGet(importState, field=field, itemName="sss", rc=rc)
@@ -696,6 +713,9 @@ module ATM
         ! deBlocks as provider defined.
       endif
     endif
+
+    call ESMF_LogWrite("ATM - InitializeP4: DONE", &
+       ESMF_LOGMSG_INFO, rc=rc)
 
   end subroutine
     
@@ -842,7 +862,8 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-#if 1
+#if 0
+    ! This does NOT currently work if precip on acceptor side stays arbGrid
     call ESMF_FieldGet(field, grid=grid, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
