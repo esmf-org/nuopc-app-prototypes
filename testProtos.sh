@@ -174,8 +174,8 @@ TestProto AtmOcnSimpleImplicitProto      esmApp
 TestProto AtmOcnIceSimpleImplicitProto   esmApp
 TestProto AtmOcnTransferGridProto        esmApp
 TestProto AtmOcnTransferLocStreamProto   esmApp
-#  ComponentExplorer
 TestProto DriverInDriverProto            mainApp
+TestProto DriverInDriverProtoIPDv02      mainApp
 TestProto GenericMediatorProto           app
 TestProto NamespaceProto                 mainApp
 TestProto NestingMultipleProto           mainApp
