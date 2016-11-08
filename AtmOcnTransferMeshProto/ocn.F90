@@ -118,13 +118,17 @@ module OCN
     type(ESMF_Grid)                   :: gridIn
     type(ESMF_Mesh)                   :: meshIn, meshOut
     
+    integer                       :: dimCount, numOwnedElements, numOwnedNodes
+    real(ESMF_KIND_R8), pointer   :: coordPtrR8D1(:)
+
     rc = ESMF_SUCCESS
     
     ! create Grid object
     gridIn = ESMF_GridCreate1PeriDimUfrm(maxIndex=(/100, 150/), &
       minCornerCoord=(/0._ESMF_KIND_R8, -60._ESMF_KIND_R8/), &
       maxCornerCoord=(/360._ESMF_KIND_R8, 80._ESMF_KIND_R8/), &
-      staggerLocList=(/ESMF_STAGGERLOC_CENTER/), name="OCN-GridIn", rc=rc)
+      staggerLocList=(/ESMF_STAGGERLOC_CENTER, ESMF_STAGGERLOC_CORNER/), &
+      name="OCN-GridIn", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -145,27 +149,56 @@ module OCN
       return  ! bail out
 #endif
 
-    meshIn = ESMF_GridToMesh(grid=gridIn, staggerLoc=ESMF_STAGGERLOC_CENTER, &
+    ! convert the Grid into a Mesh
+    ! - must use ESMF_STAGGERLOC_CORNER for this because what ever is
+    !   specified as staggerLoc will be used as the Mesh nodes.
+    ! - after the Mesh is created with the Grid corners for Mesh nodes,
+    !   the Grid centers must be added as Mesh element coordinates.
+    meshIn = ESMF_GridToMesh(grid=gridIn, staggerLoc=ESMF_STAGGERLOC_CORNER, &
       isSphere=1, & ! unused argument but must be present
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-#if 0
-    call ESMF_MeshWrite(meshIn, filename="OCN-MeshIn_centers", rc=rc)
+#if 1
+    call ESMF_MeshWrite(meshIn, filename="OCN-MeshIn_corners", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call ESMF_LogWrite("Done writing OCN-MeshIn_centers VTK", &
+    call ESMF_LogWrite("Done writing OCN-MeshIn_corners VTK", &
       ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 #endif
+
+    ! now add the Grid corner coordinates for the Mesh nodes
     
+
+    
+#if 1
+call ESMF_MeshGet(meshIn, spatialDim=dimCount, &
+  numOwnedElements=numOwnedElements, numOwnedNodes=numOwnedNodes, rc=rc)
+if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+  line=__LINE__, &
+  file=__FILE__)) &
+  return  ! bail out
+print *, "OCN:   numOwnedElements=", numOwnedElements, &
+  "numOwnedNodes=", numOwnedNodes, "dimCount=", dimCount
+allocate(coordPtrR8D1(3*numOwnedNodes))
+call ESMF_MeshGet(meshIn, ownedNodeCoords=coordPtrR8D1, rc=rc)
+if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+  line=__LINE__, &
+  file=__FILE__)) &
+  return  ! bail out
+#endif
+
+
+
+
     ! for now out same as in
     meshOut = meshIn
 

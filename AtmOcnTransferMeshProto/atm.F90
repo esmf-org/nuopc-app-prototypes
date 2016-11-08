@@ -283,6 +283,10 @@ module ATM
     integer                       :: i, j
     integer                       :: connectionCount
     type(ESMF_DistGridConnection), allocatable :: connectionList(:)
+    
+    integer                       :: numOwnedElements
+    real(ESMF_KIND_R8), pointer   :: coordPtrR8D1(:)
+
 
     rc = ESMF_SUCCESS
     
@@ -313,7 +317,36 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
+#if 0
+call ESMF_MeshGet(mesh, spatialDim=dimCount, &
+  numOwnedElements=numOwnedElements, rc=rc)
+if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+  line=__LINE__, &
+  file=__FILE__)) &
+  return  ! bail out
+allocate(coordPtrR8D1(dimCount*numOwnedElements))
+call ESMF_MeshGet(mesh, ownedElemCoords=coordPtrR8D1, rc=rc)
+if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+  line=__LINE__, &
+  file=__FILE__)) &
+  return  ! bail out
+#endif
+
+#if 0
+    call ESMF_MeshWrite(mesh, filename="Atm-Mesh_centers", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LogWrite("Done writing ATM-MeshIn_centers VTK", &
+      ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
     ! get delayout
     call ESMF_DistGridGet(distgrid, delayout=delayout, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -443,6 +476,8 @@ module ATM
     type(ESMF_Field)              :: field
     character(160)                :: msgString
 
+    type(ESMF_Mesh)               :: mesh
+
     rc = ESMF_SUCCESS
 
     ! access the "sst" field in the importState
@@ -487,6 +522,25 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
+#if 1
+    call ESMF_FieldGet(field, mesh=mesh, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_MeshWrite(mesh, filename="Atm-Mesh_corners", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LogWrite("Done writing ATM-Mesh_corners VTK", &
+      ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
   end subroutine
     
   !-----------------------------------------------------------------------------
@@ -519,7 +573,7 @@ module ATM
       return  ! bail out
     ! initialize data
     
-#if 0
+#if 1
     call ESMF_FieldFill(field, dataFillScheme="sincos", member=2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
