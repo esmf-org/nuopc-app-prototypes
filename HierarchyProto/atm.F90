@@ -47,14 +47,14 @@ module ATM
 
     ! set entry points that driver uses internally to interact with model
     call NUOPC_CompSetInternalEntryPoint(driver, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv01p1"/), userRoutine=InternalInitializeAdvertize, &
+      phaseLabelList=(/"IPDv01p1"/), userRoutine=IInitAdvertize, &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompSetInternalEntryPoint(driver, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv01p3"/), userRoutine=InternalInitializeRealize, &
+      phaseLabelList=(/"IPDv01p3"/), userRoutine=IInitRealize, &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -87,43 +87,12 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
-    ! SetServices for ATM2DYN
-    call NUOPC_DriverAddComp(driver, &
-      srcCompLabel="ATM", dstCompLabel="DYN", &
-      compSetServicesRoutine=cplSS, comp=connector, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", &
-      rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    ! SetServices for DYN2ATM
-    call NUOPC_DriverAddComp(driver, &
-      srcCompLabel="DYN", dstCompLabel="ATM", &
-      compSetServicesRoutine=cplSS, comp=connector, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", &
-      rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
     
   end subroutine
 
   !-----------------------------------------------------------------------------
 
-  subroutine InternalInitializeAdvertize(driver, importState, exportState, &
-    clock, rc)
+  subroutine IInitAdvertize(driver, importState, exportState, clock, rc)
     type(ESMF_GridComp)  :: driver
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
@@ -168,8 +137,7 @@ module ATM
   
   !-----------------------------------------------------------------------------
 
-  subroutine InternalInitializeRealize(driver, importState, exportState, &
-    clock, rc)
+  subroutine IInitRealize(driver, importState, exportState, clock, rc)
     type(ESMF_GridComp)  :: driver
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
@@ -185,9 +153,9 @@ module ATM
     rc = ESMF_SUCCESS
     
     ! create a Grid object for Fields
-    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/10, 100/), &
-      minCornerCoord=(/10._ESMF_KIND_R8, 20._ESMF_KIND_R8/), &
-      maxCornerCoord=(/100._ESMF_KIND_R8, 200._ESMF_KIND_R8/), &
+    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/200, 200/), &
+      minCornerCoord=(/-20._ESMF_KIND_R8, -90._ESMF_KIND_R8/), &
+      maxCornerCoord=(/400._ESMF_KIND_R8, 90._ESMF_KIND_R8/), &
       coordSys=ESMF_COORDSYS_CART, staggerLocList=(/ESMF_STAGGERLOC_CENTER/), &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &

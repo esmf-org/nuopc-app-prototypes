@@ -46,14 +46,6 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     
-    ! register an internal initialization method
-    call NUOPC_CompSetInternalEntryPoint(driver, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv04p2"/), userRoutine=ModifyCplLists, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
   end subroutine
 
   !-----------------------------------------------------------------------------
@@ -71,10 +63,18 @@ module ESM
     integer                       :: petCount, i
     integer                       :: petCountATM, petCountOCN
     integer, allocatable          :: petList(:)
+    type(ESMF_GridComp)           :: comp
     type(ESMF_CplComp)            :: conn
 
     rc = ESMF_SUCCESS
-    
+
+    ! set driver verbosity
+    call NUOPC_CompAttributeSet(driver, name="Verbosity", value="high", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! get the petCount
     call ESMF_GridCompGet(driver, petCount=petCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -91,24 +91,36 @@ module ESM
     do i=1, petCountATM
       petList(i) = i-1 ! PET labeling goes from 0 to petCount-1
     enddo
-    call NUOPC_DriverAddComp(driver, "ATM", atmSS, petList=petList, rc=rc)
+    call NUOPC_DriverAddComp(driver, "ATM", atmSS, petList=petList, &
+      comp=comp, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     deallocate(petList)
+    call NUOPC_CompAttributeSet(comp, name="Verbosity", value="high", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
     
     ! SetServices for OCN with petList on second half of PETs
     allocate(petList(petCountOCN))
     do i=1, petCountOCN
       petList(i) = petCountATM + i-1 ! PET labeling goes from 0 to petCount-1
     enddo
-    call NUOPC_DriverAddComp(driver, "OCN", ocnSS, petList=petList, rc=rc)
+    call NUOPC_DriverAddComp(driver, "OCN", ocnSS, petList=petList, &
+      comp=comp, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     deallocate(petList)
+    call NUOPC_CompAttributeSet(comp, name="Verbosity", value="high", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 
     ! SetServices for atm2ocn
     call NUOPC_DriverAddComp(driver, srcCompLabel="ATM", dstCompLabel="OCN", &
@@ -117,7 +129,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="0", rc=rc)
+    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="high", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -130,7 +142,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="0", rc=rc)
+    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="high", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -168,91 +180,6 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
       
-  end subroutine
-
-  !-----------------------------------------------------------------------------
-
-  recursive subroutine ModifyCplLists(driver, importState, exportState, clock, &
-    rc)
-    type(ESMF_GridComp)  :: driver
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
-    integer, intent(out) :: rc
-
-    character(len=160)              :: msg    
-    type(ESMF_CplComp), pointer     :: connectorList(:)
-    integer                         :: i, j, cplListSize
-    character(len=160), allocatable :: cplList(:)
-    character(len=160)              :: tempString
-    
-    rc = ESMF_SUCCESS
-    
-    call ESMF_LogWrite("Driver is in ModifyCplLists()", ESMF_LOGMSG_INFO, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
-    nullify(connectorList)
-    call NUOPC_DriverGetComp(driver, compList=connectorList, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
-    write (msg,*) "Found ", size(connectorList), " Connectors."// &
-      " Modifying CplList Attribute...."
-    call ESMF_LogWrite(trim(msg), ESMF_LOGMSG_INFO, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-      
-    do i=1, size(connectorList)
-      ! query the cplList for connector i
-      call NUOPC_CompAttributeGet(connectorList(i), name="CplList", &
-        itemCount=cplListSize, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-      if (cplListSize>0) then
-        allocate(cplList(cplListSize))
-        call NUOPC_CompAttributeGet(connectorList(i), name="CplList", &
-          valueList=cplList, rc=rc)
-        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=__LINE__, &
-          file=__FILE__)) &
-          return  ! bail out
-        ! go through all of the entries in the cplList
-        do j=1, cplListSize
-          if (trim(cplList(j))=="air_pressure_at_sea_level") then
-            ! switch remapping to redist, b/c holes in index space
-            cplList(j) = trim(cplList(j))//":REMAPMETHOD=redist"
-          elseif (trim(cplList(j))=="precipitation_flux") then
-            ! switch remapping to redist, b/c arbDistr Grid
-            cplList(j) = trim(cplList(j))//":REMAPMETHOD=redist"
-          elseif (trim(cplList(j))=="sea_surface_salinity") then
-            ! switch remapping to redist, b/c holes in index space
-            cplList(j) = trim(cplList(j))//":REMAPMETHOD=redist"
-          elseif (trim(cplList(j))=="sea_surface_temperature") then
-            ! switch remapping to redist, more efficient anyway 
-            cplList(j) = trim(cplList(j))//":REMAPMETHOD=redist"
-          endif
-        enddo
-        ! store the modified cplList in CplList attribute of connector i
-        call NUOPC_CompAttributeSet(connectorList(i), &
-          name="CplList", valueList=cplList, rc=rc)
-        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=__LINE__, &
-          file=__FILE__)) &
-          return  ! bail out
-        deallocate(cplList)
-      endif
-    enddo
-      
-    deallocate(connectorList)
-    
   end subroutine
 
   !-----------------------------------------------------------------------------
