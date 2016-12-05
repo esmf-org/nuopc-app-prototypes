@@ -45,16 +45,23 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
-    ! set entry points that driver uses internally to interact with model
+    ! set entry points that driver uses internally to interact with models
     call NUOPC_CompSetInternalEntryPoint(driver, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv01p1"/), userRoutine=IInitAdvertize, &
+      phaseLabelList=(/"IPDv05p1"/), userRoutine=IInitAdvertize, &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompSetInternalEntryPoint(driver, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv01p3"/), userRoutine=IInitRealize, &
+      phaseLabelList=(/"IPDv05p2"/), userRoutine=IInitAdvertizeFinish, &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompSetInternalEntryPoint(driver, ESMF_METHOD_INITIALIZE, &
+      phaseLabelList=(/"IPDv05p4"/), userRoutine=IInitRealize, &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -105,17 +112,27 @@ module ATM
     ! Fields. Use this if you want to drive the model independently.
 #define WITHIMPORTFIELDS
 #ifdef WITHIMPORTFIELDS
+#if 0
     ! importable field: sea_surface_temperature
     call NUOPC_Advertise(importState, &
-      StandardName="sea_surface_temperature", name="sst", rc=rc)
+      StandardName="sea_surface_temperature", name="sea_surface_temperature", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#else
+    call NUOPC_SetAttribute(importState, name="FieldTransferPolicy", &
+      value="transferAll", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 #endif
+#endif
     
 #define WITHEXPORTFIELDS
 #ifdef WITHEXPORTFIELDS
+#if 0
     ! exportable field: air_pressure_at_sea_level
     call NUOPC_Advertise(exportState, &
       StandardName="air_pressure_at_sea_level", name="pmsl", rc=rc)
@@ -123,7 +140,6 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
     ! exportable field: surface_net_downward_shortwave_flux
     call NUOPC_Advertise(exportState, &
       StandardName="surface_net_downward_shortwave_flux", name="rsns", rc=rc)
@@ -131,10 +147,45 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#else
+    call NUOPC_SetAttribute(exportState, name="FieldTransferPolicy", &
+      value="transferAll", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
 #endif
 
   end subroutine
   
+  !-----------------------------------------------------------------------------
+
+  subroutine IInitAdvertizeFinish(driver, importState, exportState, clock, rc)
+    type(ESMF_GridComp)  :: driver
+    type(ESMF_State)     :: importState, exportState
+    type(ESMF_Clock)     :: clock
+    integer, intent(out) :: rc
+    
+    rc = ESMF_SUCCESS
+
+    ! must reset the FieldTransferPolicy here in order to prevent
+    ! interaction of this state with uppler hierarchy layer
+    call NUOPC_SetAttribute(importState, name="FieldTransferPolicy", &
+      value="transferNone", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_SetAttribute(exportState, name="FieldTransferPolicy", &
+      value="transferNone", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+  end subroutine
+
   !-----------------------------------------------------------------------------
 
   subroutine IInitRealize(driver, importState, exportState, clock, rc)
@@ -165,7 +216,7 @@ module ATM
     gridOut = gridIn ! for now out same as in
 
 #ifdef WITHIMPORTFIELDS
-    itemName="sst"
+    itemName="sea_surface_temperature"
     call ESMF_StateGet(importState, field=field, itemName=itemName, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -211,7 +262,7 @@ module ATM
 #endif
 
 #ifdef WITHEXPORTFIELDS
-    itemName="pmsl"
+    itemName="air_pressure_at_sea_level"
     call ESMF_StateGet(exportState, field=field, itemName=itemName, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -255,7 +306,7 @@ module ATM
         return  ! bail out
     endif
 
-    itemName="rsns"
+    itemName="surface_net_downward_shortwave_flux"
     call ESMF_StateGet(exportState, field=field, itemName=itemName, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &

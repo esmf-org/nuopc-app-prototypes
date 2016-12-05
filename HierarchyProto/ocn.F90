@@ -77,7 +77,7 @@ module OCN
     ! Disabling the following macro, e.g. renaming to WITHIMPORTFIELDS_disable,
     ! will result in a model component that does not advertise any importable
     ! Fields. Use this if you want to drive the model independently.
-#define WITHIMPORTFIELDS_off
+#define WITHIMPORTFIELDS
 #ifdef WITHIMPORTFIELDS
     ! importable field: air_pressure_at_sea_level
     call NUOPC_Advertise(importState, &
@@ -233,6 +233,7 @@ module OCN
     type(ESMF_TimeInterval)       :: timeStep
     integer, save                 :: step=1
     type(ESMF_Field)              :: field
+    type(ESMF_FileStatus_Flag)    :: status
 
     rc = ESMF_SUCCESS
     
@@ -286,8 +287,16 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
     ! write out the Fields in the exportState
+    status=ESMF_FILESTATUS_OLD
+    if (step==1) status=ESMF_FILESTATUS_REPLACE
+    call NUOPC_Write(importState, fileNamePrefix="field_ocn_import_", &
+      timeslice=step, status=status, relaxedFlag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
     call NUOPC_Write(exportState, fileNamePrefix="field_ocn_export_", &
-      timeslice=step, relaxedFlag=.true., rc=rc)
+      timeslice=step, status=status, relaxedFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
