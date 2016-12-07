@@ -62,7 +62,14 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompSetInternalEntryPoint(driver, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv05p4"/), userRoutine=IInitRealize, &
+      phaseLabelList=(/"IPDv05p4"/), userRoutine=IInitCheck, &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompSetInternalEntryPoint(driver, ESMF_METHOD_INITIALIZE, &
+      phaseLabelList=(/"IPDv05p6"/), userRoutine=IInitRealize, &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -194,15 +201,13 @@ module ATM
 
   !-----------------------------------------------------------------------------
 
-  subroutine IInitRealize(driver, importState, exportState, clock, rc)
+  subroutine IInitCheck(driver, importState, exportState, clock, rc)
     type(ESMF_GridComp)  :: driver
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
     
     ! local variables    
-    type(ESMF_Grid)                 :: gridIn
-    type(ESMF_Grid)                 :: gridOut
     integer                         :: i
     type(ESMF_Field), pointer       :: fieldList(:)
     character(ESMF_MAXSTR), pointer :: itemNameList(:)
@@ -211,18 +216,6 @@ module ATM
     
     rc = ESMF_SUCCESS
     
-    ! create a Grid object for Fields
-    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/200, 200/), &
-      minCornerCoord=(/-20._ESMF_KIND_R8, -90._ESMF_KIND_R8/), &
-      maxCornerCoord=(/400._ESMF_KIND_R8, 90._ESMF_KIND_R8/), &
-      coordSys=ESMF_COORDSYS_CART, staggerLocList=(/ESMF_STAGGERLOC_CENTER/), &
-      rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    gridOut = gridIn ! for now out same as in
-
 #ifdef WITHIMPORTFIELDS
     nullify(fieldList)
     nullify(itemNameList)
@@ -250,14 +243,6 @@ module ATM
             rcToReturn=rc)
           return ! bail out
         endif
-        ! conditionally realize the field
-        call NUOPC_Realize(importState, grid=gridIn, &
-          fieldName=itemNameList(i), &
-          selection="realize_connected_remove_others", rc=rc)
-        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=__LINE__, &
-          file=__FILE__)) &
-          return  ! bail out
       enddo
     endif
     if (associated(fieldList)) deallocate(fieldList)
@@ -291,14 +276,6 @@ module ATM
             rcToReturn=rc)
           return ! bail out
         endif
-        ! conditionally realize the field
-        call NUOPC_Realize(exportState, grid=gridOut, &
-          fieldName=itemNameList(i), &
-          selection="realize_connected_remove_others", rc=rc)
-        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=__LINE__, &
-          file=__FILE__)) &
-          return  ! bail out
       enddo
     endif
     if (associated(fieldList)) deallocate(fieldList)
@@ -350,6 +327,71 @@ module ATM
         ESMF_LOGMSG_INFO)
 #endif
     end subroutine
+  end subroutine
+  
+  !-----------------------------------------------------------------------------
+
+  subroutine IInitRealize(driver, importState, exportState, clock, rc)
+    type(ESMF_GridComp)  :: driver
+    type(ESMF_State)     :: importState, exportState
+    type(ESMF_Clock)     :: clock
+    integer, intent(out) :: rc
+    
+    ! local variables    
+    integer                         :: i
+    type(ESMF_Field), pointer       :: fieldList(:)
+    character(ESMF_MAXSTR), pointer :: itemNameList(:)
+    
+    rc = ESMF_SUCCESS
+    
+#ifdef WITHIMPORTFIELDS
+    nullify(fieldList)
+    nullify(itemNameList)
+    call NUOPC_GetStateMemberLists(importState, itemNameList=itemNameList, &
+      fieldList=fieldList, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    if (associated(fieldList)) then
+      do i=1, size(fieldList)
+        ! the transferred Grid is already set, allocate memory for data by complete
+        call ESMF_FieldEmptyComplete(fieldList(i), &
+          typekind=ESMF_TYPEKIND_R8, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+      enddo
+    endif
+    if (associated(fieldList)) deallocate(fieldList)
+    if (associated(itemNameList)) deallocate(itemNameList)
+#endif
+
+#ifdef WITHEXPORTFIELDS
+    nullify(fieldList)
+    nullify(itemNameList)
+    call NUOPC_GetStateMemberLists(exportState, itemNameList=itemNameList, &
+      fieldList=fieldList, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    if (associated(fieldList)) then
+      do i=1, size(fieldList)
+        ! the transferred Grid is already set, allocate memory for data by complete
+        call ESMF_FieldEmptyComplete(fieldList(i), &
+          typekind=ESMF_TYPEKIND_R8, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+      enddo
+    endif
+    if (associated(fieldList)) deallocate(fieldList)
+    if (associated(itemNameList)) deallocate(itemNameList)
+#endif
+
   end subroutine
   
   !-----------------------------------------------------------------------------
