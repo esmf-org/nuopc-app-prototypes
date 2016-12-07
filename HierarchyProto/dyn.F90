@@ -79,6 +79,13 @@ module DYN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    ! importable field: PHYEX
+    call NUOPC_Advertise(importState, &
+      StandardName="PHYEX", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 #endif
     
 #define WITHEXPORTFIELDS
@@ -111,7 +118,6 @@ module DYN
     integer, intent(out) :: rc
     
     ! local variables    
-    type(ESMF_Field)        :: field
     type(ESMF_Grid)         :: gridIn
     type(ESMF_Grid)         :: gridOut
     
@@ -131,13 +137,17 @@ module DYN
 
 #ifdef WITHIMPORTFIELDS
     ! importable field: sea_surface_temperature
-    field = ESMF_FieldCreate(name="sst", grid=gridIn, &
-      typekind=ESMF_TYPEKIND_R8, rc=rc)
+    call NUOPC_Realize(importState, grid=gridIn, &
+      fieldName="sst", &
+      selection="realize_connected_remove_others", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_Realize(importState, field=field, rc=rc)
+    ! importable field: PHYEX
+    call NUOPC_Realize(importState, grid=gridIn, &
+      fieldName="PHYEX", &
+      selection="realize_connected_remove_others", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -146,26 +156,19 @@ module DYN
 
 #ifdef WITHEXPORTFIELDS
     ! exportable field: air_pressure_at_sea_level
-    field = ESMF_FieldCreate(name="pmsl", grid=gridOut, &
-      typekind=ESMF_TYPEKIND_R8, rc=rc)
+    call NUOPC_Realize(exportState, grid=gridOut, &
+      fieldName="pmsl", &
+      selection="realize_connected_remove_others", &
+      dataFillScheme="sincos", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_Realize(exportState, field=field, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
     ! exportable field: surface_net_downward_shortwave_flux
-    field = ESMF_FieldCreate(name="rsns", grid=gridOut, &
-      typekind=ESMF_TYPEKIND_R8, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_Realize(exportState, field=field, rc=rc)
+    call NUOPC_Realize(exportState, grid=gridOut, &
+      fieldName="rsns", &
+      selection="realize_connected_remove_others", &
+      dataFillScheme="sincos", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

@@ -11,6 +11,7 @@ module ATM
     driver_label_SetModelServices => label_SetModelServices
   
   use DYN, only: dynSS => SetServices
+  use PHY, only: phySS => SetServices
 
   use NUOPC_Connector, only: cplSS => SetServices
 
@@ -79,7 +80,7 @@ module ATM
     ! local variables
     integer                       :: localrc
     type(ESMF_GridComp)           :: child
-    type(ESMF_CplComp)            :: connector
+    type(ESMF_CplComp)            :: conn
 
     rc = ESMF_SUCCESS
     
@@ -95,6 +96,38 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
     
+    ! SetServices for PHY
+    call NUOPC_DriverAddComp(driver, "PHY", phySS, comp=child, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompAttributeSet(child, name="Verbosity", value="high", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    ! SetServices for PHY2DYN
+    call NUOPC_DriverAddComp(driver, srcCompLabel="PHY", dstCompLabel="DYN", &
+      compSetServicesRoutine=cplSS, comp=conn, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="high", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! The ATM subcomponents use fields with new standardNames
+    call NUOPC_FieldDictionaryAddEntry("PHYEX", canonicalUnits="1", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
   end subroutine
 
   !-----------------------------------------------------------------------------
@@ -112,15 +145,6 @@ module ATM
     ! Fields. Use this if you want to drive the model independently.
 #define WITHIMPORTFIELDS
 #ifdef WITHIMPORTFIELDS
-#if 0
-    ! importable field: sea_surface_temperature
-    call NUOPC_Advertise(importState, &
-      StandardName="sea_surface_temperature", name="sea_surface_temperature", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-#else
     call NUOPC_SetAttribute(importState, name="FieldTransferPolicy", &
       value="transferAll", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -128,33 +152,15 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 #endif
-#endif
     
 #define WITHEXPORTFIELDS
 #ifdef WITHEXPORTFIELDS
-#if 0
-    ! exportable field: air_pressure_at_sea_level
-    call NUOPC_Advertise(exportState, &
-      StandardName="air_pressure_at_sea_level", name="pmsl", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    ! exportable field: surface_net_downward_shortwave_flux
-    call NUOPC_Advertise(exportState, &
-      StandardName="surface_net_downward_shortwave_flux", name="rsns", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-#else
     call NUOPC_SetAttribute(exportState, name="FieldTransferPolicy", &
       value="transferAll", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-#endif
 #endif
 
   end subroutine
@@ -195,11 +201,13 @@ module ATM
     integer, intent(out) :: rc
     
     ! local variables    
-    type(ESMF_Field)        :: field
-    type(ESMF_Grid)         :: gridIn
-    type(ESMF_Grid)         :: gridOut
-    character(len=80)       :: itemName
-    logical                 :: connected, producerConnected, consumerConnected
+    type(ESMF_Grid)                 :: gridIn
+    type(ESMF_Grid)                 :: gridOut
+    integer                         :: i
+    type(ESMF_Field), pointer       :: fieldList(:)
+    character(ESMF_MAXSTR), pointer :: itemNameList(:)
+    logical                         :: connected
+    logical                         :: producerConnected, consumerConnected
     
     rc = ESMF_SUCCESS
     
@@ -216,139 +224,85 @@ module ATM
     gridOut = gridIn ! for now out same as in
 
 #ifdef WITHIMPORTFIELDS
-    itemName="sea_surface_temperature"
-    call ESMF_StateGet(importState, field=field, itemName=itemName, rc=rc)
+    nullify(fieldList)
+    nullify(itemNameList)
+    call NUOPC_GetStateMemberLists(importState, itemNameList=itemNameList, &
+      fieldList=fieldList, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call checkConnections(field, connected, producerConnected, &
-      consumerConnected, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    if (connected) then
-      if (.not.producerConnected) then
-        ! a connected field in a Driver state must have a ProducerConnection
-        call ESMF_LogSetError(ESMF_RC_NOT_VALID, &
-          msg="Connected Field in Driver State must have ProducerConnection:"//&
-          trim(itemName), &
+    if (associated(fieldList)) then
+      do i=1, size(fieldList)
+        call checkConnections(fieldList(i), connected, producerConnected, &
+          consumerConnected, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
           line=__LINE__, &
-          file=__FILE__, &
-          rcToReturn=rc)
-        return ! bail out
-      endif
-      ! realize the field
-      field = ESMF_FieldCreate(name=itemName, grid=gridIn, &
-        typekind=ESMF_TYPEKIND_R8, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-      call NUOPC_Realize(importState, field=field, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-    else
-      ! remove the field from the state
-      call ESMF_StateRemove(importState, itemName, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
+          file=__FILE__)) &
+          return  ! bail out
+        if (connected .and. .not.producerConnected) then
+          ! a connected field in a Driver state must have a ProducerConnection
+          call ESMF_LogSetError(ESMF_RC_NOT_VALID, &
+            msg="Connected Field in Driver State must have ProducerConnection:"//&
+            trim(itemNameList(i)), &
+            line=__LINE__, &
+            file=__FILE__, &
+            rcToReturn=rc)
+          return ! bail out
+        endif
+        ! conditionally realize the field
+        call NUOPC_Realize(importState, grid=gridIn, &
+          fieldName=itemNameList(i), &
+          selection="realize_connected_remove_others", rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+      enddo
     endif
+    if (associated(fieldList)) deallocate(fieldList)
+    if (associated(itemNameList)) deallocate(itemNameList)
 #endif
 
 #ifdef WITHEXPORTFIELDS
-    itemName="air_pressure_at_sea_level"
-    call ESMF_StateGet(exportState, field=field, itemName=itemName, rc=rc)
+    nullify(fieldList)
+    nullify(itemNameList)
+    call NUOPC_GetStateMemberLists(exportState, itemNameList=itemNameList, &
+      fieldList=fieldList, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call checkConnections(field, connected, producerConnected, &
-      consumerConnected, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    if (connected) then
-      if (.not.producerConnected) then
-        ! a connected field in a Driver state must have a ProducerConnection
-        call ESMF_LogSetError(ESMF_RC_NOT_VALID, &
-          msg="Connected Field in Driver State must have ProducerConnection:"//&
-          trim(itemName), &
+    if (associated(fieldList)) then
+      do i=1, size(fieldList)
+        call checkConnections(fieldList(i), connected, producerConnected, &
+          consumerConnected, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
           line=__LINE__, &
-          file=__FILE__, &
-          rcToReturn=rc)
-        return ! bail out
-      endif
-      ! realize the field
-      field = ESMF_FieldCreate(name=itemName, grid=gridOut, &
-        typekind=ESMF_TYPEKIND_R8, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-      call NUOPC_Realize(exportState, field=field, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-    else
-      ! remove the field from the state
-      call ESMF_StateRemove(exportState, itemName, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-    endif
-
-    itemName="surface_net_downward_shortwave_flux"
-    call ESMF_StateGet(exportState, field=field, itemName=itemName, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call checkConnections(field, connected, producerConnected, &
-      consumerConnected, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    if (connected) then
-      if (.not.producerConnected) then
-        ! a connected field in a Driver state must have a ProducerConnection
-        call ESMF_LogSetError(ESMF_RC_NOT_VALID, &
-          msg="Connected Field in Driver State must have ProducerConnection:"//&
-          trim(itemName), &
+          file=__FILE__)) &
+          return  ! bail out
+        if (connected .and. .not.producerConnected) then
+          ! a connected field in a Driver state must have a ProducerConnection
+          call ESMF_LogSetError(ESMF_RC_NOT_VALID, &
+            msg="Connected Field in Driver State must have ProducerConnection:"//&
+            trim(itemNameList(i)), &
+            line=__LINE__, &
+            file=__FILE__, &
+            rcToReturn=rc)
+          return ! bail out
+        endif
+        ! conditionally realize the field
+        call NUOPC_Realize(exportState, grid=gridOut, &
+          fieldName=itemNameList(i), &
+          selection="realize_connected_remove_others", rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
           line=__LINE__, &
-          file=__FILE__, &
-          rcToReturn=rc)
-        return ! bail out
-      endif
-      ! realize the field
-      field = ESMF_FieldCreate(name=itemName, grid=gridOut, &
-        typekind=ESMF_TYPEKIND_R8, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-      call NUOPC_Realize(exportState, field=field, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-    else
-      ! remove the field from the state
-      call ESMF_StateRemove(exportState, itemName, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
+          file=__FILE__)) &
+          return  ! bail out
+      enddo
     endif
+    if (associated(fieldList)) deallocate(fieldList)
+    if (associated(itemNameList)) deallocate(itemNameList)
 #endif
 
   contains
