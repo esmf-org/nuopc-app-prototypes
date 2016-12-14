@@ -200,7 +200,7 @@ module OCN
     ! here: parent Clock and stability timeStep determine actual model timeStep
     !TODO: stabilityTimeStep should be read in from configuation
     !TODO: or computed from internal Grid information
-    call ESMF_TimeIntervalSet(stabilityTimeStep, m=5, rc=rc) ! 5 minute steps
+    call ESMF_TimeIntervalSet(stabilityTimeStep, m=15, rc=rc) ! 15 minute steps
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -282,13 +282,13 @@ module OCN
     ! write out the Fields in the exportState
     status=ESMF_FILESTATUS_OLD
     if (step==1) status=ESMF_FILESTATUS_REPLACE
-    call NUOPC_Write(importState, fileNamePrefix="field_ocn_import_", &
+    call NUOPC_Write(importState, fileNamePrefix="field_ocn_import_adv_", &
       timeslice=step, status=status, relaxedFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_Write(exportState, fileNamePrefix="field_ocn_export_", &
+    call NUOPC_Write(exportState, fileNamePrefix="field_ocn_export_adv_", &
       timeslice=step, status=status, relaxedFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
