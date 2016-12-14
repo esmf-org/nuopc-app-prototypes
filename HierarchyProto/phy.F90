@@ -112,6 +112,7 @@ module PHY
     ! local variables    
     type(ESMF_Grid)         :: gridIn
     type(ESMF_Grid)         :: gridOut
+    type(ESMF_Field)        :: field
     
     rc = ESMF_SUCCESS
     
@@ -142,8 +143,7 @@ module PHY
     ! exportable field: precipitation_flux
     call NUOPC_Realize(exportState, grid=gridOut, &
       fieldName="precipitation_flux", &
-      selection="realize_connected_remove_others", &
-      dataFillScheme="sincos", rc=rc)
+      selection="realize_connected_remove_others", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -151,12 +151,42 @@ module PHY
     ! exportable field: PHYEX
     call NUOPC_Realize(exportState, grid=gridOut, &
       fieldName="PHYEX", &
-      selection="realize_connected_remove_others", &
-      dataFillScheme="sincos", rc=rc)
+      selection="realize_connected_remove_others", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    
+    call ESMF_StateGet(exportState, field=field, &
+      itemName="precipitation_flux", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out    
+    call ESMF_FieldFill(field, dataFillScheme="sincos", member=4, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_StateGet(exportState, field=field, itemName="PHYEX", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out    
+    call ESMF_FieldFill(field, dataFillScheme="sincos", member=5, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+    ! write out the Fields in the importState
+    call NUOPC_Write(exportState, fileNamePrefix="field_phy_export_datainit_", &
+      status=ESMF_FILESTATUS_REPLACE, relaxedFlag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
 #endif
 
   end subroutine

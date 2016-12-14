@@ -194,8 +194,7 @@ module DYN
     ! exportable field: air_pressure_at_sea_level
     call NUOPC_Realize(exportState, grid=gridOut, &
       fieldName="pmsl", &
-      selection="realize_connected_remove_others", &
-      dataFillScheme="sincos", rc=rc)
+      selection="realize_connected_remove_others", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -203,8 +202,7 @@ module DYN
     ! exportable field: surface_net_downward_shortwave_flux
     call NUOPC_Realize(exportState, grid=gridOut, &
       fieldName="rsns", &
-      selection="realize_connected_remove_others", &
-      dataFillScheme="sincos", rc=rc)
+      selection="realize_connected_remove_others", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -284,6 +282,36 @@ module DYN
 
     ! write out the Fields in the importState
     call NUOPC_Write(importState, fileNamePrefix="field_dyn_import_datainit_", &
+      status=ESMF_FILESTATUS_REPLACE, relaxedFlag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+    ! data initialize the exported fields
+    call ESMF_StateGet(exportState, field=field, itemName="pmsl", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_FieldFill(field, dataFillScheme="sincos", member=2, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_StateGet(exportState, field=field, itemName="rsns", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_FieldFill(field, dataFillScheme="sincos", member=3, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! write out the Fields in the importState
+    call NUOPC_Write(exportState, fileNamePrefix="field_dyn_export_datainit_", &
       status=ESMF_FILESTATUS_REPLACE, relaxedFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
