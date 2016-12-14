@@ -540,7 +540,7 @@ module IOComp
       ! local variables
       integer                                 :: itemCount, item
       type(ESMF_Field)                        :: field
-      character(len=20)                       :: transferAction
+      type(ESMF_FieldStatus_Flag)             :: fieldStatus
       character(len=80), allocatable          :: itemNameList(:)
       type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
     
@@ -570,13 +570,12 @@ module IOComp
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
-          call NUOPC_GetAttribute(field, name="TransferActionGeomObject", &
-            value=transferAction, rc=rc)
+          call ESMF_FieldGet(field, status=fieldStatus, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
-          if (trim(transferAction)=="accept") then
+          if (fieldStatus==ESMF_FIELDSTATUS_GRIDSET) then
             ! the Connector instructed the gcomp to accept geom object
             ! the transferred geom object is already set, allocate memory for data by complete
             call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)

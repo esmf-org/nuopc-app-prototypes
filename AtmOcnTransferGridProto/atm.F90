@@ -732,7 +732,7 @@ module ATM
     type(ESMF_Grid)               :: grid
     character(80)                 :: name
     character(160)                :: msgString
-    character(ESMF_MAXSTR)        :: transferAction
+    type(ESMF_FieldStatus_Flag)   :: fieldStatus
 
     rc = ESMF_SUCCESS
 
@@ -764,14 +764,21 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
     
-    ! check if the incoming grid was accepted
-    call NUOPC_GetAttribute(field, name="TransferActionGeomObject", &
-      value=transferAction, rc=rc)
+    ! check status of "sst" field and decide on action
+    call ESMF_FieldGet(field, status=fieldStatus, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    if (trim(transferAction)=="accept") then
+    if (fieldStatus==ESMF_FIELDSTATUS_COMPLETE) then
+      ! log info
+      call ESMF_LogWrite("ATM - The 'sst' Field was already complete", &
+        ESMF_LOGMSG_INFO, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    else
       ! the transferred Grid is already set, allocate memory for data by complete
       call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -780,14 +787,6 @@ module ATM
         return  ! bail out
       ! log info
       call ESMF_LogWrite("ATM - Just completed the 'sst' Field", &
-        ESMF_LOGMSG_INFO, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-    else
-      ! log info
-      call ESMF_LogWrite("ATM - The 'sst' Field was already complete", &
         ESMF_LOGMSG_INFO, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
