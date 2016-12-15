@@ -60,12 +60,6 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompSetInternalEntryPoint(driver, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv05p3"/), userRoutine=ModifyCplLists, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_CompSetInternalEntryPoint(driver, ESMF_METHOD_INITIALIZE, &
       phaseLabelList=(/"IPDv05p4"/), userRoutine=IInitCheck, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -149,28 +143,19 @@ module ATM
     
     rc = ESMF_SUCCESS
     
-    ! Disabling the following macro, e.g. renaming to WITHIMPORTFIELDS_disable,
-    ! will result in a model component that does not advertise any importable
-    ! Fields. Use this if you want to drive the model independently.
-#define WITHIMPORTFIELDS
-#ifdef WITHIMPORTFIELDS
+    ! request that connectors transfer all fields into the import/export states
     call NUOPC_SetAttribute(importState, name="FieldTransferPolicy", &
       value="transferAll", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-#endif
-    
-#define WITHEXPORTFIELDS
-#ifdef WITHEXPORTFIELDS
     call NUOPC_SetAttribute(exportState, name="FieldTransferPolicy", &
       value="transferAll", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-#endif
 
   end subroutine
   
@@ -184,8 +169,7 @@ module ATM
     
     rc = ESMF_SUCCESS
 
-    ! must reset the FieldTransferPolicy here in order to prevent
-    ! interaction of this state with uppler hierarchy layer
+    ! reset FieldTransferPolicy to prevent interaction w upper hierarchy layer
     call NUOPC_SetAttribute(importState, name="FieldTransferPolicy", &
       value="transferNone", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -203,155 +187,80 @@ module ATM
 
   !-----------------------------------------------------------------------------
 
-  subroutine ModifyCplLists(driver, importState, exportState, clock, rc)
-    type(ESMF_GridComp)  :: driver
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
-    integer, intent(out) :: rc
-
-    character(len=160)              :: msg    
-    type(ESMF_CplComp), pointer     :: connectorList(:)
-    integer                         :: i, j, cplListSize
-    character(len=160), allocatable :: cplList(:)
-    character(len=160)              :: tempString
-    
-    rc = ESMF_SUCCESS
-    
-    nullify(connectorList)
-    call NUOPC_DriverGetComp(driver, compList=connectorList, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
-    write (msg,*) "Found ", size(connectorList), " Connectors."// &
-      " Modifying CplList Attribute...."
-    call ESMF_LogWrite(trim(msg), ESMF_LOGMSG_INFO, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-      
-    do i=1, size(connectorList)
-      ! query the cplList for connector i
-      call NUOPC_CompAttributeGet(connectorList(i), name="CplList", &
-        itemCount=cplListSize, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-      if (cplListSize>0) then
-        allocate(cplList(cplListSize))
-        call NUOPC_CompAttributeGet(connectorList(i), name="CplList", &
-          valueList=cplList, rc=rc)
-        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=__LINE__, &
-          file=__FILE__)) &
-          return  ! bail out
-        ! go through all of the entries in the cplList
-        do j=1, cplListSize
-          ! switch remapping to redist
-          cplList(j) = trim(cplList(j))//":dumpWeights=true"
-        enddo
-        ! store the modified cplList in CplList attribute of connector i
-        call NUOPC_CompAttributeSet(connectorList(i), &
-          name="CplList", valueList=cplList, rc=rc)
-        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=__LINE__, &
-          file=__FILE__)) &
-          return  ! bail out
-        deallocate(cplList)
-      endif
-    enddo
-      
-    deallocate(connectorList)
-    
-  end subroutine
-
-  !-----------------------------------------------------------------------------
-
   subroutine IInitCheck(driver, importState, exportState, clock, rc)
     type(ESMF_GridComp)  :: driver
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
     
-    ! local variables    
-    integer                         :: i
-    type(ESMF_Field), pointer       :: fieldList(:)
-    character(ESMF_MAXSTR), pointer :: itemNameList(:)
-    logical                         :: connected
-    logical                         :: producerConnected, consumerConnected
-    
     rc = ESMF_SUCCESS
+
+    ! - check that all connected fields in importState have producer
+    call checkProducerConnection(importState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
     
-#ifdef WITHIMPORTFIELDS
-    nullify(fieldList)
-    nullify(itemNameList)
-    call NUOPC_GetStateMemberLists(importState, itemNameList=itemNameList, &
-      fieldList=fieldList, rc=rc)
+    ! - check that all connected fields in exportState have producer
+    call checkProducerConnection(exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    if (associated(fieldList)) then
-      do i=1, size(fieldList)
-        call checkConnections(fieldList(i), connected, producerConnected, &
-          consumerConnected, rc=rc)
-        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=__LINE__, &
-          file=__FILE__)) &
-          return  ! bail out
-        if (connected .and. .not.producerConnected) then
-          ! a connected field in a Driver state must have a ProducerConnection
-          call ESMF_LogSetError(ESMF_RC_NOT_VALID, &
-            msg="Connected Field in Driver State must have ProducerConnection:"//&
-            trim(itemNameList(i)), &
-            line=__LINE__, &
-            file=__FILE__, &
-            rcToReturn=rc)
-          return ! bail out
-        endif
-      enddo
-    endif
-    if (associated(fieldList)) deallocate(fieldList)
-    if (associated(itemNameList)) deallocate(itemNameList)
-#endif
-
-#ifdef WITHEXPORTFIELDS
-    nullify(fieldList)
-    nullify(itemNameList)
-    call NUOPC_GetStateMemberLists(exportState, itemNameList=itemNameList, &
-      fieldList=fieldList, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    if (associated(fieldList)) then
-      do i=1, size(fieldList)
-        call checkConnections(fieldList(i), connected, producerConnected, &
-          consumerConnected, rc=rc)
-        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=__LINE__, &
-          file=__FILE__)) &
-          return  ! bail out
-        if (connected .and. .not.producerConnected) then
-          ! a connected field in a Driver state must have a ProducerConnection
-          call ESMF_LogSetError(ESMF_RC_NOT_VALID, &
-            msg="Connected Field in Driver State must have ProducerConnection:"//&
-            trim(itemNameList(i)), &
-            line=__LINE__, &
-            file=__FILE__, &
-            rcToReturn=rc)
-          return ! bail out
-        endif
-      enddo
-    endif
-    if (associated(fieldList)) deallocate(fieldList)
-    if (associated(itemNameList)) deallocate(itemNameList)
-#endif
-
+  
   contains
+  
+    !---------------------------------------------------------------------------
+
+    subroutine checkProducerConnection(state, rc)
+      type(ESMF_State)     :: state
+      integer, intent(out) :: rc
+      
+      ! local variables    
+      integer                         :: i
+      type(ESMF_Field), pointer       :: fieldList(:)
+      character(ESMF_MAXSTR), pointer :: itemNameList(:)
+      logical                         :: connected
+      logical                         :: producerConnected, consumerConnected
+
+      rc = ESMF_SUCCESS
+
+      nullify(fieldList)
+      nullify(itemNameList)
+      call NUOPC_GetStateMemberLists(state, itemNameList=itemNameList, &
+        fieldList=fieldList, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      if (associated(fieldList)) then
+        do i=1, size(fieldList)
+          call checkConnections(fieldList(i), connected, producerConnected, &
+            consumerConnected, rc=rc)
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+          if (connected .and. .not.producerConnected) then
+            ! a connected field in a Driver state must have a ProducerConnection
+            call ESMF_LogSetError(ESMF_RC_NOT_VALID, &
+              msg="Connected Field in Driver State must have ProducerConnection:"//&
+              trim(itemNameList(i)), &
+              line=__LINE__, &
+              file=__FILE__, &
+              rcToReturn=rc)
+            return ! bail out
+          endif
+        enddo
+      endif
+      if (associated(fieldList)) deallocate(fieldList)
+      if (associated(itemNameList)) deallocate(itemNameList)
+      
+    end subroutine
+
+    !---------------------------------------------------------------------------
+
     subroutine checkConnections(field, connected, producerConnected, &
       consumerConnected, rc)
       type(ESMF_Field), intent(in)  :: field
@@ -361,7 +270,9 @@ module ATM
       integer, intent(out)          :: rc
       ! local variables
       character(len=80)             :: value
+      
       rc = ESMF_SUCCESS
+      
       call NUOPC_GetAttribute(field, name="Connected", &
         value=value, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -369,10 +280,6 @@ module ATM
         file=__FILE__)) &
         return  ! bail out
       connected = (value=="true")
-#if 1
-      call ESMF_LogWrite("Attribute - ??? - Connected: "//trim(value), &
-        ESMF_LOGMSG_INFO)
-#endif
       call NUOPC_GetAttribute(field, name="ProducerConnection", &
         value=value, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -380,10 +287,6 @@ module ATM
         file=__FILE__)) &
         return  ! bail out
       producerConnected = (value/="open")
-#if 1
-      call ESMF_LogWrite("Attribute - ??? - ProducerConnection: "//trim(value), &
-        ESMF_LOGMSG_INFO)
-#endif
       call NUOPC_GetAttribute(field, name="ConsumerConnection", &
         value=value, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -391,11 +294,10 @@ module ATM
         file=__FILE__)) &
         return  ! bail out
       consumerConnected = (value/="open")
-#if 1
-      call ESMF_LogWrite("Attribute - ??? - ConsumerConnection: "//trim(value), &
-        ESMF_LOGMSG_INFO)
-#endif
     end subroutine
+    
+    !---------------------------------------------------------------------------
+
   end subroutine
   
   !-----------------------------------------------------------------------------
@@ -406,63 +308,65 @@ module ATM
     type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
     
-    ! local variables    
-    integer                         :: i
-    type(ESMF_Field), pointer       :: fieldList(:)
-    character(ESMF_MAXSTR), pointer :: itemNameList(:)
-    
     rc = ESMF_SUCCESS
     
-#ifdef WITHIMPORTFIELDS
-    nullify(fieldList)
-    nullify(itemNameList)
-    call NUOPC_GetStateMemberLists(importState, itemNameList=itemNameList, &
-      fieldList=fieldList, rc=rc)
+    ! - complete all the fields in the importState
+    call completeAllFields(importState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    if (associated(fieldList)) then
-      do i=1, size(fieldList)
-        ! the transferred Grid is already set, allocate memory for data by complete
-        call ESMF_FieldEmptyComplete(fieldList(i), &
-          typekind=ESMF_TYPEKIND_R8, rc=rc)
-        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=__LINE__, &
-          file=__FILE__)) &
-          return  ! bail out
-      enddo
-    endif
-    if (associated(fieldList)) deallocate(fieldList)
-    if (associated(itemNameList)) deallocate(itemNameList)
-#endif
 
-#ifdef WITHEXPORTFIELDS
-    nullify(fieldList)
-    nullify(itemNameList)
-    call NUOPC_GetStateMemberLists(exportState, itemNameList=itemNameList, &
-      fieldList=fieldList, rc=rc)
+    ! - complete all the fields in the exportState
+    call completeAllFields(exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    if (associated(fieldList)) then
-      do i=1, size(fieldList)
-        ! the transferred Grid is already set, allocate memory for data by complete
-        call ESMF_FieldEmptyComplete(fieldList(i), &
-          typekind=ESMF_TYPEKIND_R8, rc=rc)
-        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=__LINE__, &
-          file=__FILE__)) &
-          return  ! bail out
-      enddo
-    endif
-    if (associated(fieldList)) deallocate(fieldList)
-    if (associated(itemNameList)) deallocate(itemNameList)
-#endif
+
+  contains
+  
+    !---------------------------------------------------------------------------
+
+    subroutine completeAllFields(state, rc)
+      type(ESMF_State)     :: state
+      integer, intent(out) :: rc
+      
+      ! local variables    
+      integer                         :: i
+      type(ESMF_Field), pointer       :: fieldList(:)
+      character(ESMF_MAXSTR), pointer :: itemNameList(:)
+
+      rc = ESMF_SUCCESS
+
+      nullify(fieldList)
+      nullify(itemNameList)
+      call NUOPC_GetStateMemberLists(state, itemNameList=itemNameList, &
+        fieldList=fieldList, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      if (associated(fieldList)) then
+        do i=1, size(fieldList)
+          ! the transferred Grid is already set, allocate memory for data by complete
+          call ESMF_FieldEmptyComplete(fieldList(i), &
+            typekind=ESMF_TYPEKIND_R8, rc=rc)
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+        enddo
+      endif
+      if (associated(fieldList)) deallocate(fieldList)
+      if (associated(itemNameList)) deallocate(itemNameList)
+      
+    end subroutine
+
+    !---------------------------------------------------------------------------
 
   end subroutine
   
   !-----------------------------------------------------------------------------
-  
+
 end module
