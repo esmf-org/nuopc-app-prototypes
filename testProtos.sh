@@ -177,6 +177,7 @@ TestProto AtmOcnTransferLocStreamProto   esmApp
 TestProto DriverInDriverProto            mainApp
 TestProto DriverInDriverProtoIPDv02      mainApp
 TestProto GenericMediatorProto           app
+TestProto HierarchyProto                 esmApp
 TestProto NamespaceProto                 mainApp
 TestProto NestingMultipleProto           mainApp
 TestProto NestingSingleProto             mainApp

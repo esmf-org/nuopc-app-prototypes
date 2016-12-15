@@ -331,7 +331,6 @@ module OCN
     type(ESMF_Time)               :: time
     type(ESMF_Field)              :: field
     logical                       :: neededCurrent
-    integer, save                 :: slice=1
     
     rc = ESMF_SUCCESS
 
@@ -364,7 +363,7 @@ module OCN
       
     ! write out the Fields in the exportState
     call NUOPC_Write(exportState, fileNamePrefix="field_ocn_export_datainit_", &
-      timeslice=slice, relaxedFlag=.true., rc=rc)
+      status=ESMF_FILESTATUS_REPLACE, relaxedFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -377,7 +376,6 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    slice = slice + 1
     
   end subroutine
 

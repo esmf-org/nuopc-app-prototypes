@@ -254,14 +254,14 @@ module ATM
       return  ! bail out
 
     ! write out the Fields in the importState
-    call NUOPC_Write(importState, fileNamePrefix="field_atm_import_", &
+    call NUOPC_Write(importState, fileNamePrefix="field_atm_import_adv_", &
       timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     ! write out the Fields in the exportState
-    call NUOPC_Write(exportState, fileNamePrefix="field_atm_export_", &
+    call NUOPC_Write(exportState, fileNamePrefix="field_atm_export_adv_", &
       timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -284,7 +284,6 @@ module ATM
     type(ESMF_Time)               :: time
     type(ESMF_Field)              :: field
     logical                       :: neededCurrent
-    integer, save                 :: slice=1
     
     rc = ESMF_SUCCESS
 
@@ -333,12 +332,11 @@ if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     
     ! write out the Fields in the importState
     call NUOPC_Write(importState, fileNamePrefix="field_atm_import_datainit_", &
-      timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
+      status=ESMF_FILESTATUS_REPLACE, relaxedFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    slice = slice+1
     
     ! must explicitly set time stamp on all export fields
     call NUOPC_UpdateTimestamp(exportState, clock, rc=rc)
