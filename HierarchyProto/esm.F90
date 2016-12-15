@@ -86,7 +86,7 @@ module ESM
     petCountOCN = min(2,petCount/2) ! don't give OCN more than 2 PETs
     petCountATM = petCount - petCountOCN
 
-     ! SetServices for ATM with petList on first half of PETs
+     ! SetServices for ATM with petList on first section of PETs
     allocate(petList(petCountATM))
     do i=1, petCountATM
       petList(i) = i-1 ! PET labeling goes from 0 to petCount-1
@@ -104,7 +104,7 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     
-    ! SetServices for OCN with petList on second half of PETs
+    ! SetServices for OCN with petList on second section of PETs
     allocate(petList(petCountOCN))
     do i=1, petCountOCN
       petList(i) = petCountATM + i-1 ! PET labeling goes from 0 to petCount-1
