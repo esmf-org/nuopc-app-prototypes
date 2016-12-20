@@ -8,7 +8,8 @@ module asyncIODriver
   use NUOPC
   use NUOPC_Driver, &
     driver_routine_SS             => SetServices, &
-    driver_label_SetModelServices => label_SetModelServices
+    driver_label_SetModelServices => label_SetModelServices, &
+    driver_label_ModifyCplLists   => label_ModifyCplLists
 
   use ModelComp, only: modelSS => SetServices
   use IOComp, only: ioSS => SetServices
@@ -45,15 +46,13 @@ module asyncIODriver
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
-    ! register an internal initialization method
-    call NUOPC_CompSetInternalEntryPoint(driver, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv04p2"/), userRoutine=ModifyCplLists, rc=rc)
+    call NUOPC_CompSpecialize(driver, specLabel=driver_label_ModifyCplLists, &
+      specRoutine=ModifyCplLists, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+        
   end subroutine
 
   !-----------------------------------------------------------------------------
@@ -207,13 +206,11 @@ module asyncIODriver
 
   !-----------------------------------------------------------------------------
 
-  recursive subroutine ModifyCplLists(driver, importState, exportState, clock, &
-    rc)
+  subroutine ModifyCplLists(driver, rc)
     type(ESMF_GridComp)  :: driver
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
-
+    
+    ! local variables
     character(len=160)              :: msg    
     type(ESMF_CplComp), pointer     :: connectorList(:)
     integer                         :: i, j, cplListSize

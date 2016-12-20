@@ -168,6 +168,7 @@ TestProto AtmOcnMedProto                 esmApp
 TestProto AtmOcnPetListProto             esmApp
 TestProto AtmOcnProto                    esmApp
 TestProto AtmOcnRtmTwoTimescalesProto    esmApp
+TestProto AtmOcnScalarProto              esmApp
 TestSelectExternalProto   AtmOcnSelectExternalProto    esmApp
 TestSelectProto           AtmOcnSelectProto            esmApp
 TestProto AtmOcnSimpleImplicitProto      esmApp

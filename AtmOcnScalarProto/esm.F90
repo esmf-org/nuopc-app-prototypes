@@ -8,7 +8,8 @@ module ESM
   use NUOPC
   use NUOPC_Driver, &
     driver_routine_SS             => SetServices, &
-    driver_label_SetModelServices => label_SetModelServices
+    driver_label_SetModelServices => label_SetModelServices, &
+    driver_label_ModifyCplLists   => label_ModifyCplLists
 
   use ATM, only: atmSS => SetServices
   use OCN, only: ocnSS => SetServices
@@ -45,17 +46,15 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-
-    ! set verbosity on driver
-    call NUOPC_CompAttributeSet(driver, name="Verbosity", value="max", rc=rc)
+    call NUOPC_CompSpecialize(driver, specLabel=driver_label_ModifyCplLists, &
+      specRoutine=ModifyCplLists, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 
-    ! register an internal initialization method
-    call NUOPC_CompSetInternalEntryPoint(driver, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv04p2"/), userRoutine=ModifyCplLists, rc=rc)
+    ! set verbosity on driver
+    call NUOPC_CompAttributeSet(driver, name="Verbosity", value="max", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -200,13 +199,11 @@ module ESM
 
   !-----------------------------------------------------------------------------
 
-  recursive subroutine ModifyCplLists(driver, importState, exportState, clock, &
-    rc)
+  subroutine ModifyCplLists(driver, rc)
     type(ESMF_GridComp)  :: driver
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
-
+    
+    ! local variables
     character(len=160)              :: msg    
     type(ESMF_CplComp), pointer     :: connectorList(:)
     integer                         :: i, j, cplListSize
