@@ -208,7 +208,6 @@ module ESM
     type(ESMF_CplComp), pointer     :: connectorList(:)
     integer                         :: i, j, cplListSize
     character(len=160), allocatable :: cplList(:)
-    character(len=160)              :: tempString
     
     rc = ESMF_SUCCESS
     
