@@ -44,13 +44,13 @@ module DYN
 
     ! set entry point for methods that require specific implementation
     call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv02p1"/), userRoutine=InitAdvertise, rc=rc)
+      phaseLabelList=(/"IPDv03p1"/), userRoutine=InitAdvertise, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv02p3"/), userRoutine=InitRealize, rc=rc)
+      phaseLabelList=(/"IPDv03p3"/), userRoutine=InitRealize, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -82,10 +82,9 @@ module DYN
     
     rc = ESMF_SUCCESS
 
-    ! Switch to IPDv02 (for datainitialize dependency loop) 
-    ! by filtering all other phaseMap entries
+    ! Switch to IPDv03
     call NUOPC_CompFilterPhaseMap(gcomp, ESMF_METHOD_INITIALIZE, &
-      acceptStringList=(/"IPDv02p"/), rc=rc)
+      acceptStringList=(/"IPDv03p"/), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -116,8 +115,8 @@ module DYN
       file=__FILE__)) &
       return  ! bail out
     ! importable field: PHYEX
-    call NUOPC_Advertise(importState, &
-      StandardName="PHYEX", rc=rc)
+    call NUOPC_Advertise(importState, StandardName="PHYEX", &
+      SharePolicyField="share", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -243,6 +242,26 @@ module DYN
       file=__FILE__)) &
       return  ! bail out
 
+#if 1
+    call ESMF_TimePrint(time, &
+      preString="DYN DataInitialize time: ", unit=msgString, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
+    neededCurrent = NUOPC_IsAtTime(importState, time, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out    
+#if 0
     ! get a handle on the imported SST field
     call ESMF_StateGet(importState, itemName="sst", &
       itemType=itemType, rc=rc)
@@ -265,19 +284,6 @@ module DYN
     else
       neededCurrent=.true.
     endif
-    
-#if 1
-    call ESMF_TimePrint(time, &
-      preString="DYN DataInitialize time: ", unit=msgString, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
 #endif
 
     if (neededCurrent) then
@@ -316,6 +322,11 @@ module DYN
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
+      call NUOPC_SetAttribute(field, name="Updated", value="true", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
     endif
     
     call ESMF_StateGet(exportState, itemName="rsns", &
@@ -331,6 +342,11 @@ module DYN
         file=__FILE__)) &
         return  ! bail out
       call ESMF_FieldFill(field, dataFillScheme="sincos", member=3, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      call NUOPC_SetAttribute(field, name="Updated", value="true", rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &

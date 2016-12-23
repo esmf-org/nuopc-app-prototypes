@@ -7,8 +7,9 @@ module PHY
   use ESMF
   use NUOPC
   use NUOPC_Model, &
-    model_routine_SS    => SetServices, &
-    model_label_Advance => label_Advance
+    model_routine_SS            => SetServices, &
+    model_label_DataInitialize  => label_DataInitialize, &
+    model_label_Advance         => label_Advance
   
   implicit none
   
@@ -33,15 +34,23 @@ module PHY
       file=__FILE__)) &
       return  ! bail out
     
+    ! Provide InitializeP0 to switch to custom IPD version
+    call ESMF_GridCompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
+      userRoutine=InitializeP0, phase=0, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! set entry point for methods that require specific implementation
     call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv00p1"/), userRoutine=InitAdvertise, rc=rc)
+      phaseLabelList=(/"IPDv03p1"/), userRoutine=InitAdvertise, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv00p2"/), userRoutine=InitRealize, rc=rc)
+      phaseLabelList=(/"IPDv03p3"/), userRoutine=InitRealize, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -54,9 +63,35 @@ module PHY
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+    call NUOPC_CompSpecialize(model, specLabel=model_label_DataInitialize, &
+      specRoutine=DataInitialize, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
   end subroutine
   
+  !-----------------------------------------------------------------------------
+
+  subroutine InitializeP0(gcomp, importState, exportState, clock, rc)
+    type(ESMF_GridComp)   :: gcomp
+    type(ESMF_State)      :: importState, exportState
+    type(ESMF_Clock)      :: clock
+    integer, intent(out)  :: rc
+    
+    rc = ESMF_SUCCESS
+
+    ! Switch to IPDv03
+    call NUOPC_CompFilterPhaseMap(gcomp, ESMF_METHOD_INITIALIZE, &
+      acceptStringList=(/"IPDv03p"/), rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+  end subroutine
+
   !-----------------------------------------------------------------------------
 
   subroutine InitAdvertise(model, importState, exportState, clock, rc)
@@ -91,8 +126,8 @@ module PHY
       file=__FILE__)) &
       return  ! bail out
     ! exportable field: PHYEX
-    call NUOPC_Advertise(exportState, &
-      StandardName="PHYEX", rc=rc)
+    call NUOPC_Advertise(exportState, StandardName="PHYEX", &
+      TransferOfferField="will provide", SharePolicyField="share", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -118,9 +153,9 @@ module PHY
     rc = ESMF_SUCCESS
     
     ! create a Grid object for Fields
-    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/100, 100/), &
-      minCornerCoord=(/0._ESMF_KIND_R8, -50._ESMF_KIND_R8/), &
-      maxCornerCoord=(/360._ESMF_KIND_R8, 90._ESMF_KIND_R8/), &
+    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/1000, 100/), &
+      minCornerCoord=(/0._ESMF_KIND_R8, -20._ESMF_KIND_R8/), &
+      maxCornerCoord=(/360._ESMF_KIND_R8, 20._ESMF_KIND_R8/), &
       coordSys=ESMF_COORDSYS_CART, staggerLocList=(/ESMF_STAGGERLOC_CENTER/), &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -152,12 +187,60 @@ module PHY
     ! exportable field: PHYEX
     call NUOPC_Realize(exportState, grid=gridOut, &
       fieldName="PHYEX", &
-      selection="realize_connected_remove_others", rc=rc)
+      selection="realize_connected+provide_remove_others", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+#endif
+
+  end subroutine
+  
+  !-----------------------------------------------------------------------------
+
+  subroutine DataInitialize(model, rc)
+    type(ESMF_GridComp)   :: model
+    integer, intent(out)  :: rc
+
+    ! local variables
+    type(ESMF_Clock)          :: clock
+    type(ESMF_State)          :: importState, exportState
+    type(ESMF_Time)           :: time
+    type(ESMF_Field)          :: field
+    character(len=160)        :: msgString
+    type(ESMF_StateItem_Flag) :: itemType
+
+    rc = ESMF_SUCCESS
+
+    ! query the Component for its clock, importState and exportState
+    call NUOPC_ModelGet(model, modelClock=clock, importState=importState, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! get the current time out of the clock
+    call ESMF_ClockGet(clock, currTime=time, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+#if 1
+    call ESMF_TimePrint(time, &
+      preString="PHY DataInitialize time: ", unit=msgString, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
     call ESMF_StateGet(exportState, itemName="precipitation_flux", &
       itemType=itemType, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -172,6 +255,11 @@ module PHY
         file=__FILE__)) &
         return  ! bail out    
       call ESMF_FieldFill(field, dataFillScheme="sincos", member=4, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      call NUOPC_SetAttribute(field, name="Updated", value="true", rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
@@ -195,8 +283,21 @@ module PHY
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
+      call NUOPC_SetAttribute(field, name="Updated", value="true", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
     endif
-      
+    
+    ! indicate that data initialization is complete (breaking out of init-loop)
+    call NUOPC_CompAttributeSet(model, &
+      name="InitializeDataComplete", value="true", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! write out the Fields in the importState
     call NUOPC_Write(exportState, fileNamePrefix="field_phy_export_datainit_", &
       status=ESMF_FILESTATUS_REPLACE, relaxedFlag=.true., rc=rc)
@@ -204,11 +305,9 @@ module PHY
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
-#endif
 
   end subroutine
-  
+
   !-----------------------------------------------------------------------------
 
   subroutine ModelAdvance(model, rc)

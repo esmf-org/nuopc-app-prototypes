@@ -61,13 +61,20 @@ module ATM
 
     rc = ESMF_SUCCESS
     
+    ! Turn on profiling for driver component
+    call NUOPC_CompAttributeSet(driver, name="Profiling", value="0", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! SetServices for DYN
     call NUOPC_DriverAddComp(driver, "DYN", dynSS, comp=child, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(child, name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(child, name="Verbosity", value="max", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -79,7 +86,7 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(child, name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(child, name="Verbosity", value="max", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -92,7 +99,7 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="max", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
