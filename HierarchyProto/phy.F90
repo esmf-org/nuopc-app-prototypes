@@ -110,9 +110,10 @@ module PHY
     integer, intent(out) :: rc
     
     ! local variables    
-    type(ESMF_Grid)         :: gridIn
-    type(ESMF_Grid)         :: gridOut
-    type(ESMF_Field)        :: field
+    type(ESMF_Grid)           :: gridIn
+    type(ESMF_Grid)           :: gridOut
+    type(ESMF_Field)          :: field
+    type(ESMF_StateItem_Flag) :: itemType
     
     rc = ESMF_SUCCESS
     
@@ -157,27 +158,44 @@ module PHY
       file=__FILE__)) &
       return  ! bail out
     
-    call ESMF_StateGet(exportState, field=field, &
-      itemName="precipitation_flux", rc=rc)
+    call ESMF_StateGet(exportState, itemName="precipitation_flux", &
+      itemType=itemType, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out    
-    call ESMF_FieldFill(field, dataFillScheme="sincos", member=4, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call ESMF_StateGet(exportState, field=field, itemName="PHYEX", rc=rc)
+    if (itemType==ESMF_STATEITEM_FIELD) then
+      call ESMF_StateGet(exportState, field=field, &
+        itemName="precipitation_flux", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out    
+      call ESMF_FieldFill(field, dataFillScheme="sincos", member=4, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    endif
+    
+    call ESMF_StateGet(exportState, itemName="PHYEX", &
+      itemType=itemType, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out    
-    call ESMF_FieldFill(field, dataFillScheme="sincos", member=5, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
+    if (itemType==ESMF_STATEITEM_FIELD) then
+      call ESMF_StateGet(exportState, field=field, itemName="PHYEX", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out    
+      call ESMF_FieldFill(field, dataFillScheme="sincos", member=5, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    endif
       
     ! write out the Fields in the importState
     call NUOPC_Write(exportState, fileNamePrefix="field_phy_export_datainit_", &
@@ -203,6 +221,7 @@ module PHY
     integer, save                 :: step=1
     type(ESMF_Field)              :: field
     type(ESMF_FileStatus_Flag)    :: status
+    type(ESMF_StateItem_Flag)     :: itemType
 
     rc = ESMF_SUCCESS
     
@@ -236,29 +255,45 @@ module PHY
       return  ! bail out
 
     ! update the export fields with data
-    call ESMF_StateGet(exportState, field=field, &
-      itemName="precipitation_flux", rc=rc)
+    call ESMF_StateGet(exportState, itemName="precipitation_flux", &
+      itemType=itemType, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out    
-    call ESMF_FieldFill(field, dataFillScheme="sincos", member=4, step=step, &
-      rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call ESMF_StateGet(exportState, field=field, itemName="PHYEX", rc=rc)
+    if (itemType==ESMF_STATEITEM_FIELD) then
+      call ESMF_StateGet(exportState, field=field, &
+        itemName="precipitation_flux", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out    
+      call ESMF_FieldFill(field, dataFillScheme="sincos", member=4, step=step, &
+        rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    endif
+    call ESMF_StateGet(exportState, itemName="PHYEX", &
+      itemType=itemType, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out    
-    call ESMF_FieldFill(field, dataFillScheme="sincos", member=5, step=step, &
-      rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
+    if (itemType==ESMF_STATEITEM_FIELD) then
+      call ESMF_StateGet(exportState, field=field, itemName="PHYEX", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out    
+      call ESMF_FieldFill(field, dataFillScheme="sincos", member=5, step=step, &
+        rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    endif
     ! write out the Fields in the importState
     status=ESMF_FILESTATUS_OLD
     if (step==1) status=ESMF_FILESTATUS_REPLACE
