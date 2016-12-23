@@ -225,7 +225,7 @@ module ATM
     integer, save                 :: step=1
     integer                       :: i
     type(ESMF_Field)              :: field
-    integer, pointer              :: fptr(:,:)
+    integer(ESMF_KIND_I4), pointer:: fptr(:,:)
     type(ESMF_FileStatus_Flag)    :: status
 
     rc = ESMF_SUCCESS
@@ -271,6 +271,7 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
     do i=lbound(fptr,2), ubound(fptr,2)
+      print *, "fptr(1,i=",i,")"
       fptr(1,i)=(i-1)*10+step
     enddo
     status=ESMF_FILESTATUS_OLD
