@@ -270,10 +270,13 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    do i=lbound(fptr,2), ubound(fptr,2)
-      print *, "fptr(1,i=",i,")"
-      fptr(1,i)=(i-1)*10+step
-    enddo
+    if (size(fptr)>0) then
+      ! only use fptr on that PET which holds allocation
+      do i=lbound(fptr,2), ubound(fptr,2)
+        print *, "fptr(1,i=",i,")"
+        fptr(1,i)=(i-1)*10+step
+      enddo
+    endif
     status=ESMF_FILESTATUS_OLD
     if (step==1) status=ESMF_FILESTATUS_REPLACE
     call NUOPC_Write(exportState, fileNamePrefix="field_atm_export_adv_", &
