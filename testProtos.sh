@@ -161,6 +161,7 @@ TestProto AtmOcnCplListProto             esmApp
 TestProto AtmOcnFDSynoProto              esmApp
 TestProto AtmOcnImplicitProto            esmApp
 TestProto AtmOcnLndProto                 esmApp
+TestProto AtmOcnMedFlexibleRunSequenceProto        esmApp
 TestProto AtmOcnMedPetListProto          esmApp
 TestProto AtmOcnMedPetListTimescalesProto          esmApp
 TestProto AtmOcnMedPetListTimescalesSplitFastProto esmApp
@@ -177,6 +178,7 @@ TestProto AtmOcnTransferGridProto        esmApp
 TestProto AtmOcnTransferLocStreamProto   esmApp
 TestProto DriverInDriverProto            mainApp
 TestProto DriverInDriverProtoIPDv02      mainApp
+TestProto DynPhyProto                    esmApp
 TestProto GenericMediatorProto           app
 TestProto HierarchyProto                 esmApp
 TestProto NamespaceProto                 mainApp
