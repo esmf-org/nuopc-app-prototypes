@@ -144,6 +144,7 @@ module OCN
     type(ESMF_DistGridConnection), allocatable :: connectionList(:)
     type(ESMF_Array)      :: array
     integer               :: dimCount, rank
+    integer               :: coordDimMap(2,2)
     
     rc = ESMF_SUCCESS
     
@@ -158,6 +159,100 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
       
+#if 1
+    ! Test Grid created from DG -> so I can 
+    
+    gridAux = gridIn  ! hold on to original gridIn
+    
+    call ESMF_GridGet(gridAux, distgrid=distgrid, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+#define KEEPFACTORIZEDCOORDS_disable
+#ifdef KEEPFACTORIZEDCOORDS
+    coordDimMap(1,1) = 1
+    coordDimMap(1,2) = 1
+    coordDimMap(2,1) = 2
+    coordDimMap(2,2) = 2
+#endif
+
+    gridIn = ESMF_GridCreate(distgrid, &
+#ifdef KEEPFACTORIZEDCOORDS
+      coordDimCount=(/1,1/), coordDimMap=coordDimMap, &
+#endif
+      indexflag=ESMF_INDEX_GLOBAL, &
+      gridEdgeLWidth=(/1,1/),     &
+      gridEdgeUWidth=(/1,1/),     &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+ 
+#ifdef KEEPFACTORIZEDCOORDS
+    call ESMF_GridGetCoord(gridAux, coordDim=1, array=array, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_GridSetCoord(gridIn, coordDim=1, array=array, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call ESMF_GridGetCoord(gridAux, coordDim=2, array=array, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_GridSetCoord(gridIn, coordDim=2, array=array, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#else
+    call ESMF_GridAddCoord(gridIn, staggerloc=ESMF_STAGGERLOC_CENTER, &
+      staggerEdgeLWidth = (/1,1/), &
+      staggerEdgeUWidth = (/1,1/), &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
+#if 1
+    call ESMF_GridAddCoord(gridIn, staggerloc=ESMF_STAGGERLOC_CORNER, &
+      staggerEdgeLWidth = (/0,0/), &
+      staggerEdgeUWidth = (/1,1/), &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_GridAddCoord(gridIn, staggerloc=ESMF_STAGGERLOC_EDGE1, &
+      staggerEdgeLWidth = (/0,1/), &
+      staggerEdgeUWidth = (/1,1/), &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_GridAddCoord(gridIn, staggerloc=ESMF_STAGGERLOC_EDGE2, &
+      staggerEdgeLWidth = (/1,0/), &
+      staggerEdgeUWidth = (/1,1/), &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+      
+#endif
+  
 #if 0
     ! testing the output of coord arrays
     ! they are currently written in 2D index space although there is coordinate
