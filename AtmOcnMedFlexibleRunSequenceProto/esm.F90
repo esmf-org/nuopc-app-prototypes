@@ -46,6 +46,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    
     call NUOPC_CompSpecialize(driver, specLabel=label_SetRunSequence, &
       specRoutine=SetRunSequence, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -210,6 +211,8 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
 
+#define TESTAUTOADDCONNECTORS
+#ifndef TESTAUTOADDCONNECTORS
     ! SetServices for atm2med
     call NUOPC_DriverAddComp(driver, srcCompLabel="ATM", dstCompLabel="MED", &
       compSetServicesRoutine=cplSS, comp=connector, rc=rc)
@@ -265,7 +268,8 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+#endif
+
     ! set the model clock
     call ESMF_TimeIntervalSet(timeStep, m=15, rc=rc) ! 15 minute default step
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -297,7 +301,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
   end subroutine
 
   !-----------------------------------------------------------------------------
@@ -333,7 +337,8 @@ module ESM
 #endif
 
     ! ingest FreeFormat run sequence
-    call NUOPC_DriverIngestRunSequence(driver, runSeqFF, rc=rc)
+    call NUOPC_DriverIngestRunSequence(driver, runSeqFF, &
+      autoAddConnectors=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
 
