@@ -199,8 +199,10 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    ! create Field on the single DE of the DistGrid, and add an ungridded dim
+    ! as the first dimension to store multiple scalar values
     field = ESMF_FieldCreate(name="scalar_test", grid=grid, &
-      typekind=ESMF_TYPEKIND_I4, &
+      typekind=ESMF_TYPEKIND_I4, gridToFieldMap=(/2/), &
       ungriddedLBound=(/1/), ungriddedUBound=(/2/), & ! 2 scalar values
       rc=rc)
 #endif
@@ -225,7 +227,7 @@ module ATM
     integer, save                 :: step=1
     integer                       :: i
     type(ESMF_Field)              :: field
-    integer(ESMF_KIND_I4), pointer:: fptr(:,:)
+    integer(ESMF_KIND_I4), pointer:: fptr(:,:), scalars(:)
     type(ESMF_FileStatus_Flag)    :: status
 
     rc = ESMF_SUCCESS
@@ -270,11 +272,12 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    ! access the scalars through a 1D array
+    scalars => fptr(:,1)
     if (size(fptr)>0) then
       ! only use fptr on that PET which holds allocation
-      do i=lbound(fptr,2), ubound(fptr,2)
-        print *, "fptr(1,i=",i,")"
-        fptr(1,i)=(i-1)*10+step
+      do i=lbound(scalars,1), ubound(scalars,1)
+        scalars(i)=(i-1)*10+step
       enddo
     endif
     status=ESMF_FILESTATUS_OLD

@@ -194,8 +194,10 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    ! create Field on the single DE of the DistGrid, and add an ungridded dim
+    ! as the first dimension to store multiple scalar values
     field = ESMF_FieldCreate(name="scalar_test", grid=grid, &
-      typekind=ESMF_TYPEKIND_I4, &
+      typekind=ESMF_TYPEKIND_I4, gridToFieldMap=(/2/), &
       ungriddedLBound=(/1/), ungriddedUBound=(/2/), & ! 2 scalar values
       rc=rc)
 #endif
