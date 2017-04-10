@@ -160,7 +160,9 @@ module OCN
       return  ! bail out
       
 #if 1
-    ! Test Grid created from DG -> so I can 
+    ! Test Grid created from DG -> test transfer of various pieces of info
+    ! Note that the DG holds the topology info of the original GridCreate()
+    ! short-cut, so here simple periodic connection along dim=1.
     
     gridAux = gridIn  ! hold on to original gridIn
     
@@ -214,9 +216,12 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
 #else
+    ! Caution: make sure to choose staggerEdge widths that are consistent
+    ! with the topology. Here because of periodicity in dim=1, there cannot
+    ! be any staggerEdge L/U width along the 1st dimension!
     call ESMF_GridAddCoord(gridIn, staggerloc=ESMF_STAGGERLOC_CENTER, &
-      staggerEdgeLWidth = (/1,1/), &
-      staggerEdgeUWidth = (/1,1/), &
+      staggerEdgeLWidth = (/0,1/), &
+      staggerEdgeUWidth = (/0,1/), &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -256,7 +261,7 @@ module OCN
 #if 0
     ! testing the output of coord arrays
     ! they are currently written in 2D index space although there is coordinate
-    ! factorization used n the Ufrm() GridCreate. Therefore the coord arrays 
+    ! factorization used in the Ufrm() GridCreate. Therefore the coord arrays 
     ! have replicated dims, and underlying allocation is only 1D. This should
     ! be changed in the ArrayWrite() where Arrays with replicated dims should
     ! write out only the non-degenerate data, i.e. according to the actual 
