@@ -232,7 +232,7 @@ module ATM
         return  ! bail out
     else  ! transferAction=="accept"
       ! the Connector instructed the ATM to accept the Grid from OCN for "sst"
-      call ESMF_LogWrite("ATM is accepting Grid for Field 'sst'.", &
+      call ESMF_LogWrite("ATM is accepting LocStream for Field 'sst'.", &
         ESMF_LOGMSG_INFO, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
