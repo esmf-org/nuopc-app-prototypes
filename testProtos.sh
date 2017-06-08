@@ -154,38 +154,39 @@ echo
 }
 
 
-TestProto AsyncIOBlockingProto           asyncIOApp
-TestProto AsyncIONonblockingProto        asyncIOApp
-TestProto AtmOcnConProto                 esmApp
-TestProto AtmOcnCplListProto             esmApp
-TestProto AtmOcnFDSynoProto              esmApp
-TestProto AtmOcnImplicitProto            esmApp
-TestProto AtmOcnLndProto                 esmApp
-TestProto AtmOcnMedFlexibleRunSequenceProto        esmApp
-TestProto AtmOcnMedPetListProto          esmApp
-TestProto AtmOcnMedPetListTimescalesProto          esmApp
+TestProto AsyncIOBlockingProto              asyncIOApp
+TestProto AsyncIONonblockingProto           asyncIOApp
+TestProto AtmOcnConProto                    esmApp
+TestProto AtmOcnCplListProto                esmApp
+TestProto AtmOcnFDSynoProto                 esmApp
+TestProto AtmOcnImplicitProto               esmApp
+TestProto AtmOcnLndProto                    esmApp
+TestProto AtmOcnMedIngestFromConfigProto    esmApp
+TestProto AtmOcnMedIngestFromInternalProto  esmApp
+TestProto AtmOcnMedPetListProto             esmApp
+TestProto AtmOcnMedPetListTimescalesProto   esmApp
 TestProto AtmOcnMedPetListTimescalesSplitFastProto esmApp
-TestProto AtmOcnMedProto                 esmApp
-TestProto AtmOcnPetListProto             esmApp
-TestProto AtmOcnProto                    esmApp
-TestProto AtmOcnRtmTwoTimescalesProto    esmApp
-TestProto AtmOcnScalarProto              esmApp
+TestProto AtmOcnMedProto                    esmApp
+TestProto AtmOcnPetListProto                esmApp
+TestProto AtmOcnProto                       esmApp
+TestProto AtmOcnRtmTwoTimescalesProto       esmApp
+TestProto AtmOcnScalarProto                 esmApp
 TestSelectExternalProto   AtmOcnSelectExternalProto    esmApp
 TestSelectProto           AtmOcnSelectProto            esmApp
-TestProto AtmOcnSimpleImplicitProto      esmApp
-TestProto AtmOcnIceSimpleImplicitProto   esmApp
-TestProto AtmOcnTransferGridProto        esmApp
-TestProto AtmOcnTransferLocStreamProto   esmApp
-TestProto DriverInDriverProto            mainApp
-TestProto DriverInDriverProtoIPDv02      mainApp
-TestProto DynPhyProto                    esmApp
-TestProto GenericMediatorProto           app
-TestProto HierarchyProto                 esmApp
-TestProto NamespaceProto                 mainApp
-TestProto NestingMultipleProto           mainApp
-TestProto NestingSingleProto             mainApp
-TestProto NestingTelescopeMultipleProto  mainApp
-TestProto SingleModelProto               mainApp
+TestProto AtmOcnSimpleImplicitProto         esmApp
+TestProto AtmOcnIceSimpleImplicitProto      esmApp
+TestProto AtmOcnTransferGridProto           esmApp
+TestProto AtmOcnTransferLocStreamProto      esmApp
+TestProto DriverInDriverProto               mainApp
+TestProto DriverInDriverProtoIPDv02         mainApp
+TestProto DynPhyProto                       esmApp
+TestProto GenericMediatorProto              app
+TestProto HierarchyProto                    esmApp
+TestProto NamespaceProto                    mainApp
+TestProto NestingMultipleProto              mainApp
+TestProto NestingSingleProto                mainApp
+TestProto NestingTelescopeMultipleProto     mainApp
+TestProto SingleModelProto                  mainApp
 
 i=1
 while [[ $i -le $count ]]
