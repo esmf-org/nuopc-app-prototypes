@@ -225,6 +225,11 @@ module OCN
     type(ESMF_Time)               :: currTime
     type(ESMF_TimeInterval)       :: timeStep
 
+#define NUOPC_TRACE__OFF
+#ifdef NUOPC_TRACE
+    call ESMF_TraceRegionEnter("OCN:ModelAdvance")
+#endif
+    
     rc = ESMF_SUCCESS
     
     ! query the Component for its clock, importState and exportState
@@ -264,6 +269,9 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
 
+#ifdef NUOPC_TRACE
+    call ESMF_TraceRegionExit("OCN:ModelAdvance")
+#endif
   end subroutine
 
 end module

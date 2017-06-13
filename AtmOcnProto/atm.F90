@@ -125,7 +125,7 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
     gridOut = gridIn ! for now out same as in
-
+    
 #ifdef WITHIMPORTFIELDS
     ! importable field: sea_surface_temperature
     field = ESMF_FieldCreate(name="sst", grid=gridIn, &
@@ -179,6 +179,11 @@ module ATM
     type(ESMF_Clock)              :: clock
     type(ESMF_State)              :: importState, exportState
 
+#define NUOPC_TRACE__OFF
+#ifdef NUOPC_TRACE
+    call ESMF_TraceRegionEnter("ATM:ModelAdvance")
+#endif
+
     rc = ESMF_SUCCESS
     
     ! query the Component for its clock, importState and exportState
@@ -210,6 +215,10 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
+#ifdef NUOPC_TRACE
+    call ESMF_TraceRegionExit("ATM:ModelAdvance")
+#endif
+    
   end subroutine
 
 end module
