@@ -237,9 +237,11 @@ module ESM
           return  ! bail out
         ! go through all of the entries in the cplList and add options
         do j=1, cplListSize
+          print *, cplList(j)
           tempString = trim(cplList(j))//":REMAPMETHOD=bilinear"//&
           ":SrcTermProcessing=1:DUMPWEIGHTS=true:TermOrder=SrcSeq"
           cplList(j) = trim(tempString)
+          print *, cplList(j)
         enddo
         ! store the modified cplList in CplList attribute of connector i
         call NUOPC_CompAttributeSet(connectorList(i), &
