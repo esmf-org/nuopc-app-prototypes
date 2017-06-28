@@ -20,7 +20,7 @@
         driver_routine_SS             => SetServices, &
         driver_label_SetModelServices => label_SetModelServices
 
-      use ECTM,          only : EctmSetServices  => SetServices
+      use ENVCTM,        only : EctmSetServices  => SetServices
       use ADVCORE,       only : AdvCSetServices  => SetServices
       use PTRACER,       only : pTraSetServices  => SetServices
 !
@@ -91,6 +91,11 @@
       logical :: do_ctmConvection = .FALSE.
       logical :: do_ctmDiffusion  = .FALSE.
       character(len=ESMF_MAXSTR) :: metType ! MERRA2 or MERRA1 or FPIT
+      integer :: ADV3 = 1
+      integer :: ECTM = 2
+      integer :: PTRA = 3
+      type(ESMF_GridComp) :: childcomp(3)
+
 !------------------------------------------------------------------------------
       contains
 !------------------------------------------------------------------------------
@@ -165,25 +170,18 @@
     type(ESMF_GridComp)  :: GC
     integer, intent(out) :: rc
 
-      type (ESMF_Config)            :: config
       type (ESMF_Config)            :: configFile
       CHARACTER(LEN=ESMF_MAXSTR)    :: rcfilen = 'CTM_GridComp.rc'
-      type(ESMF_GridComp)           :: comp
 
-      ! Get LM value from the component's config and pass it down to the 
-      ! children components as an attribute
-      call ESMF_GridCompGet(GC, config=config, rc=rc)
-     
       ! Choose children to birth and which children not to conceive
       ! -----------------------------------------------------------
-      configFile = ESMF_ConfigCreate(rc=STATUS )
+      configFile = ESMF_ConfigCreate(rc=rc )
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
            return  ! bail out
-      VERIFY_(STATUS)
 
-      call ESMF_ConfigLoadFile(configFile, TRIM(rcfilen), rc=STATUS )
+      call ESMF_ConfigLoadFile(configFile, TRIM(rcfilen), rc=rc )
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
@@ -191,7 +189,7 @@
 
       call ESMF_ConfigGetAttribute(configFile, enable_pTracers,             &
                                      Default  = .FALSE.,                    &
-                                     Label    = "ENABLE_pTracers:",  __RC__ )
+                                     Label    = "ENABLE_pTracers:",  rc=rc )
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
@@ -199,7 +197,7 @@
 
       call ESMF_ConfigGetAttribute(configFile, do_ctmConvection,            &
                                      Default  = .FALSE.,                    &
-                                     Label    = "do_ctmConvection:", __RC__ )
+                                     Label    = "do_ctmConvection:", rc=rc )
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
@@ -207,7 +205,7 @@
 
       call ESMF_ConfigGetAttribute(configFile, do_ctmDiffusion,             &
                                      Default  = .FALSE.,                    &
-                                     Label    = "do_ctmDiffusion:",  __RC__ )
+                                     Label    = "do_ctmDiffusion:",  rc=rc )
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
@@ -216,7 +214,7 @@
       ! Type of meteological fields (MERRA2 or MERRA1 or FPIT)
       call ESMF_ConfigGetAttribute(configFile, metType,                     &
                                      Default  = 'MERRA2',                   &
-                                     Label    = "metType:",          __RC__ )
+                                     Label    = "metType:",          rc=rc )
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
@@ -243,19 +241,21 @@
          ! Doing passive tracer experiment
          !--------------------------------
          call NUOPC_DriverAddComp(GC, 'DYNAMICS', AdvCSetServices, &
-            comp=comp, rc=rc)
+            comp=childcomp(ADV3), rc=rc)
          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
            return  ! bail out
+ 
          call NUOPC_DriverAddComp(GC, 'CTMenv', EctmSetServices, &
-            comp=comp, rc=rc)
+            comp=childcomp(ECTM), rc=rc)
          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
            return  ! bail out
+
          call NUOPC_DriverAddComp(GC, 'PTRACERS', pTraSetServices, &
-            comp=comp, rc=rc)
+            comp=childcomp(PTRA), rc=rc)
          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
@@ -373,7 +373,7 @@
       type (ESMF_FieldBundle)             :: BUNDLE, iBUNDLE
       type (ESMF_Field)                   :: FIELD
       type (ESMF_State)                   :: DUMMY
-      type (ESMF_Grid)                    :: GRID
+      type (ESMF_Grid)                    :: grid
 
       integer                             :: NUM_TRACERS
       integer                             :: I
@@ -382,33 +382,57 @@
       character(len=ESMF_MAXSTR)          :: myNAME
       character(len=ESMF_MAXSTR)          ::  iNAME
       character(len=ESMF_MAXSTR)          :: COMP_NAME
+      type(ESMF_Config)                   :: config
       character(len=ESMF_MAXSTR)          :: IAm = "Initialize"
 
       ! Get the target components name and set-up traceback handle.
       ! -----------------------------------------------------------
 
-      call ESMF_GridCompGet ( GC, name=COMP_NAME, RC=STATUS )
-      VERIFY_(STATUS)
+      call ESMF_GridCompGet ( GC, name=COMP_NAME, config=config, RC=rc )
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
       Iam = trim(COMP_NAME) // "::" // TRIM(Iam)
 
-      call MAPL_TimerOn(STATE,"TOTAL")
-      call MAPL_TimerOn(STATE,"INITIALIZE")
+      !call MAPL_TimerOn(STATE,"TOTAL")
+      !call MAPL_TimerOn(STATE,"INITIALIZE")
 
       ! Create grid for this GC
       !------------------------
       call My_GridCreate  (GC, rc )
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+
+      ! Set the children component's grid to be parent's grid
+      ! also pass the vertical layer information down to child components by setting it as an 
+      ! attribute to the component.
+      call ESMF_GridCompGet(GC, grid=grid, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+      do i=1,3
+        call ESMF_GridCompSet(childcomp(i), grid=grid, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+      enddo  
 
       ! Call Initialize for every Child
       !--------------------------------
-      ! call MAPL_GenericInitialize ( GC, IMPORT, EXPORT, CLOCK,  RC=STATUS)
+      ! call MAPL_GenericInitialize ( GC, IMPORT, EXPORT, CLOCK,  RC=rc)
       !  VERIFY_(STATUS)
 
 
 #ifdef PRINT_STATES
       call WRITE_PARALLEL ( trim(Iam)//": IMPORT State" )
-      if ( MAPL_am_I_root() ) call ESMF_StatePrint ( IMPORT, rc=STATUS )
+      if ( MAPL_am_I_root() ) call ESMF_StatePrint ( IMPORT, rc=rc )
       call WRITE_PARALLEL ( trim(Iam)//": EXPORT State" )
-      if ( MAPL_am_I_root() ) call ESMF_StatePrint ( EXPORT, rc=STATUS )
+      if ( MAPL_am_I_root() ) call ESMF_StatePrint ( EXPORT, rc=rc )
 #endif
 
 
@@ -740,6 +764,12 @@ subroutine My_GridCreate(GC, rc)
         file=__FILE__)) &
         return  ! bail out
     endif
+
+    call ESMF_AttributeSet(grid, name='GRID_LM', value=LM, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
 
     ! Set grid to the GridComp
     call ESMF_GridCompSet(GC, grid=grid, rc=rc)

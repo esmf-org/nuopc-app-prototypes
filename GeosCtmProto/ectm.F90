@@ -4,11 +4,11 @@
 !-------------------------------------------------------------------------
 !BOP
 !
-! !MODULE: ctm -- Prepares derived variables for GEOSctm
+! !MODULE: ENVCTM -- Prepares derived variables for GEOSctm
 !
 ! !INTERFACE:
 !
-      module ECTM
+      module ENVCTM
 !
 ! !USES:
       use ESMF
@@ -519,19 +519,15 @@
       __Iam__('Initialize')
       character(len=ESMF_MAXSTR)    :: COMP_NAME
       type(ESMF_Grid)               :: esmfGrid
-      type (ESMF_VM)                :: VM
-      integer                       :: im, jm, km
-      type(MAPL_MetaComp), pointer  :: ggState      ! GEOS Generic State
+      integer                       :: lm
       type (ESMF_Config)            :: CF
-      integer                       :: dims(3)
-
-      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      !! Need to get the grid from its parent
-      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      type(mystates_wrap)           :: mystates_ptr
+      type(MAPL_VarSpec), pointer   :: importSpec(:)
+      type(MAPL_VarSpec), pointer   :: exportSpec(:)
 
       !  Get my name and set-up traceback handle
       !  ---------------------------------------
-      call ESMF_GridCompGet( GC, NAME=COMP_NAME, CONFIG=CF, VM=VM, RC=rc )
+      call ESMF_GridCompGet( GC, NAME=COMP_NAME, CONFIG=CF, GRID=esmfGrid, RC=rc )
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
@@ -541,23 +537,26 @@
       !call MAPL_TimerOn(ggSTATE,"TOTAL")
       !call MAPL_TimerOn(ggSTATE,"INITIALIZE")
 
-      ! Get the grid related information
+      !Get VarSpec info
+      call ESMF_UserCompGetInternalState(GC, "MAPL_VarSpec", mystates_ptr, rc) 
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      importSpec => mystates_ptr%ptr%importSpec
+      exportSpec => mystates_ptr%ptr%exportSpec
+ 
+      ! Create the fields in the import and export state
       !---------------------------------
-      call ESMF_GridCompGet ( GC, GRID=esmfGrid, rc=STATUS)
+      ! realize connected Fields in the importState
+      call realizeConnectedFields(importState, importSpec, esmfGrid, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
 
       ! realize connected Fields in the importState
-      call realizeConnectedFields(importState, grid=esmfGrid, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-
-      ! realize connected Fields in the importState
-      call realizeConnectedFields(exportState, grid=esmfGrid, rc=rc)
+      call realizeConnectedFields(exportState, exportSpec, esmfGrid, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
@@ -565,37 +564,38 @@
 
     contains  !--------------------------------------------------------
 
-    subroutine realizeConnectedFields(state, grid, rc)
+    subroutine realizeConnectedFields(state, spec, grid, rc)
       ! TODO: this method may move into the NUOPC_ utility layer
       type(ESMF_State)                :: state
+      type(MAPL_VarSpec), pointer     :: spec(:)
       type(ESMF_Grid)                 :: grid
       integer, intent(out), optional  :: rc
       ! local variables
-      character(len=80), allocatable  :: fieldNameList(:)
+      character(len=80)               :: fieldName
       integer                         :: i, itemCount, k
       type(ESMF_Field)                :: field
       real(ESMF_KIND_R8), pointer     :: fptr(:)
 
       if (present(rc)) rc = ESMF_SUCCESS
       
-      call ESMF_StateGet(state, itemCount=itemCount, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-      allocate(fieldNameList(itemCount))
-      call ESMF_StateGet(state, itemNameList=fieldNameList, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-      
+      itemCount=size(spec)
+
       k=1 ! initialize
       do i=1, itemCount 
-        if (NUOPC_IsConnected(state, fieldName=fieldNameList(i))) then
+       ! find the VarSpec with matching long_name
+       call MAPL_VarSpecGet(spec(i),LONG_NAME=fieldName, rc=rc)
+       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+       call MAPL_VarSpecSet(spec(i), GRID=grid,rc=rc)
+       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+       if (NUOPC_IsConnected(state, fieldName=fieldName)) then
           ! create a Field
-          field = ESMF_FieldCreate(grid, ESMF_TYPEKIND_R8, &
-            name=fieldNameList(i), rc=rc)
+          field = NUOPC_FieldCreateFromSpec(spec(i),rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
@@ -608,14 +608,13 @@
             return  ! bail out
         else
           ! remove a not connected Field from State
-          call ESMF_StateRemove(state, (/fieldNameList(i)/), rc=rc)
+          call ESMF_StateRemove(state, (/fieldName/), rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
         endif
       enddo
-      deallocate(fieldNameList)
 
     end subroutine realizeConnectedFields
 
@@ -1746,4 +1745,4 @@
       end subroutine compute_ZLE_RH2
 !EOC
 !-----------------------------------------------------------------------
-      end module ECTM
+      end module ENVCTM

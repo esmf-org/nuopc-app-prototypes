@@ -63,6 +63,7 @@ module ADVCORE
            model_label_Advance   => label_Advance
       use NUOPC_Generic
       use m_set_eta,       only: set_eta
+#if 0
       use fv_arrays_mod,   only: fv_atmos_type, FVPRC, REAL4, REAL8
       use fms_mod,         only: fms_init, set_domain, nullify_domain
       use fv_control_mod,  only: fv_init, fv_end
@@ -73,7 +74,7 @@ module ADVCORE
 
       USE FV_StateMod,     only: AdvCoreTracers => T_TRACERS
       USE fv_grid_tools_mod, only: gridCellArea => area
-
+#endif
       implicit none
       private
 
