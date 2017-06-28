@@ -380,7 +380,7 @@ contains
            return  ! bail out
     end do
 
-
+#if 0
       ! Set the Profiling timers
       ! ------------------------
       call MAPL_TimerAdd ( GC, name = "RUN",        RC=STATUS )
@@ -389,6 +389,7 @@ contains
       VERIFY_(STATUS)
       call MAPL_TimerAdd ( GC, name = "FINALIZE",   RC=STATUS )
       VERIFY_(STATUS)
+#endif
   
       ! Generic Set Services
       ! --------------------
@@ -483,10 +484,6 @@ contains
 
       ! Need to create fields and realize them
       
-      ! Get the grid related information
-      !---------------------------------
-      call ESMF_GridCompGet ( GC, GRID=esmfGrid, rc=STATUS)
-
       ! realize connected Fields in the importState
       call realizeConnectedFields(IMPORT, grid=esmfGrid, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -503,39 +500,38 @@ contains
 
     contains  !--------------------------------------------------------
 
-    subroutine realizeConnectedFields(state, grid, rc)
+    subroutine realizeConnectedFields(state, spec, grid, rc)
       ! TODO: this method may move into the NUOPC_ utility layer
       type(ESMF_State)                :: state
+      type(MAPL_VarSpec)              :: spec
       type(ESMF_Grid)                 :: grid
       integer, intent(out), optional  :: rc
       ! local variables
-      character(len=80), allocatable  :: fieldNameList(:)
+      character(len=80)               :: fieldName
       integer                         :: i, itemCount, k
       type(ESMF_Field)                :: field
       real(ESMF_KIND_R8), pointer     :: fptr(:)
 
       if (present(rc)) rc = ESMF_SUCCESS
       
-      call ESMF_StateGet(state, itemCount=itemCount, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-      allocate(fieldNameList(itemCount))
-      call ESMF_StateGet(state, itemNameList=fieldNameList, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
+      itemCount=size(spec)
 
-      ! Need to create a field with undistributed dimension -- 
-      ! where do I get this information??      
       k=1 ! initialize
       do i=1, itemCount 
-        if (NUOPC_IsConnected(state, fieldName=fieldNameList(i))) then
+        ! find the VarSpec with matching long_name
+        call MAPL_VarSpecGet(spec(i),LONG_NAME=fieldName, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+        call MAPL_VarSpecSet(spec(i), GRID=grid,rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+       if (NUOPC_IsConnected(state, fieldName=fieldName)) then
           ! create a Field
-          field = ESMF_FieldCreate(grid, ESMF_TYPEKIND_R8, &
-            name=fieldNameList(i), rc=rc)
+          field = NUOPC_FieldCreateFromSpec(spec(i),rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
@@ -548,14 +544,13 @@ contains
             return  ! bail out
         else
           ! remove a not connected Field from State
-          call ESMF_StateRemove(state, (/fieldNameList(i)/), rc=rc)
+          call ESMF_StateRemove(state, (/fieldName/), rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
         endif
       enddo
-      deallocate(fieldNameList)
 
     end subroutine realizeConnectedFields
 

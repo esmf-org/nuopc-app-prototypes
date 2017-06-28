@@ -81,12 +81,22 @@ contains
 
     STATE => mystate%ptr%importSpec
 
-    call NUOPC_AddVarSpec(GC, STATE, SHORT_NAME, LONG_NAME,               &
-                              UNITS,  Dims, VLocation,                 &
-                              DATATYPE,NUM_SUBTILES, REFRESH_INTERVAL, &
-                              AVERAGING_INTERVAL, HALOWIDTH, PRECISION, DEFAULT,  &
-                              RESTART, UNGRIDDED_DIMS, FIELD_TYPE,     &
-                              STAGGERING, ROTATION, RC)
+    call NUOPC_AddVarSpec(GC, STATE, SHORT_NAME,                      & 
+                              LONG_NAME=LONG_NAME,                    &
+                              UNITS=UNITS,                            &
+                              DIMS=Dims, VLOCATION=VLocation,         &
+                              DATATYPE=DATATYPE,                      &
+                              NUM_SUBTILES=NUM_SUBTILES,              &
+                              REFRESH_INTERVAL=REFRESH_INTERVAL,     &
+                              AVERAGING_INTERVAL=AVERAGING_INTERVAL,  &
+                              HALOWIDTH=HALOWIDTH,                    &
+                              PRECISION=PRECISION,                    &
+                              DEFAULT=DEFAULT,                        &
+                              RESTART=RESTART,                        &
+                              UNGRIDDED_DIMS=UNGRIDDED_DIMS,          &
+                              FIELD_TYPE=FIELD_TYPE,                  &
+                              STAGGERING=STAGGERING,                  &
+                              ROTATION=ROTATION, RC=RC)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
        line=__LINE__, &
        file=__FILE__)) &
@@ -141,12 +151,22 @@ contains
 
     STATE => mystate%ptr%exportSpec
 
-    call NUOPC_AddVarSpec(GC, STATE, SHORT_NAME, LONG_NAME,               &
-                              UNITS,  Dims, VLocation,                 &
-                              DATATYPE,NUM_SUBTILES, REFRESH_INTERVAL, &
-                              AVERAGING_INTERVAL, HALOWIDTH, PRECISION, DEFAULT,  &
-                              RESTART, UNGRIDDED_DIMS, FIELD_TYPE,     &
-                              STAGGERING, ROTATION, RC)
+    call NUOPC_AddVarSpec(GC, STATE, SHORT_NAME,                      & 
+                              LONG_NAME=LONG_NAME,                    &
+                              UNITS=UNITS,                            &
+                              DIMS=Dims, VLOCATION=VLocation,         &
+                              DATATYPE=DATATYPE,                      &
+                              NUM_SUBTILES=NUM_SUBTILES,              &
+                              REFRESH_INTERVAL=REFRESH_INTERVAL,     &
+                              AVERAGING_INTERVAL=AVERAGING_INTERVAL,  &
+                              HALOWIDTH=HALOWIDTH,                    &
+                              PRECISION=PRECISION,                    &
+                              DEFAULT=DEFAULT,                        &
+                              RESTART=RESTART,                        &
+                              UNGRIDDED_DIMS=UNGRIDDED_DIMS,          &
+                              FIELD_TYPE=FIELD_TYPE,                  &
+                              STAGGERING=STAGGERING,                  &
+                              ROTATION=ROTATION, RC=RC)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
        line=__LINE__, &
        file=__FILE__)) &
@@ -160,7 +180,7 @@ contains
 ! !IIROUTINE: MAPL_AddInternalSpec --- Sets specifications for an item in the \texttt{INTERNAL} state
 
 ! !INTERFACE:
-  subroutine NUOPC_StateAddInternalSpec(GC,                 &
+  subroutine NUOPC_AddInternalSpec(GC,                 &
                                        SHORT_NAME,         &
                                        LONG_NAME,          &
                                        UNITS,              &
@@ -232,7 +252,7 @@ contains
     type (mystates_WRAP)                  :: mystate
     type (MAPL_VarSpec) , pointer         :: STATE(:)
 
-    if (present) RC = ESMF_SUCCESS
+    if (present(RC)) RC = ESMF_SUCCESS
 
     call ESMF_UserCompGetInternalState(GC, 'MAPL_VarSpec', mystate, rc) 
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -253,10 +273,10 @@ contains
        UNITS      = UNITS,                                                   &
        SHORT_NAME = SHORT_NAME,                                              &
        DIMS       = DIMS,                                                    &
-       STAT       = DATATYPE,                                                &
+       DATATYPE   = DATATYPE,                                                &
        NUM_SUBTILES=NUM_SUBTILES,                                            &
-       ACCMLT_INTERVAL= AVERAGING_INTERVAL,                                  &
-       COUPLE_INTERVAL= REFRESH_INTERVAL,                                    &
+       AVERAGING_INTERVAL= AVERAGING_INTERVAL,                               &
+       REFRESH_INTERVAL= REFRESH_INTERVAL,                                   &
        VLOCATION  = VLOCATION,                                               &
        DEFAULT    = DEFAULT, FRIENDLYTO = FRIENDLYTO,                        &
        HALOWIDTH  = usable_HW, PRECISION=PRECISION,                          &
@@ -284,14 +304,14 @@ contains
           RETURN_(ESMF_FAILURE)
        endif
 
-       call MAPL_VarSpecAddRefToList(mystates%ptr%export_spec, STATE(I), RC=RC)
+       call MAPL_VarSpecAddRefToList(mystate%ptr%exportSpec, STATE(I), RC=RC)
        VERIFY_(RC)
 
     endif
 
     RETURN
 
-  end subroutine MAPL_AddInternalSpec
+  end subroutine NUOPC_AddInternalSpec
 
   subroutine NUOPC_AddVarSpec(GC, STATE, SHORT_NAME, LONG_NAME,               &
                                       UNITS,  Dims, VLocation,                 &
@@ -415,5 +435,288 @@ contains
 
     RETURN_(ESMF_SUCCESS)
   end subroutine NUOPC_AddVarSpec
+
+  function NUOPC_FieldCreateFromSpec(SPEC,DEFER,RC)
+    type(MAPL_VarSpec),               intent(INOUT) :: SPEC
+    logical, optional,                intent(IN   ) :: DEFER
+    integer, optional,                intent(  OUT) :: RC
+
+! Return value
+    type(ESMF_Field)      :: NUOPC_FieldCreateFromSpec
+
+    character(len=ESMF_MAXSTR), parameter :: IAm="MAPL_StateCreateFromSpec"
+    integer                               :: STATUS
+
+    integer               :: COUNTS(ESMF_MAXDIM)
+    integer               :: L
+    type(ESMF_DistGrid)   :: distgrid
+    type (ESMF_Array)     :: Array
+    type (ESMF_Field)     :: FIELD
+    type (ESMF_FieldBundle) :: BUNDLE
+    type (ESMF_Field)       :: SPEC_FIELD
+    type (ESMF_FieldBundle) :: SPEC_BUNDLE
+    real(kind=ESMF_KIND_R4), pointer         :: VAR_1D(:), VAR_2D(:,:), VAR_3D(:,:,:)
+    real(kind=ESMF_KIND_R8), pointer         :: VR8_1D(:), VR8_2D(:,:), VR8_3D(:,:,:)
+    logical               :: usableDEFER
+    logical               :: deferAlloc
+    integer               :: RANK
+    integer               :: DIMS
+    integer               :: STAT
+    integer               :: KND
+    integer               :: LOCATION
+    character(ESMF_MAXSTR):: SHORT_NAME
+    character(ESMF_MAXSTR):: LONG_NAME
+    character(ESMF_MAXSTR):: UNITS
+    character(ESMF_MAXSTR):: FRIENDLYTO
+    integer               :: REFRESH
+    integer               :: AVGINT
+    real                  :: DEFAULT_VALUE
+    type(ESMF_Grid)       :: GRD, GRID
+    integer               :: I
+    logical               ::  done
+    integer               :: N, N1, N2, NE
+    integer               :: HW
+    integer               :: RESTART
+    integer               :: maplist(ESMF_MAXDIM)          ! mapping between array and grid
+    character(len=ESMF_MAXSTR), pointer     :: ATTR_INAMES(:)
+    character(len=ESMF_MAXSTR), pointer     :: ATTR_RNAMES(:)
+    integer,                    pointer     :: ATTR_IVALUES(:)
+    real,                       pointer     :: ATTR_RVALUES(:)
+    integer,                    pointer     :: UNGRD(:)
+    integer                                 :: attr
+    integer                                 :: initStatus
+    logical                                 :: defaultProvided
+    integer                                 :: fieldRank
+    real(kind=ESMF_KIND_R8)                 :: def_val_8
+    type(ESMF_TypeKind_Flag)                :: typekind
+    logical                                 :: has_ungrd
+    logical                                 :: doNotAllocate
+    logical                                 :: alwaysAllocate
+    integer                                 :: field_type
+    integer                                 :: staggering
+    integer                                 :: rotation
+    type(ESMF_State)                        :: SPEC_STATE
+    type(ESMF_State)                        :: nestSTATE
+    character(ESMF_MAXSTR)                  :: ungridded_unit
+    character(ESMF_MAXSTR)                  :: ungridded_name
+    real,                    pointer        :: ungridded_coords(:)
+    integer                                 :: szUngrd
+    integer                                 :: rstReq
+
+
+   if (present(DEFER)) then
+      usableDEFER = DEFER
+   else
+      usableDEFER = .false.
+   end if
+
+   attr = 0
+   rstReq = 0
+
+      call MAPL_VarSpecGet(SPEC,DIMS=DIMS,VLOCATION=LOCATION,   &
+                           SHORT_NAME=SHORT_NAME, LONG_NAME=LONG_NAME, UNITS=UNITS,&
+                           FIELD=SPEC_FIELD, &
+                           BUNDLE=SPEC_BUNDLE, &
+                           STATE=SPEC_STATE, &
+                           STAT=STAT, DEFAULT = DEFAULT_VALUE, &
+                           defaultProvided = defaultProvided, &
+                           FRIENDLYTO=FRIENDLYTO, &
+                           COUPLE_INTERVAL=REFRESH, &
+                           ACCMLT_INTERVAL=AVGINT, &
+                           HALOWIDTH=HW, &
+                           RESTART=RESTART, &
+                           PRECISION=KND, &
+                           ATTR_RNAMES=ATTR_RNAMES, &
+                           ATTR_INAMES=ATTR_INAMES, &
+                           ATTR_RVALUES=ATTR_RVALUES, &
+                           ATTR_IVALUES=ATTR_IVALUES, &
+                           UNGRIDDED_DIMS=UNGRD, &
+                           UNGRIDDED_UNIT=UNGRIDDED_UNIT, &
+                           UNGRIDDED_NAME=UNGRIDDED_NAME, &
+                           UNGRIDDED_COORDS=UNGRIDDED_COORDS, &
+                           GRID=GRID, &
+                           doNotAllocate=doNotAllocate, &
+                           alwaysAllocate=alwaysAllocate, &
+                           FIELD_TYPE=FIELD_TYPE, &
+                           STAGGERING=STAGGERING, &
+                           ROTATION=ROTATION, &
+                           RC=STATUS )
+      VERIFY_(STATUS)
+
+      if (RESTART == MAPL_RestartRequired) then
+         rstReq = 1
+      end if
+
+      if (DIMS == MAPL_DimsTileOnly .OR. DIMS == MAPL_DimsTileTile) then
+         ATTR = IOR(ATTR, MAPL_AttrTile)
+      else
+         ATTR = IOR(ATTR, MAPL_AttrGrid)
+      end if
+      
+      deferAlloc = usableDefer
+      if (usableDefer) deferAlloc = .not. alwaysAllocate
+
+! Create the appropriate ESMF FIELD
+! ---------------------------------
+
+         field = MAPL_FieldCreateEmpty(name=SHORT_NAME, grid=grid, rc=status)
+         VERIFY_(STATUS)
+
+         has_ungrd = associated(UNGRD)
+
+         if (.not. deferAlloc) then
+
+!ALT we check if doNotAllocate is set only for fields that are not deferred
+            if (.not. doNotAllocate) then
+               if (has_ungrd) then
+                  if (defaultProvided) then
+                     call MAPL_FieldAllocCommit(field, dims=dims, location=location, typekind=knd, &
+                          hw=hw, ungrid=ungrd, default_value=default_value, rc=status)
+                     VERIFY_(STATUS)
+                  else
+                     call MAPL_FieldAllocCommit(field, dims=dims, location=location, typekind=knd, &
+                          hw=hw, ungrid=ungrd, rc=status)
+                     VERIFY_(STATUS)
+                  endif
+               else
+                  if (defaultProvided) then
+                     call MAPL_FieldAllocCommit(field, dims=dims, location=location, typekind=knd, &
+                          hw=hw, default_value=default_value, rc=status)
+                     VERIFY_(STATUS)
+                  else
+                     call MAPL_FieldAllocCommit(field, dims=dims, location=location, typekind=knd, &
+                          hw=hw, rc=status)
+                     VERIFY_(STATUS)
+                  end if
+
+               end if
+            else
+               call ESMF_AttributeSet(FIELD, NAME='doNotAllocate', VALUE=1, RC=STATUS)
+               VERIFY_(STATUS)
+            end if
+         else
+            call ESMF_AttributeSet(FIELD, NAME='PRECISION', VALUE=KND, RC=STATUS)
+            VERIFY_(STATUS)
+            call ESMF_AttributeSet(FIELD, NAME='HAS_UNGRIDDED_DIMS', &
+                 value=has_ungrd, RC=STATUS)
+            VERIFY_(STATUS)
+            call ESMF_AttributeSet(FIELD, NAME='DEFAULT_PROVIDED', &
+                 value=defaultProvided, RC=STATUS)
+            VERIFY_(STATUS)
+            if (defaultProvided) then
+               call ESMF_AttributeSet(FIELD, NAME='DEFAULT_VALUE', &
+                    value=default_value, RC=STATUS)
+               VERIFY_(STATUS)
+            end if
+            if (has_ungrd) then
+               call ESMF_AttributeSet(FIELD, NAME='UNGRIDDED_DIMS', valueList=UNGRD, RC=STATUS)
+               VERIFY_(STATUS)
+            end if
+         end if
+
+! Put the FIELD in the MAPL FIELD (VAR SPEC)
+! --------------------------------
+
+      call MAPL_VarSpecSet(SPEC,FIELD=FIELD,RC=STATUS)
+      VERIFY_(STATUS)
+! and in the FIELD in the state
+! --------------------------
+
+      if (deferAlloc) then
+         initStatus = MAPL_Uninitialized
+      else
+         if (defaultProvided) initStatus = MAPL_InitialDefault
+      end if
+
+! Add SPECs to the FIELD
+
+      call ESMF_AttributeSet(FIELD, NAME='STAT', VALUE=STAT, RC=STATUS)
+      VERIFY_(STATUS)
+      call ESMF_AttributeSet(FIELD, NAME='DIMS', VALUE=DIMS, RC=STATUS)
+      VERIFY_(STATUS)
+      call ESMF_AttributeSet(FIELD, NAME='VLOCATION', VALUE=LOCATION, RC=STATUS)
+      VERIFY_(STATUS)
+      call ESMF_AttributeSet(FIELD, NAME='LONG_NAME', VALUE=LONG_NAME, RC=STATUS)
+      VERIFY_(STATUS)
+      call ESMF_AttributeSet(FIELD, NAME='UNITS', VALUE=UNITS, RC=STATUS)
+      VERIFY_(STATUS)
+
+      call ESMF_AttributeSet(FIELD, NAME='REFRESH_INTERVAL', VALUE=REFRESH, RC=STATUS)
+      VERIFY_(STATUS)
+      call ESMF_AttributeSet(FIELD, NAME='AVERAGING_INTERVAL', VALUE=AVGINT, RC=STATUS)
+      VERIFY_(STATUS)
+      call ESMF_AttributeSet(FIELD, NAME='HALOWIDTH', VALUE=HW, RC=STATUS)
+      VERIFY_(STATUS)
+      call ESMF_AttributeSet(FIELD, NAME='RESTART', VALUE=RESTART, RC=STATUS)
+      VERIFY_(STATUS)
+      call ESMF_AttributeSet(FIELD, NAME='FIELD_TYPE', VALUE=FIELD_TYPE, RC=STATUS)
+      VERIFY_(STATUS)
+      call ESMF_AttributeSet(FIELD, NAME='STAGGERING', VALUE=STAGGERING, RC=STATUS)
+      VERIFY_(STATUS)
+      call ESMF_AttributeSet(FIELD, NAME='ROTATION', VALUE=ROTATION, RC=STATUS)
+      VERIFY_(STATUS)
+      if (associated(UNGRD)) Then
+         call ESMF_AttributeSet(FIELD, NAME='UNGRIDDED_NAME', VALUE=UNGRIDDED_NAME, RC=STATUS)
+         VERIFY_(STATUS)
+         call ESMF_AttributeSet(FIELD, NAME='UNGRIDDED_UNIT', VALUE=UNGRIDDED_UNIT, RC=STATUS)
+         VERIFY_(STATUS)
+         if (associated(UNGRIDDED_COORDS)) then
+            szUngrd = size(ungridded_coords)
+            call ESMF_AttributeSet(FIELD, NAME='UNGRIDDED_COORDS', itemCount=szUngrd, &
+                                   valuelist=ungridded_coords, rc=status)
+            VERIFY_(STATUS)
+         end if      
+      end if
+
+      if (associated(ATTR_RNAMES)) then
+         DO N = 1, size(ATTR_RNAMES) 
+            call ESMF_AttributeSet(FIELD, NAME=trim(ATTR_RNAMES(N)), &
+                                        VALUE=ATTR_RVALUES(N), RC=STATUS)
+            VERIFY_(STATUS)
+         END DO
+      end if
+
+      if (associated(ATTR_INAMES)) then
+         DO N = 1, size(ATTR_INAMES) 
+            call ESMF_AttributeSet(FIELD, NAME=trim(ATTR_INAMES(N)), &
+                                        VALUE=ATTR_IVALUES(N), RC=STATUS)
+            VERIFY_(STATUS)
+         END DO
+      end if
+
+10    if (FRIENDLYTO /= "") then
+
+! parse the string for ":" word delimiters
+         done = .false.
+         n1 = 1
+         NE = len(FRIENDLYTO)
+
+         DO WHILE(.not. DONE)
+            N = INDEX(FRIENDLYTO(N1:NE), ':')
+            IF (N == 0) then
+               DONE = .TRUE.
+               N2 = NE
+            ELSE
+               N2 = N1 + N - 2
+            END IF
+            if (N1 <= N2 .and. N2 > 0) then
+!print *,"DEBUG: setting FieldAttr:FriendlyTo"//trim(FRIENDLYTO(N1:N2))
+                  call ESMF_AttributeSet(FIELD, &
+                       NAME='FriendlyTo'//trim(FRIENDLYTO(N1:N2)), &
+                       VALUE=.TRUE., RC=STATUS)
+                  VERIFY_(STATUS)
+            end if
+
+            N1 = N1 + N
+         END DO
+
+      end if
+
+   NUOPC_FieldCreateFromSpec = FIELD
+
+   RETURN
+
+  end function NUOPC_FieldCreateFromSpec
+
 
 end module NUOPC_Generic
