@@ -270,7 +270,7 @@ contains
          do ic = 1, numTracers
             write (id  ,'(i2.2)') ic-1
             state%vname (ic) = 'Q'//id
-            state%vtitle(ic) = 'Q'//id
+            state%vtitle(ic) = 'Tracer Q'//id
             state%vunits(ic) = 'mol/mol'
          end do
 
@@ -345,7 +345,7 @@ contains
        return  ! bail out
 
 ! !INTERNAL STATE:
-! !When FRIENDLYTO is given, these fields will be added into the exportState automatically
+! !When FRIENDLYTO is given, these fields will be added into the exportSpec automatically
 
        FRIENDLIES="DYNAMICS:TURBULENCE:MOIST"
 
@@ -437,6 +437,9 @@ contains
       type (T_pTracers_STATE), pointer :: pTracers_STATE 
       type (pTracers_wrap)             :: WRAP
       type(ESMF_Grid)                  :: esmfGrid
+      type(mystates_wrap)              :: mystates_ptr
+      type(MAPL_VarSpec), pointer   :: importSpec(:)
+      type(MAPL_VarSpec), pointer   :: exportSpec(:)
 
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       !! Need to get the grid from its parent
@@ -461,11 +464,14 @@ contains
         file=__FILE__)) &
         return  ! bail out
 
-      ! Get my internal MAPL_Generic state
-      !-----------------------------------
-
-      !call MAPL_GetObjectFromGC ( GC, ggState, RC=STATUS)
-      !VERIFY_(STATUS)
+      ! Get the importSpec and exportSpec from internal state
+      call ESMF_UserCompGetInternalState(GC, "MAPL_VarSpec", mystates_ptr, rc) 
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      importSpec => mystates_ptr%ptr%importSpec
+      exportSpec => mystates_ptr%ptr%exportSpec
 
       ! Start timer
       !------------      
@@ -476,23 +482,17 @@ contains
       !call MAPL_TimerOn (ggState,"TOTAL"  )
       !call MAPL_TimerOn (ggState,"INITIALIZE"  )
 
-      ! Call Generic Initialize
-      !------------------------
-
-      !call MAPL_GenericInitialize ( GC, IMPORT, EXPORT, CLOCK,  RC=STATUS)
-      !VERIFY_(STATUS)
-
       ! Need to create fields and realize them
       
       ! realize connected Fields in the importState
-      call realizeConnectedFields(IMPORT, grid=esmfGrid, rc=rc)
+      call realizeConnectedFields(IMPORT, importspec, esmfGrid, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
 
       ! realize connected Fields in the importState
-      call realizeConnectedFields(EXPORT, grid=esmfGrid, rc=rc)
+      call realizeConnectedFields(EXPORT, exportspec,esmfGrid, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
@@ -543,7 +543,9 @@ contains
             file=__FILE__)) &
             return  ! bail out
         else
-          ! remove a not connected Field from State
+          ! We might need to keep them for now to allow the connection between
+          ! the friendly fields and 
+          ! remove a not connected Field from State in a later phase
           call ESMF_StateRemove(state, (/fieldName/), rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
@@ -1049,7 +1051,7 @@ contains
 
       ! Get time step
       ! -------------
-      call ESMF_ConfigGetAttribute ( CF, cdt, Label="RUN_DT:", RC=STATUS )
+      call ESMF_AttributeGet ( GC, cdt, Label="RUN_DT:", RC=STATUS )
       VERIFY_(STATUS)
 
       ! Need code to extract nymd(20050205), nhms(120000) from clock
