@@ -133,6 +133,8 @@ contains
       character(len=ESMF_MAXSTR)              :: IAm
       character(len=ESMF_MAXSTR)              :: COMP_NAME
       character(len=ESMF_MAXSTR)              :: DYCORE
+      CHARACTER(LEN=ESMF_MAXSTR)              :: rcfilen = 'fvcore_layout.rc'
+      type(ESMF_Config)                       :: configFile
       type (mystates_WRAP)                    :: mystates_ptr
       type (my_States), pointer               :: mystates
 
@@ -146,6 +148,24 @@ contains
       call ESMF_GridCompGet( GC, NAME=COMP_NAME, RC=STATUS )
       VERIFY_(STATUS)
       Iam = trim(COMP_NAME) // 'SetServices'
+
+      configFile = ESMF_ConfigCreate(rc=rc )
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+      call ESMF_ConfigLoadFile(configFile, TRIM(rcfilen), rc=STATUS )
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+      call ESMF_GridCompSet(comp, config=ConfigFile, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+       line=__LINE__, &
+       file=__FILE__)) &
+       return  ! bail out
 
       allocate(mystates)
       mystates_ptr%ptr => mystates
@@ -308,6 +328,7 @@ contains
 
 !EOS
 
+#if 0
       ! Set the Profiling timers
       !-------------------------
       call MAPL_TimerAdd(GC,    name="INITIALIZE"  ,RC=RC)
@@ -319,38 +340,24 @@ contains
       call MAPL_TimerAdd(GC,    name="TOTAL"       ,RC=RC)
       VERIFY_(STATUS)
 
-      ! Check if AdvCore is running without FV3_DynCoreIsRunning, if yes then setup the MAPL Grid 
-      ! ----------------------------------------------------------------------------
-      call MAPL_GetObjectFromGC (GC, MAPL,  RC=STATUS )
-      VERIFY_(STATUS)
-      call MAPL_GetResource(MAPL, DYCORE, 'DYCORE:', default="", RC=STATUS )
-      VERIFY_(STATUS)
-      call MAPL_GetResource(MAPL, AdvCore_Advection , label='AdvCore_Advection:', &
-                                  default=AdvCore_Advection, RC=STATUS )
-      VERIFY_(STATUS)
-      if(adjustl(DYCORE)=="FV3") FV3_DynCoreIsRunning = .true.
-      if (.NOT. FV3_DynCoreIsRunning) then
-         call MAPL_GridCreate(GC, rc=status)
-         VERIFY_(STATUS)
-      endif
-
       ! Ending with a Generic SetServices call is a MAPL requirement 
       !-------------------------------------------------------------
       call MAPL_GenericSetServices    ( GC, rc=STATUS)
       VERIFY_(STATUS)
+#endif
 
       RETURN_(ESMF_SUCCESS)
 
-      end subroutine SetServices
+      end subroutine InitAdvertise
 
 !------------------------------------------------------------------------------
 !BOP
 !
-! !IROUTINE: Initialize - initialization routine
+! !IROUTINE: InitRealize - initialization routine
 !
 ! !INTERFACE:
 !
-  subroutine Initialize(GC, IMPORT, EXPORT, CLOCK, RC)
+  subroutine InitRealize(GC, IMPORT, EXPORT, CLOCK, RC)
 !
 ! !INPUT/OUTPUT PARAMETERS:
       type(ESMF_GridComp), intent(inout) :: GC     ! Gridded component 
@@ -392,36 +399,47 @@ contains
       VERIFY_(STATUS)
       Iam = trim(COMP_NAME) // trim(Iam)
 
-      ! Retrieve the pointer to the state
-      ! ---------------------------------
-      call MAPL_GetObjectFromGC (GC, MAPL,  RC=STATUS )
-      VERIFY_(STATUS)
-
+#if 0
       call MAPL_TimerOn(MAPL,"TOTAL")
       call MAPL_TimerOn(MAPL,"INITIALIZE")
+#endif
 
       ! Get the time-step
       ! -----------------------
-      call MAPL_GetResource( MAPL, ndt, 'RUN_DT:', default=0, RC=STATUS )
-      VERIFY_(STATUS)
-      dt = ndt
+      ! call MAPL_GetResource( MAPL, ndt, 'RUN_DT:', default=0, RC=STATUS )
+      call ESMF_AttributeGet ( GC, dt, Label="RUN_DT:", RC=STATUS )
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
 
-      ! Make sure FV3 is setup
-      ! -----------------------
-      call MAPL_GetResource ( MAPL, LAYOUT_FILE, 'LAYOUT:', default='fvcore_layout.rc', rc=status )
+      ! Check if AdvCore is running without FV3_DynCoreIsRunning, if yes then setup the MAPL Grid 
+      ! ----------------------------------------------------------------------------
+fg
+
+      call MAPL_GetObjectFromGC (GC, MAPL,  RC=STATUS )
       VERIFY_(STATUS)
-      cf = ESMF_ConfigCreate(rc=rc)
-      call ESMF_ConfigLoadFile( cf, LAYOUT_FILE, rc = rc )
+      call MAPL_GetResource(MAPL, DYCORE, 'DYCORE:', default="", RC=STATUS )
+      VERIFY_(STATUS)
+      call MAPL_GetResource(MAPL, AdvCore_Advection , label='AdvCore_Advection:', &
+                                  default=AdvCore_Advection, RC=STATUS )
+      VERIFY_(STATUS)
+      if(adjustl(DYCORE)=="FV3") FV3_DynCoreIsRunning = .true.
+      if (.NOT. FV3_DynCoreIsRunning) then
+         call MAPL_GridCreate(GC, rc=status)
+         VERIFY_(STATUS)
+      endif
 
       ! Get Domain decomposition
       !-------------------------
-      call ESMF_ConfigGetAttribute( cf, npes_x, label='npes_x:', RC=STATUS )
+      call ESMF_ConfigGetAttribute( CF, npes_x, label='npes_x:', RC=STATUS )
       if (STATUS /= ESMF_SUCCESS) then
           call MAPL_GetResource( MAPL, nx, 'NX:', default=0, RC=STATUS )
+
           VERIFY_(STATUS)
           npes_x = nx
       endif
-      call ESMF_ConfigGetAttribute( cf, npes_y, label='npes_y:', RC=STATUS )
+      call ESMF_ConfigGetAttribute( CF, npes_y, label='npes_y:', RC=STATUS )
       if (STATUS /= ESMF_SUCCESS) then
           call MAPL_GetResource( MAPL, ny, 'NY:', default=0, RC=STATUS )
           VERIFY_(STATUS)
@@ -431,44 +449,45 @@ contains
 
       ! Get Resolution Information
       !---------------------------
-      call ESMF_ConfigGetAttribute( cf, npx, label='npx:', RC=STATUS )
+      call ESMF_ConfigGetAttribute( CF, npx, label='npx:', RC=STATUS )
       if (STATUS /= ESMF_SUCCESS) then
           call MAPL_GetResource( MAPL, npx, 'AGCM_IM:', default=32, RC=STATUS )
           VERIFY_(STATUS)
       endif
       ! FV likes npx;npy in terms of cell vertices
       npx=npx+1
-      call ESMF_ConfigGetAttribute( cf, npy, label='npy:', RC=STATUS )
+      call ESMF_ConfigGetAttribute( CF, npy, label='npy:', RC=STATUS )
       if (STATUS /= ESMF_SUCCESS) then
           call MAPL_GetResource( MAPL, npy, 'AGCM_IM:', default=32, RC=STATUS )
           VERIFY_(STATUS)
       endif
       ! FV likes npx;npy in terms of cell vertices
       npy=npy+1
-      call ESMF_ConfigGetAttribute( cf, npz, label='npz:', RC=STATUS )
+      call ESMF_ConfigGetAttribute( CF, npz, label='npz:', RC=STATUS )
       if (STATUS /= ESMF_SUCCESS) then
           call MAPL_GetResource( MAPL, npz, 'AGCM_LM:', default=72, RC=STATUS )
           VERIFY_(STATUS)
       endif
       ! Check for cubed grid tiles=6
-      call ESMF_ConfigGetAttribute( cf, ntiles, label='ntiles:', default=6, RC=STATUS )
+      call ESMF_ConfigGetAttribute( CF, ntiles, label='ntiles:', default=6, RC=STATUS )
       VERIFY_(STATUS)
 
       ! Get tracer advection and remapping schemes
       !-------------------------------------------
-      call ESMF_ConfigGetAttribute( cf, hord_tr , label='hord_tr:' , default=12, rc = STATUS )
+      call ESMF_ConfigGetAttribute( CF, hord_tr , label='hord_tr:' , default=12, rc = STATUS )
       VERIFY_(STATUS)
-      call ESMF_ConfigGetAttribute( cf, kord_tr , label='kord_tr:' , default=8, rc = STATUS )
+      call ESMF_ConfigGetAttribute( CF, kord_tr , label='kord_tr:' , default=8, rc = STATUS )
       VERIFY_(STATUS)
-      call ESMF_ConfigGetAttribute( cf, q_split , label='qsplit:'  , default=0, rc = STATUS )
+      call ESMF_ConfigGetAttribute( CF, q_split , label='qsplit:'  , default=0, rc = STATUS )
       VERIFY_(STATUS)
-      call ESMF_ConfigGetAttribute( cf, z_tracer, label='z_tracer:', default=.false., rc = STATUS )
+      call ESMF_ConfigGetAttribute( CF, z_tracer, label='z_tracer:', default=.false., rc = STATUS )
       VERIFY_(STATUS)
-      call ESMF_ConfigGetAttribute( cf, fill    , label='fill:'    , default=.false., rc = STATUS )
+      call ESMF_ConfigGetAttribute( CF, fill    , label='fill:'    , default=.false., rc = STATUS )
       VERIFY_(STATUS)
-      call ESMF_ConfigGetAttribute( cf, chk_mass, label='chk_mass:', default=.false., rc = STATUS )
+      call ESMF_ConfigGetAttribute( CF, chk_mass, label='chk_mass:', default=.false., rc = STATUS )
       VERIFY_(STATUS)
 
+#if 0
       ! Start up FMS/MPP
       !-------------------------------------------
       call ESMF_VMGet(VM,mpiCommunicator=comm,rc=STATUS)
@@ -481,10 +500,6 @@ contains
          call fv_init(FV_Atm, dt)
       endif
 
-      ! Call Generic Initialize 
-      ! -----------------------
-      call MAPL_GenericInitialize(GC, IMPORT, EXPORT, CLOCK, RC=STATUS)
-      VERIFY_(STATUS)
       ! Compute Grid-Cell Area
       ! ----------------------
       if (.NOT. FV3_DynCoreIsRunning) then
@@ -500,10 +515,11 @@ contains
 
       call MAPL_TimerOff(MAPL,"INITIALIZE")
       call MAPL_TimerOff(MAPL,"TOTAL")
+#endi
 
       RETURN_(ESMF_SUCCESS)
 
-      end subroutine Initialize
+      end subroutine InitRealize
 !EOC
 !------------------------------------------------------------------------------
 !BOP
@@ -512,7 +528,7 @@ contains
 !
 ! !INTERFACE:
 !
-      subroutine Run(GC, IMPORT, EXPORT, CLOCK, RC)
+      subroutine modelAdvance(GC, IMPORT, EXPORT, CLOCK, RC)
 !
 ! !INPUT/OUTPUT PARAMETERS:
       type(ESMF_GridComp), intent(inout) :: GC     ! Gridded component 
@@ -744,8 +760,10 @@ contains
 
       RETURN_(ESMF_SUCCESS)
 
-      end subroutine Run
+      end subroutine ModelAdvance
 !EOC
+
+#if 0
 !------------------------------------------------------------------------------
 !BOP
 !
@@ -796,7 +814,7 @@ contains
 
       RETURN_(ESMF_SUCCESS)
       end subroutine Finalize
-
+#endif
 
 subroutine global_integral (QG,Q,PLE,IM,JM,KM,NQ)
 

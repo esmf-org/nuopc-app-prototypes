@@ -4,9 +4,9 @@
 !-------------------------------------------------------------------------
 !BOP
 
-! !MODULE:  GEOS\_ctmGridCompMod -- A Module to combine Chemistry, 
-!                                   advCore (Transport), Convection and 
-!                                   Diffusion Gridded Components
+! !MODULE:  CTM -- A Module to combine Chemistry, 
+!                  advCore (Transport), Convection and 
+!                  Diffusion Gridded Components
 !
 ! !INTERFACE:
 !
@@ -91,10 +91,6 @@
       logical :: do_ctmConvection = .FALSE.
       logical :: do_ctmDiffusion  = .FALSE.
       character(len=ESMF_MAXSTR) :: metType ! MERRA2 or MERRA1 or FPIT
-      integer :: ADV3 = 1
-      integer :: ECTM = 2
-      integer :: PTRA = 3
-      type(ESMF_GridComp) :: childcomp(3)
 
 !------------------------------------------------------------------------------
       contains
@@ -241,21 +237,21 @@
          ! Doing passive tracer experiment
          !--------------------------------
          call NUOPC_DriverAddComp(GC, 'DYNAMICS', AdvCSetServices, &
-            comp=childcomp(ADV3), rc=rc)
+            rc=rc)
          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
            return  ! bail out
  
          call NUOPC_DriverAddComp(GC, 'CTMenv', EctmSetServices, &
-            comp=childcomp(ECTM), rc=rc)
+            rc=rc)
          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
            return  ! bail out
 
          call NUOPC_DriverAddComp(GC, 'PTRACERS', pTraSetServices, &
-            comp=childcomp(PTRA), rc=rc)
+            rc=rc)
          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
@@ -374,7 +370,7 @@
       type (ESMF_Field)                   :: FIELD
       type (ESMF_State)                   :: DUMMY
       type (ESMF_Grid)                    :: grid
-
+      type (ESMF_GridComp), pointer       :: childcomp(:)
       integer                             :: NUM_TRACERS
       integer                             :: I
       integer                             :: NA
@@ -384,6 +380,9 @@
       character(len=ESMF_MAXSTR)          :: COMP_NAME
       type(ESMF_Config)                   :: config
       character(len=ESMF_MAXSTR)          :: IAm = "Initialize"
+      integer                             :: heartbeat_dt
+      integer                             :: dt
+      logical                             :: existDT
 
       ! Get the target components name and set-up traceback handle.
       ! -----------------------------------------------------------
@@ -394,6 +393,34 @@
             file=__FILE__)) &
             return  ! bail out
       Iam = trim(COMP_NAME) // "::" // TRIM(Iam)
+
+      call ESMF_ConfigFindLabel(config, "RUN_DT:", isPresent=existDT, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+           line=__LINE__, &
+           file=__FILE__)) &
+           return  ! bail out
+      if (existDT) then 
+          call ESMF_ConfigGetAttribute(config, dt,                     &
+                                   Label = "RUN_DT:",  rc=rc )
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+             line=__LINE__, &
+             file=__FILE__)) &
+             return  ! bail out
+      else 
+          call ESMF_ConfigGetAttribute(config, heartbeat_dt,             &
+                                   Label = "HEARTBEAT_DT:",  rc=rc )
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+             line=__LINE__, &
+             file=__FILE__)) &
+             return  ! bail out
+          dt = heartbeat_dt
+          call ESMF_ConfigSetAttribute(config, dt,                      &
+                                       Label = "RUN_DT:", rc=rc)
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+             line=__LINE__, &
+             file=__FILE__)) &
+             return  ! bail out
+      endif
 
       !call MAPL_TimerOn(STATE,"TOTAL")
       !call MAPL_TimerOn(STATE,"INITIALIZE")
@@ -414,12 +441,24 @@
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
-      do i=1,3
+      call NUOPC_DriverGetComp(GC, compList=childcomp, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+      do i=1, size(childcomp)
         call ESMF_GridCompSet(childcomp(i), grid=grid, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
+        !!! Set dt as RUN_DT to children component's attribute
+        call ESMF_AttributeSet(childcomp(i), "RUN_DT:", dt, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+        
       enddo  
 
       ! Call Initialize for every Child
@@ -562,7 +601,7 @@
       VERIFY_(STATUS)
 
       call ESMF_ConfigGetAttribute(CF, DT, Label="RUN_DT:" , RC=STATUS)
-      VERIFY_(STATUS)
+      VERIFY_(STATUS)     
 
       !---------------------
       ! Cinderella Component: to derive variables for other components
