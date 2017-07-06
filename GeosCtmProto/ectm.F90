@@ -746,7 +746,12 @@
       ! Get the time-step
       ! -----------------------
       ! call MAPL_GetResource( ggState, ndt, 'RUN_DT:', default=0, __RC__ )
-      DT = ndt
+
+      call ESMF_AttributeGet ( GC, DT, Label="RUN_DT:", RC=STATUS )
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
 
       !-----------------------------
       ! Required Imports and Exports
