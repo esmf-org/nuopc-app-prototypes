@@ -293,11 +293,8 @@ module IOComp
       type(ESMF_Mesh)                         :: mesh
       character(160)                          :: msgString
       type(ESMF_DistGrid)                     :: distgrid
-      integer                                 :: dimCount, tileCount, petCount
-      integer                                 :: deCountPTile, extraDEs
+      integer                                 :: dimCount, tileCount
       integer, allocatable                    :: minIndexPTile(:,:), maxIndexPTile(:,:)
-      integer, allocatable                    :: regDecompPTile(:,:)
-      integer                                 :: i, j
     
       if (present(rc)) rc = ESMF_SUCCESS
       
@@ -372,29 +369,10 @@ module IOComp
                 line=__LINE__, &
                 file=__FILE__)) &
                 return  ! bail out
-              ! construct a default regDecompPTile -> TODO: move this into ESMF as default
-              call ESMF_GridCompGet(gcomp, petCount=petCount, rc=rc)
-              if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-                line=__LINE__, &
-                file=__FILE__)) &
-                return  ! bail out
-              allocate(regDecompPTile(dimCount, tileCount))
-              deCountPTile = petCount/tileCount
-              extraDEs = max(0, petCount-deCountPTile)
-              do i=1, tileCount
-                if (i<=extraDEs) then
-                  regDecompPTile(1, i) = deCountPTile + 1
-                else
-                  regDecompPTile(1, i) = deCountPTile
-                endif
-                do j=2, dimCount
-                  regDecompPTile(j, i) = 1
-                enddo
-              enddo
               ! create the new DistGrid with the same minIndexPTile and maxIndexPTile,
               ! but with a default regDecompPTile
               distgrid = ESMF_DistGridCreate(minIndexPTile=minIndexPTile, &
-                maxIndexPTile=maxIndexPTile, regDecompPTile=regDecompPTile, rc=rc)
+                maxIndexPTile=maxIndexPTile, rc=rc)
               if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                 line=__LINE__, &
                 file=__FILE__)) &
@@ -411,7 +389,7 @@ module IOComp
                 file=__FILE__)) &
                 return  ! bail out
               ! local clean-up
-              deallocate(minIndexPTile, maxIndexPTile, regDecompPTile)
+              deallocate(minIndexPTile, maxIndexPTile)
             elseif (geomtype==ESMF_GEOMTYPE_MESH) then
               ! empty field holds a Mesh with DistGrid
               call ESMF_FieldGet(field, mesh=mesh, rc=rc)
@@ -445,29 +423,10 @@ module IOComp
                 line=__LINE__, &
                 file=__FILE__)) &
                 return  ! bail out
-              ! construct a default regDecompPTile -> TODO: move this into ESMF as default
-              call ESMF_GridCompGet(gcomp, petCount=petCount, rc=rc)
-              if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-                line=__LINE__, &
-                file=__FILE__)) &
-                return  ! bail out
-              allocate(regDecompPTile(dimCount, tileCount))
-              deCountPTile = petCount/tileCount
-              extraDEs = max(0, petCount-deCountPTile)
-              do i=1, tileCount
-                if (i<=extraDEs) then
-                  regDecompPTile(1, i) = deCountPTile + 1
-                else
-                  regDecompPTile(1, i) = deCountPTile
-                endif
-                do j=2, dimCount
-                  regDecompPTile(j, i) = 1
-                enddo
-              enddo
               ! create the new DistGrid with the same minIndexPTile and maxIndexPTile,
               ! but with a default regDecompPTile
               distgrid = ESMF_DistGridCreate(minIndexPTile=minIndexPTile, &
-                maxIndexPTile=maxIndexPTile, regDecompPTile=regDecompPTile, rc=rc)
+                maxIndexPTile=maxIndexPTile, rc=rc)
               if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                 line=__LINE__, &
                 file=__FILE__)) &
@@ -484,7 +443,7 @@ module IOComp
                 file=__FILE__)) &
                 return  ! bail out
               ! local clean-up
-              deallocate(minIndexPTile, maxIndexPTile, regDecompPTile)
+              deallocate(minIndexPTile, maxIndexPTile)
             else
               call ESMF_LogSetError(ESMF_RC_NOT_VALID, &
                 msg="Unsupported geom object found in "// &
