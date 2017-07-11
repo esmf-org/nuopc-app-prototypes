@@ -16,13 +16,13 @@
       use NUOPC_Model, &
            model_routine_SS      => SetServices, &
            model_label_Advance   => label_Advance, &
-           model_label_DataINitialize   => label_DataInitialize
+           model_label_DataInitialize   => label_DataInitialize
       use NUOPC_Generic
-      use m_set_eta,       only: set_eta
+!      use m_set_eta,       only: set_eta
       use MAPL_Mod
 !      USE Chem_UtilMod
       
-      USE jw, only : tracer_q, tracer_q1_q2, tracer_q3
+!      USE jw, only : tracer_q, tracer_q1_q2, tracer_q3
 
       implicit none
 !
@@ -98,8 +98,6 @@ contains
       type (ESMF_Config )              :: configFile
       type (mystates_WRAP)             :: mystates_ptr
       type (my_States), pointer        :: mystates
-      CHARACTER(LEN=ESMF_MAXSTR)       :: tempNames(150)
-      CHARACTER(LEN=38400)             :: longList
       INTEGER                          :: numTracers, dims(3)
 
       ! Get my name and set-up traceback handle
@@ -170,10 +168,14 @@ contains
      type(ESMF_Config)                :: configFile
      type(MAPL_VarSpec), pointer      :: importSpec(:), exportSpec(:)
      character(len=ESMF_MAXSTR)       :: FRIENDLIES
+     type (mystates_WRAP)             :: mystates_ptr
      type (T_pTracers_STATE), pointer :: state 
      type (pTracers_wrap)             :: wrap
      INTEGER                          :: numTracers, dims(3)
      INTEGER                          :: n, i, ic
+     CHARACTER(LEN=ESMF_MAXSTR)       :: tempNames(150)
+     CHARACTER(LEN=38400)             :: longList
+     character(len=2)                 :: id
      character(len=ESMF_MAXSTR)       :: short_name, long_name
 
      rc = ESMF_SUCCESS
@@ -184,13 +186,13 @@ contains
         file=__FILE__)) &
         return  ! bail out
 
-     call ESMF_ConfigLoadFile(configFile, TRIM(rcfilen), rc=STATUS )
+     call ESMF_ConfigLoadFile(configFile, TRIM(rcfilen), rc=rc )
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
 
-     call ESMF_GridCompSet(comp, config=ConfigFile, rc=rc)
+     call ESMF_GridCompSet(GC, config=ConfigFile, rc=rc)
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
        line=__LINE__, &
        file=__FILE__)) &
@@ -214,7 +216,7 @@ contains
 
       ! Wrap internal state for storing in GC; rename legacyState
       ! -------------------------------------
-      allocate ( state, stat=STATUS )
+      allocate ( state, stat=rc )
       wrap%ptr => state
 
 ! !IMPORT STATE:
@@ -251,7 +253,7 @@ contains
            line=__LINE__, &
            file=__FILE__)) &
            return  ! bail out
-        call NUOPC_Advertise(importState, &
+        call NUOPC_Advertise(IMPORT, &
            StandardName=long_name, name=short_name, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
@@ -275,7 +277,7 @@ contains
          end do
 
       else
-         call rcEsmfReadTable2String(configFile, longList, "vNames::", rc=STATUS)
+         call rcEsmfReadTable2String(configFile, longList, "vNames::", rc=rc)
      
          !-------------------------------------
          ! Obtain the name of all the tracers
@@ -286,22 +288,18 @@ contains
 
          numTracers = Count (tempNames(:) /= '')
 
-         allocate(state%vname(numTracers), stat=STATUS)
-         VERIFY_(STATUS)
+         allocate(state%vname(numTracers))
 
          state%vname(:) = tempNames(1:numTracers)
 
-         allocate(state%vunits(numTracers), stat=STATUS)
-         VERIFY_(STATUS)
+         allocate(state%vunits(numTracers))
 
-         allocate(state%vtitle(numTracers), stat=STATUS)
-         VERIFY_(STATUS)
+         allocate(state%vtitle(numTracers))
          state%vtitle(:) = ''
 
          ! Obtain the units of tracers
          !----------------------------
-         call rcEsmfReadTable2String(configFile, longList, "vunits::", rc=STATUS)
-         VERIFY_(STATUS)
+         call rcEsmfReadTable2String(configFile, longList, "vunits::", rc=rc)
 
          tempNames(:) = ''
          call constructListNames(tempNames, longList)
@@ -331,14 +329,14 @@ contains
       !---------------------------
       ! Allocate the state tracers
       !---------------------------
-      allocate(state%tr(numTracers), stat=rc)
+      allocate(state%tr(numTracers))
 
 
 !                       ------------------------
 !                       ESMF Functional Services
 !                       ------------------------
 
-      call ESMF_UserCompSetInternalState ( GC, 'PTRACERS', WRAP, rc=rc )
+      call ESMF_UserCompSetInternalState ( GC, 'PTRACERS', WRAP, rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
        line=__LINE__, &
        file=__FILE__)) &
@@ -372,7 +370,7 @@ contains
            line=__LINE__, &
            file=__FILE__)) &
            return  ! bail out
-        call NUOPC_Advertise(exportState, &
+        call NUOPC_Advertise(EXPORT, &
            StandardName=long_name, name=short_name, rc=rc) 
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
@@ -503,7 +501,7 @@ contains
     subroutine realizeConnectedFields(state, spec, grid, rc)
       ! TODO: this method may move into the NUOPC_ utility layer
       type(ESMF_State)                :: state
-      type(MAPL_VarSpec)              :: spec
+      type(MAPL_VarSpec),pointer      :: spec(:)
       type(ESMF_Grid)                 :: grid
       integer, intent(out), optional  :: rc
       ! local variables
@@ -560,16 +558,10 @@ contains
 
       
 !----------------------------------------------------------------------
-      subroutine initTracer ( GC, IMPORT, EXPORT, CLOCK, RC )
+      subroutine initTracer ( GC, RC )
 !
-! !INPUT/OUTPUT PARAMETERS:
-      type(ESMF_GridComp), intent(inout) :: GC     ! Gridded component 
-      type(ESMF_State),    intent(inout) :: IMPORT ! Import state
-      type(ESMF_State),    intent(inout) :: EXPORT ! Export state
-      type(ESMF_Clock),    intent(inout) :: CLOCK  ! The clock
-!
-! !OUTPUT PARAMETERS:
-      integer, optional,   intent(  out) :: RC     ! Error code
+      type(ESMF_GridComp)      :: GC     ! Gridded component 
+      integer,   intent(  out) :: RC     ! Error code
 !
 ! !DESCRIPTION: The Initialize method of pTracers gridded component.
 !   \newline
@@ -585,15 +577,24 @@ contains
       real(REAL8) :: dz, ztop, height, pressure
       real(REAL8) :: LONc,LATc
       real(REAL8) :: eta, eta_top, rot_ang, ptop, pint
-      real(ESMF_TYPEKIND_R8), pointer  :: LONS   (:,:)
-      real(ESMF_TYPEKIND_R8), pointer  :: LATS   (:,:)
+      real(ESMF_KIND_R8), pointer  :: LONS   (:,:)
+      real(ESMF_KIND_R8), pointer  :: LATS   (:,:)
       type (mystates_WRAP)             :: mystates_ptr
       type (MAPL_VarSpec), pointer        :: internalSpec(:)
       type (T_pTracers_STATE), pointer :: pTracers_STATE 
       type (pTracers_wrap)             :: WRAP
-      real(REAL8), parameter    :: r0_6=0.6
-      real(REAL8), parameter    :: r1_0=1.0
-
+      real(REAL8), parameter           :: r0_6=0.6
+      real(REAL8), parameter           :: r1_0=1.0
+      type(ESMF_Grid)                  :: esmfGrid
+      type(ESMF_Field)                 :: field
+      integer                          :: minIndex(2)
+      integer                          :: maxIndex(2)
+      integer                          :: tileno, nSpc
+      integer                          :: i, j, k, ic
+      character(len=ESMF_MAXSTR)       :: short_name
+      character(len=ESMF_MAXSTR)       :: Iam = 'SetServices'
+      type(ESMF_State)                 :: IMPORT, EXPORT
+      type(ESMF_State)                 :: INTERNAL
 
       ! Get my private state from the component
       !----------------------------------------
@@ -604,7 +605,7 @@ contains
            file=__FILE__)) &
            return  ! bail out
 
-      internalSpec => mystate_ptr%ptr%InternalSpec
+      internalSpec => mystates_ptr%ptr%InternalSpec
 
       call ESMF_UserCompGetInternalState(gc, 'PTRACERS', WRAP, rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -614,10 +615,21 @@ contains
 
       pTracers_STATE => WRAP%PTR
 
-      call ESMF_GridCompGet ( GC, GRID=esmfGrid, rc=STATUS)
+      call ESMF_GridCompGet ( GC, GRID=esmfGrid, importState=IMPORT, &
+                            exportState=EXPORT, rc=RC)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+           line=__LINE__, &
+           file=__FILE__)) &
+           return  ! bail out
 
       call ESMF_GridGet(esmfGrid, staggerloc = ESMF_STAGGERLOC_CENTER, &
            minIndex = minIndex, maxIndex=maxIndex, tile = tileno, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+           line=__LINE__, &
+           file=__FILE__)) &
+           return  ! bail out
+
+      call ESMF_AttributeGet(esmfGrid, value=KM, name="GRID_LM", rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
@@ -639,10 +651,11 @@ contains
       !  ---------------------------------------------------------
       ! call MAPL_Get ( ggSTATE, INTERNALSPEC=InternalSpec, &
       !                INTERNAL_ESMF_STATE=internal, &
-      !                LM = KM, lats = LATS, lons = LONS, RC=STATUS  )
-      ! VERIFY_(STATUS)
+      !                LM = KM, lats = LATS, lons = LONS, RC=RC  )
+      ! VERIFY_(RC)
 
       ! How do I find out KM that is defined in GEOSCTM.rc, the config for ctm component?
+      ! defined it as an attribute to the grid
       KS = 1
       KE = KM
 
@@ -659,27 +672,27 @@ contains
          AllOCATE( AK(0:KM))
          AllOCATE( BK(0:KM))
   
-         call set_eta(KM,LS,PTOP,PINT,AK,BK)
-         rot_ang = 0
+         !call set_eta(KM,LS,PTOP,PINT,AK,BK)
+         !rot_ang = 0
       end if
 
       nSpc = size(pTracers_STATE%tr(:))
 
       ! Consistency Checks
       !-------------------
-      ASSERT_ ( size(InternalSpec) == nSpc )
+      ! ASSERT_ ( size(InternalSpec) == nSpc )
 
       do ic = 1, size(InternalSpec)
          call MAPL_VarSpecGet ( InternalSpec(ic),          &
                              SHORT_NAME = short_name,  &
-                             RC=STATUS )
+                             RC=RC )
          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
            return  ! bail out
 
          ! Should I get it from the export state????
-         call ESMF_StateGet(EXPORT, NAME = short_name, field = field, nc=nc)  
+         call ESMF_StateGet(EXPORT, short_name, field, rc=rc)  
          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
@@ -695,8 +708,8 @@ contains
         !CALL MAPL_GetPointer ( internal, &
          !                       NAME = short_name, &
          !                       ptr  = pTracers_STATE%tr(ic)%pArray3D, &
-         !                       rc   = STATUS )
-         VERIFY_(STATUS)
+         !                       rc   = RC )
+         !VERIFY_(RC)
 
          ! Determine the concentrations of idealized tracers
          !--------------------------------------------------
@@ -716,7 +729,8 @@ contains
                      do i=IS,IE
                         LONc = LONS(i,j)
                         LATc = LATS(i,j)
-                        dummy_1 = tracer_q1_q2(LONc,LATc,eta,rot_ang,r0_6)
+                        !dummy_1 = tracer_q1_q2(LONc,LATc,eta,rot_ang,r0_6)
+                        dummy_1 = 2.0
                         pTracers_STATE%tr(ic)%pArray3D(i,j,k) = dummy_1
                      enddo
                   enddo
@@ -728,7 +742,8 @@ contains
                      do i=IS,IE
                         LONc = LONS(i,j)
                         LATc = LATS(i,j)
-                        dummy_1 = tracer_q1_q2(LONc,LATc,eta,rot_ang,r1_0)
+                        !dummy_1 = tracer_q1_q2(LONc,LATc,eta,rot_ang,r1_0)
+                        dummy_1 = 3.0
                         pTracers_STATE%tr(ic)%pArray3D(i,j,k) = dummy_1
                      enddo
                   enddo
@@ -740,7 +755,8 @@ contains
                      do i=IS,IE
                         LONc = LONS(i,j)
                         LATc = LATS(i,j)
-                        dummy_1 = tracer_q3(LONc,LATc,eta,rot_ang)
+                        !dummy_1 = tracer_q3(LONc,LATc,eta,rot_ang)
+                        dummy_1 = 4.0
                         pTracers_STATE%tr(ic)%pArray3D(i,j,k) = dummy_1
                      enddo
                   enddo
@@ -765,8 +781,8 @@ contains
       if ( MAPL_am_I_root() ) then
          print *,  trim(Iam)//": IMPORT State" 
                                  call ESMF_StatePrint ( IMPORT)
-         print *,  trim(Iam)//": INTERNAL State" 
-                                 call ESMF_StatePrint ( INTERNAL )
+!         print *,  trim(Iam)//": INTERNAL State" 
+!                                 call ESMF_StatePrint ( WRAP )
          print *,  trim(Iam)//": EXPORT State" 
                                  call ESMF_StatePrint ( EXPORT )
       end if
@@ -780,7 +796,7 @@ contains
 
       RETURN_(ESMF_SUCCESS)
 
-      end subroutine Initialize_
+      end subroutine initTracer
 !EOC
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !BOP
@@ -843,6 +859,7 @@ contains
       ! Retrieve the pointer to the generic state
       !------------------------------------------
 
+#if 0
       call MAPL_GetObjectFromGC ( GC, ggState, RC=STATUS)
       VERIFY_(STATUS)
 
@@ -898,9 +915,10 @@ contains
       call MAPL_TimerOff (ggState,"RUN" )
       call MAPL_TimerOff (ggState,"TOTAL"      )
 
+#endif
       RETURN_(ESMF_SUCCESS)
 
-      end subroutine Run_
+      end subroutine modelAdvance
 !EOC
 !-------------------------------------------------------------------------
 !BOP
@@ -1051,7 +1069,7 @@ contains
 
       ! Get time step
       ! -------------
-      call ESMF_AttributeGet ( GC, cdt, Label="RUN_DT:", RC=STATUS )
+      call ESMF_AttributeGet ( GC, "RUN_DT:", cdt, RC=STATUS )
       VERIFY_(STATUS)
 
       ! Need code to extract nymd(20050205), nhms(120000) from clock

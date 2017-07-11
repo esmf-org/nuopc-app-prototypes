@@ -19,10 +19,10 @@
       use NUOPC_Driver, &
         driver_routine_SS             => SetServices, &
         driver_label_SetModelServices => label_SetModelServices
-
-      use ENVCTM,        only : EctmSetServices  => SetServices
-      use ADVCORE,       only : AdvCSetServices  => SetServices
-      use PTRACER,       only : pTraSetServices  => SetServices
+      use NUOPC_Connector, only : cplSS            => SetServices
+      use ENVCTM,          only : EctmSetServices  => SetServices
+      use ADVCORE,         only : AdvCSetServices  => SetServices
+      use PTRACER,         only : pTraSetServices  => SetServices
 !
       implicit none
       private
@@ -127,9 +127,10 @@
 
       ! Get my name and set-up traceback handle
       ! ---------------------------------------
+      RC=ESMF_SUCCESS
 
       Iam = 'SetServices'
-      call ESMF_GridCompGet( GC, NAME=COMP_NAME, RC=STATUS )
+      call ESMF_GridCompGet( GC, NAME=COMP_NAME, RC=rc )
       VERIFY_(STATUS)
       Iam = trim(COMP_NAME) // "::" // Iam
 
@@ -143,8 +144,8 @@
       ! Register services for this component
       ! ------------------------------------
 
-      call NUOPC_GridCompSetEntryPoint (GC, ESMF_METHOD_INITIALIZE, &
-      	   phaseLabelList=(/"IPDv00p1"/), userRoutine=Initialize, RC=STATUS )
+      call NUOPC_CompSetEntryPoint (GC, ESMF_METHOD_INITIALIZE, &
+      	   phaseLabelList=(/"IPDv00p1"/), userRoutine=Initialize, RC=rc )
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
           line=__LINE__, &
           file=__FILE__)) &
@@ -158,6 +159,7 @@
         file=__FILE__)) &
         return  ! bail out
 
+      return
   end subroutine SetServices
 
   !-----------------------------------------------------------------------------
@@ -168,6 +170,9 @@
 
       type (ESMF_Config)            :: configFile
       CHARACTER(LEN=ESMF_MAXSTR)    :: rcfilen = 'CTM_GridComp.rc'
+      type (ESMF_CplComp)          :: conn
+
+      RC=ESMF_SUCCESS
 
       ! Choose children to birth and which children not to conceive
       ! -----------------------------------------------------------
@@ -259,7 +264,7 @@
 
          ! Add connectors to connect the components
          ! ECTM -> ADVCORE
-         call NUOPC_DriverAddComp(driver, srcCompLabel="CTMenv", dstCompLabel="DYNAMICS", &
+         call NUOPC_DriverAddComp(GC, srcCompLabel="CTMenv", dstCompLabel="DYNAMICS", &
               compSetServicesRoutine=cplSS, comp=conn, rc=rc)
          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
@@ -267,7 +272,7 @@
             return  ! bail out
          ! Add connectors to connect the components
          ! ADVCORE -> ECTM
-         call NUOPC_DriverAddComp(driver, srcCompLabel="DYNAMICS", dstCompLabel="CTMenv", &
+         call NUOPC_DriverAddComp(GC, srcCompLabel="DYNAMICS", dstCompLabel="CTMenv", &
               compSetServicesRoutine=cplSS, comp=conn, rc=rc)
          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
@@ -275,7 +280,7 @@
             return  ! bail out
          ! Add connectors to connect the components
          ! ECTM -> PTRACER
-         call NUOPC_DriverAddComp(driver, srcCompLabel="CTMenv", dstCompLabel="PTRACERS", &
+         call NUOPC_DriverAddComp(GC, srcCompLabel="CTMenv", dstCompLabel="PTRACERS", &
               compSetServicesRoutine=cplSS, comp=conn, rc=rc)
          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
@@ -283,7 +288,7 @@
             return  ! bail out
          ! Add connectors to connect the components
          ! PTRACERS -> ADVCORE
-         call NUOPC_DriverAddComp(driver, srcCompLabel="PTRACERS", dstCompLabel="DYNAMICS", &
+         call NUOPC_DriverAddComp(GC, srcCompLabel="PTRACERS", dstCompLabel="DYNAMICS", &
               compSetServicesRoutine=cplSS, comp=conn, rc=rc)
          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
@@ -291,7 +296,7 @@
             return  ! bail out
          ! Add connectors to connect the components
          ! ADVCORE -> PTRACERS
-         call NUOPC_DriverAddComp(driver, srcCompLabel="DYNAMICS", dstCompLabel="PTRACERS", &
+         call NUOPC_DriverAddComp(GC, srcCompLabel="DYNAMICS", dstCompLabel="PTRACERS", &
               compSetServicesRoutine=cplSS, comp=conn, rc=rc)
          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
@@ -300,11 +305,13 @@
 
       END IF
 
-      call MAPL_TimerAdd(GC, name="INITIALIZE"    ,RC=STATUS)
+#if 0
+      call MAPL_TimerAdd(GC, name="INITIALIZE"    ,RC=rc)
       VERIFY_(STATUS)
 
-      call MAPL_TimerAdd(GC, name="RUN"           ,RC=STATUS)
+      call MAPL_TimerAdd(GC, name="RUN"           ,RC=rc)
       VERIFY_(STATUS)
+#endif
 
       ! -------------------------------
       ! Connectivities between Children
@@ -335,7 +342,7 @@
       !call MAPL_GenericSetServices ( GC, RC=STATUS )
       !VERIFY_(STATUS)
 
-      RETURN_(ESMF_SUCCESS)
+      RETURN
   
       end subroutine SetModelServices
 
@@ -346,10 +353,13 @@
 !
 ! !INTERFACE:
 !
-      subroutine Initialize ( GC, RC )
+      subroutine Initialize ( GC, IMPORT, EXPORT, CLOCK, RC )
 !
 ! !INPUT/OUTPUT PARAMETERS:
       type(ESMF_GridComp), intent(inout) :: GC     ! Gridded component 
+      type(ESMF_State)     :: IMPORT
+      type(ESMF_State)     :: EXPORT
+      type(ESMF_Clock)     :: CLOCK
 
 ! !INPUT/OUTPUT PARAMETERS:
       integer,             intent(  out) :: RC     ! Error code
@@ -386,6 +396,8 @@
 
       ! Get the target components name and set-up traceback handle.
       ! -----------------------------------------------------------
+
+      RC = ESMF_SUCCESS
 
       call ESMF_GridCompGet ( GC, name=COMP_NAME, config=config, RC=rc )
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -513,12 +525,15 @@
 
       ENDIF
 #endif
+
+#if 0
       call MAPL_TimerOff(STATE,"INITIALIZE")
       call MAPL_TimerOff(STATE,"TOTAL")
-
+#endif
       ! All Done
       !---------
-      RETURN_(ESMF_SUCCESS)
+     
+      RETURN
 
       end subroutine Initialize
 
@@ -791,13 +806,14 @@ subroutine My_GridCreate(GC, rc)
       if (mod(NY, 6) /= 0) then
         call ESMF_LogSetError(ESMF_RC_ARG_BAD, msg='NY has to be multiple of 6', &
           line=__LINE__, &
-          file=__FILE__, rcToReturn=rc) &
+          file=__FILE__, rcToReturn=rc) 
         return
       endif
       allocate(regDecomp(2,6))
       regDecomp(1,:)=NX
       regDecomp(2,:)=NY/6
-      grid = ESMC_GridCreateCubedSphere(IM_WORLD, regDecompPTile = regDecomp, name=Gridname, rc=rc)
+      grid = ESMF_GridCreateCubedSphere(IM_WORLD, regDecompPTile = regDecomp, &
+           name=trim(Gridname), rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
@@ -822,4 +838,4 @@ end subroutine My_GridCreate
 
 !EOC
 !------------------------------------------------------------------------------
-      end module GEOS_ctmGridCompMod
+      end module CTM
