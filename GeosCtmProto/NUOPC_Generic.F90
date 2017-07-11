@@ -422,7 +422,11 @@ contains
        file=__FILE__)) &
        return  ! bail out
 
-     if (.not. NUOPC_FieldDictionaryHasEntry(LONG_NAME)) then
+
+    ! If DATATYPE is MAPL_Bundleitem, we need to do something different:: what??
+    ! ignore it for now
+    if (DATATYPE .ne. MAPL_Bundleitem) then
+    if (.not. NUOPC_FieldDictionaryHasEntry(LONG_NAME)) then
         call NUOPC_FieldDictionaryAddEntry( &
           standardName=LONG_NAME, &
           canonicalUnits=UNITS, &
@@ -431,9 +435,9 @@ contains
           line=__LINE__, &
           file=__FILE__)) &
           return  ! bail out
-      endif
-
-    RETURN_(ESMF_SUCCESS)
+     endif
+     endif
+     RETURN_(ESMF_SUCCESS)
   end subroutine NUOPC_AddVarSpec
 
   function NUOPC_FieldCreateFromSpec(SPEC,DEFER,RC)

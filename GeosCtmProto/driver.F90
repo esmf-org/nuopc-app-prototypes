@@ -10,9 +10,9 @@ module driverCTM
     driver_routine_SS             => SetServices, &
     driver_label_SetModelServices => label_SetModelServices
   
-  use CTM, only: atmSS => SetServices
-  use ExtData, only: extDataSS => SetServices
-  use ExtData, only: historySS => SetServices
+  use CTM, only: ctmSS => SetServices
+!  use ExtData, only: extDataSS => SetServices
+!  use HISTORY, only: historySS => SetServices
   
   use NUOPC_Connector, only: cplSS => SetServices
   
@@ -67,13 +67,27 @@ module driverCTM
     type(ESMF_GridComp)           :: comp
     type(ESMF_CplComp)            :: conn
     type(ESMF_Config)             :: config
-    character(len=ESMF_MAXSTR)    :: histConfigfile
+    character(len=ESMF_MAXSTR)    :: hisConfigfile
     character(len=ESMF_MAXSTR)    :: extConfigfile
     character(len=ESMF_MAXSTR)    :: ctmConfigfile
     character(len=ESMF_MAXSTR)    :: name
     logical                       :: AmIRoot_
     integer                       :: HEARTBEAT_DT
     integer                       :: RUN_DT
+
+     integer        :: BEG_YY
+     integer        :: BEG_MM
+     integer        :: BEG_DD
+     integer        :: BEG_H
+     integer        :: BEG_M
+     integer        :: BEG_S
+
+     integer        :: END_YY
+     integer        :: END_MM
+     integer        :: END_DD
+     integer        :: END_H
+     integer        :: END_M
+     integer        :: END_S
 
     rc = ESMF_SUCCESS
 

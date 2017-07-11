@@ -57,13 +57,13 @@ module ADVCORE
 
       use ESMF
       use MAPL_Mod
-      use NUOPC_Mod
+      use NUOPC
       use NUOPC_Model, &
            model_routine_SS      => SetServices, &
            model_label_Advance   => label_Advance
       use NUOPC_Generic
-      use m_set_eta,       only: set_eta
 #if 0
+      use m_set_eta,       only: set_eta
       use fv_arrays_mod,   only: fv_atmos_type, FVPRC, REAL4, REAL8
       use fms_mod,         only: fms_init, set_domain, nullify_domain
       use fv_control_mod,  only: fv_init, fv_end
@@ -83,13 +83,13 @@ module ADVCORE
       integer     :: q_split
       logical     :: z_tracer
       logical     :: fill
-      real(FVPRC) :: dt
+!      real(FVPRC) :: dt
       logical     :: FV3_DynCoreIsRunning=.false.
       integer     :: AdvCore_Advection=1
       logical     :: chk_mass=.false.
 
       integer,  parameter :: ntiles_per_pe = 1
-      type(fv_atmos_type), save :: FV_Atm(ntiles_per_pe)
+!      type(fv_atmos_type), save :: FV_Atm(ntiles_per_pe)
 
 ! Tracer I/O History stuff
 ! -------------------------------------
@@ -97,8 +97,8 @@ module ADVCORE
       integer                    :: ntracer
       character(len=ESMF_MAXSTR) :: myTracer
       character(len=ESMF_MAXSTR) :: tMassStr
-      real(REAL8), SAVE          :: TMASS0(ntracers)
-      real(REAL8), SAVE          ::  MASS0
+      real(ESMF_KIND_R8), SAVE          :: TMASS0(ntracers)
+      real(ESMF_KIND_R8), SAVE          ::  MASS0
       logical    , SAVE          :: firstRun=.true.
 
 ! !PUBLIC MEMBER FUNCTIONS:
@@ -145,8 +145,12 @@ contains
       ! Get my name and set-up traceback handle
       ! ---------------------------------------
     
-      call ESMF_GridCompGet( GC, NAME=COMP_NAME, RC=STATUS )
-      VERIFY_(STATUS)
+      call ESMF_GridCompGet( GC, NAME=COMP_NAME, RC=rc )
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
       Iam = trim(COMP_NAME) // 'SetServices'
 
       configFile = ESMF_ConfigCreate(rc=rc )
@@ -155,13 +159,13 @@ contains
         file=__FILE__)) &
         return  ! bail out
 
-      call ESMF_ConfigLoadFile(configFile, TRIM(rcfilen), rc=STATUS )
+      call ESMF_ConfigLoadFile(configFile, TRIM(rcfilen), rc=rc )
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
 
-      call ESMF_GridCompSet(comp, config=ConfigFile, rc=rc)
+      call ESMF_GridCompSet(GC, config=ConfigFile, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
        line=__LINE__, &
        file=__FILE__)) &
@@ -216,6 +220,14 @@ contains
      type(ESMF_Clock)     :: CLOCK
      integer, intent(out) :: rc
 
+     type (mystates_WRAP)         :: mystates_ptr
+     type(MAPL_VarSpec), pointer  :: importSpec(:)
+     type(MAPL_VarSpec), pointer  :: exportSpec(:)
+     character(len=ESMF_MAXSTR)   :: short_name
+     character(len=ESMF_MAXSTR)   :: long_name
+     integer                      :: mytype
+     integer                      :: i
+         
 ! !IMPORT STATE:
 !
     call NUOPC_AddImportSpec ( gc,                                  &
@@ -225,7 +237,10 @@ contains
          PRECISION  = ESMF_KIND_R8,                                &
          DIMS       = MAPL_DimsHorzVert,                           &
          VLOCATION  = MAPL_VLocationCenter,             RC=RC  )
-     VERIFY_(STATUS)
+     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+       line=__LINE__, &
+       file=__FILE__)) &
+       return  ! bail out
 
     call NUOPC_AddImportSpec ( gc,                                  &
          SHORT_NAME = 'MFY',                                       &
@@ -234,7 +249,10 @@ contains
          PRECISION  = ESMF_KIND_R8,                                &
          DIMS       = MAPL_DimsHorzVert,                           &
          VLOCATION  = MAPL_VLocationCenter,             RC=RC  )
-     VERIFY_(STATUS)
+     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+       line=__LINE__, &
+       file=__FILE__)) &
+       return  ! bail out
 
     call NUOPC_AddImportSpec ( gc,                                  &
          SHORT_NAME = 'CX',                                        &
@@ -243,7 +261,10 @@ contains
          PRECISION  = ESMF_KIND_R8,                                &
          DIMS       = MAPL_DimsHorzVert,                           &
          VLOCATION  = MAPL_VLocationCenter,             RC=RC  )
-     VERIFY_(STATUS)
+     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+       line=__LINE__, &
+       file=__FILE__)) &
+       return  ! bail out
 
     call NUOPC_AddImportSpec ( gc,                                  &
          SHORT_NAME = 'CY',                                        &
@@ -252,7 +273,10 @@ contains
          PRECISION  = ESMF_KIND_R8,                                &
          DIMS       = MAPL_DimsHorzVert,                           &
          VLOCATION  = MAPL_VLocationCenter,             RC=RC  )
-     VERIFY_(STATUS)
+     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+       line=__LINE__, &
+       file=__FILE__)) &
+       return  ! bail out
 
     call NUOPC_AddImportSpec ( gc,                                  &
          SHORT_NAME = 'PLE0',                                      &
@@ -261,7 +285,10 @@ contains
          PRECISION  = ESMF_KIND_R8,                                &
          DIMS       = MAPL_DimsHorzVert,                           &
          VLOCATION  = MAPL_VLocationEdge,             RC=RC  )
-     VERIFY_(STATUS)
+     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+       line=__LINE__, &
+       file=__FILE__)) &
+       return  ! bail out
 
     call NUOPC_AddImportSpec ( gc,                                  &
          SHORT_NAME = 'PLE1',                                      &
@@ -270,7 +297,10 @@ contains
          PRECISION  = ESMF_KIND_R8,                                &
          DIMS       = MAPL_DimsHorzVert,                           &
          VLOCATION  = MAPL_VLocationEdge,             RC=RC  )
-     VERIFY_(STATUS)
+     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+       line=__LINE__, &
+       file=__FILE__)) &
+       return  ! bail out
 
     call NUOPC_AddImportSpec(GC,                                  &
        SHORT_NAME         = 'TRADV',                             &
@@ -280,28 +310,38 @@ contains
        VLOCATION          = MAPL_VLocationCenter,                &
        DATATYPE           = MAPL_BundleItem,                     &
                                                       RC=RC  )
-     VERIFY_(STATUS)
+     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+       line=__LINE__, &
+       file=__FILE__)) &
+       return  ! bail out
 
+      call ESMF_UserCompGetInternalState(gc, 'MAPL_VarSpec', mystates_ptr, rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+           line=__LINE__, &
+           file=__FILE__)) &
+           return  ! bail out
+     
      !Advertize the import fields
      importSpec => mystates_ptr%ptr%importSpec
 
      do i=1,size(importSpec)
         call MAPL_VarSpecGet(importSpec(i), SHORT_NAME=short_name, LONG_NAME=long_name, &
-             DATATYPE=mytype, rc=rc)
+             STAT=mytype, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
            return  ! bail out
 
        !!! Need to do something different if mytype is MAPL_BundleItem, Nothing has been added into
-       !!! the bundle yet.
-
-        call NUOPC_Advertise(importState, &
+       !!! the bundle yet.  Ignore it for now
+       if (mytype .ne. MAPL_BundleItem) then
+        call NUOPC_Advertise(IMPORT, &
            StandardName=long_name, name=short_name, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
            return  ! bail out
+       endif
      end do
 
 ! !EXPORT STATE:
@@ -312,7 +352,10 @@ contains
           UNITS      = 'm+2'  ,                                     &
           DIMS       = MAPL_DimsHorzOnly,                           &
           VLOCATION  = MAPL_VLocationNone,               RC=RC  )
-     VERIFY_(STATUS)
+     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+       line=__LINE__, &
+       file=__FILE__)) &
+       return  ! bail out
 
 ! 3D Tracers
      do ntracer=1,ntracers
@@ -323,8 +366,34 @@ contains
              UNITS      = '1',                                    &
              DIMS       = MAPL_DimsHorzVert,                      &
              VLOCATION  = MAPL_VLocationCenter,               RC=RC  )
-        VERIFY_(STATUS)
+     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+       line=__LINE__, &
+       file=__FILE__)) &
+       return  ! bail out
      enddo
+
+     !Advertize the import fields
+     exportSpec => mystates_ptr%ptr%exportSpec
+
+     do i=1,size(exportSpec)
+        call MAPL_VarSpecGet(exportSpec(i), SHORT_NAME=short_name, LONG_NAME=long_name, &
+             STAT=mytype, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+           line=__LINE__, &
+           file=__FILE__)) &
+           return  ! bail out
+
+       !!! Need to do something different if mytype is MAPL_BundleItem, Nothing has been added into
+       !!! the bundle yet.  Ignore it for now
+       if (mytype .ne. MAPL_BundleItem) then
+        call NUOPC_Advertise(EXPORT, &
+           StandardName=long_name, name=short_name, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+           line=__LINE__, &
+           file=__FILE__)) &
+           return  ! bail out
+       endif
+     end do
 
 !EOS
 
@@ -346,7 +415,9 @@ contains
       VERIFY_(STATUS)
 #endif
 
-      RETURN_(ESMF_SUCCESS)
+      RC=ESMF_SUCCESS
+
+      RETURN
 
       end subroutine InitAdvertise
 
@@ -388,6 +459,7 @@ contains
       integer                            :: ndt, comm
       real, pointer                      :: temp2d(:,:)
       integer                            :: IS, IE, JS, JE
+      integer                            :: dt
 
 ! Begin... 
 
@@ -407,15 +479,15 @@ contains
       ! Get the time-step
       ! -----------------------
       ! call MAPL_GetResource( MAPL, ndt, 'RUN_DT:', default=0, RC=STATUS )
-      call ESMF_AttributeGet ( GC, dt, Label="RUN_DT:", RC=STATUS )
+      call ESMF_AttributeGet ( GC, "RUN_DT:", dt, RC=STATUS )
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
 
+#if 0
       ! Check if AdvCore is running without FV3_DynCoreIsRunning, if yes then setup the MAPL Grid 
       ! ----------------------------------------------------------------------------
-fg
 
       call MAPL_GetObjectFromGC (GC, MAPL,  RC=STATUS )
       VERIFY_(STATUS)
@@ -486,6 +558,7 @@ fg
       VERIFY_(STATUS)
       call ESMF_ConfigGetAttribute( CF, chk_mass, label='chk_mass:', default=.false., rc = STATUS )
       VERIFY_(STATUS)
+#endif
 
 #if 0
       ! Start up FMS/MPP
@@ -515,7 +588,7 @@ fg
 
       call MAPL_TimerOff(MAPL,"INITIALIZE")
       call MAPL_TimerOff(MAPL,"TOTAL")
-#endi
+#endif
 
       RETURN_(ESMF_SUCCESS)
 
@@ -528,16 +601,10 @@ fg
 !
 ! !INTERFACE:
 !
-      subroutine modelAdvance(GC, IMPORT, EXPORT, CLOCK, RC)
+      subroutine modelAdvance(GC, RC)
 !
-! !INPUT/OUTPUT PARAMETERS:
       type(ESMF_GridComp), intent(inout) :: GC     ! Gridded component 
-      type(ESMF_State),    intent(inout) :: IMPORT ! Import state
-      type(ESMF_State),    intent(inout) :: EXPORT ! Export state
-      type(ESMF_Clock),    intent(inout) :: CLOCK  ! The clock
-!
-! !OUTPUT PARAMETERS:
-      integer, optional,   intent(  out) :: RC     ! Error code
+      integer,             intent(  out) :: RC     ! Error code
 !
 ! !DESCRIPTION:
 ! 
@@ -557,30 +624,31 @@ fg
       type (ESMF_Alarm)             :: ALARM
       type(ESMF_Config)             :: CF          ! Universal Config 
 
+#if 0
 ! Imports
-      REAL(REAL8), POINTER, DIMENSION(:,:,:)   :: CX
-      REAL(REAL8), POINTER, DIMENSION(:,:,:)   :: CY
-      REAL(REAL8), POINTER, DIMENSION(:,:,:)   :: MFX
-      REAL(REAL8), POINTER, DIMENSION(:,:,:)   :: MFY
-      REAL(REAL8), POINTER, DIMENSION(:,:,:)   :: PLE0
-      REAL(REAL8), POINTER, DIMENSION(:,:,:)   :: PLE1
+      REAL(ESMF_KIND_R8), POINTER, DIMENSION(:,:,:)   :: CX
+      REAL(ESMF_KIND_R8), POINTER, DIMENSION(:,:,:)   :: CY
+      REAL(ESMF_KIND_R8), POINTER, DIMENSION(:,:,:)   :: MFX
+      REAL(ESMF_KIND_R8), POINTER, DIMENSION(:,:,:)   :: MFY
+      REAL(ESMF_KIND_R8), POINTER, DIMENSION(:,:,:)   :: PLE0
+      REAL(ESMF_KIND_R8), POINTER, DIMENSION(:,:,:)   :: PLE1
 
 ! Locals
-      REAL(REAL8), POINTER, DIMENSION(:)       :: AK
-      REAL(REAL8), POINTER, DIMENSION(:)       :: BK
-      REAL(REAL8), POINTER, DIMENSION(:,:,:,:) :: TRACERS
-      REAL(REAL8) :: tmassL, MASSfac, MASS1, TMASS1(ntracers)
+      REAL(ESMF_KIND_R8), POINTER, DIMENSION(:)       :: AK
+      REAL(ESMF_KIND_R8), POINTER, DIMENSION(:)       :: BK
+      REAL(ESMF_KIND_R8), POINTER, DIMENSION(:,:,:,:) :: TRACERS
+      REAL(ESMF_KIND_R8) :: tmassL, MASSfac, MASS1, TMASS1(ntracers)
       TYPE(AdvCoreTracers), POINTER :: advTracers(:)
       type(ESMF_FieldBundle) :: TRADV
       type(ESMF_Field)       :: field
       type(ESMF_Array)       :: array
       INTEGER :: IM, JM, LM, N, NQ, I,J,L, LS
-      REAL(REAL8) :: PTOP, PINT
+      REAL(ESMF_KIND_R8) :: PTOP, PINT
 ! Temporaries for exports/tracers
       REAL, POINTER :: temp3D(:,:,:)
       REAL, POINTER :: ptArray3D(:,:,:)
       real(REAL4),        pointer     :: tracer_r4 (:,:,:)
-      real(REAL8),        pointer     :: tracer_r8 (:,:,:)
+      real(ESMF_KIND_R8),        pointer     :: tracer_r8 (:,:,:)
       character(len=ESMF_MAXSTR)    :: fieldName
       type(ESMF_TypeKind_Flag)      :: kind
 
@@ -758,6 +826,7 @@ fg
 
 !WMP  end if ! AdvCore_Advection
 
+#endif
       RETURN_(ESMF_SUCCESS)
 
       end subroutine ModelAdvance
@@ -814,18 +883,17 @@ fg
 
       RETURN_(ESMF_SUCCESS)
       end subroutine Finalize
-#endif
 
 subroutine global_integral (QG,Q,PLE,IM,JM,KM,NQ)
 
-      real(REAL8), intent(OUT)   :: QG(NQ)
-      real(REAL8), intent(IN)    :: Q(IM,JM,KM,NQ)
-      real(REAL8), intent(IN)    :: PLE(IM,JM,KM+1)
+      real(ESMF_KIND_R8), intent(OUT)   :: QG(NQ)
+      real(ESMF_KIND_R8), intent(IN)    :: Q(IM,JM,KM,NQ)
+      real(ESMF_KIND_R8), intent(IN)    :: PLE(IM,JM,KM+1)
       integer,     intent(IN)    :: IM,JM,KM,NQ
 ! Locals
       integer   :: k,n
-      real(REAL8), allocatable ::    dp(:,:,:)
-      real(REAL8), allocatable :: qsum1(:,:)
+      real(ESMF_KIND_R8), allocatable ::    dp(:,:,:)
+      real(ESMF_KIND_R8), allocatable :: qsum1(:,:)
 
       allocate(    dp(im,jm,km) )
       allocate( qsum1(im,jm)    )
@@ -850,8 +918,9 @@ subroutine global_integral (QG,Q,PLE,IM,JM,KM,NQ)
      deallocate( qsum1 )
 
 end subroutine global_integral
+#endif
 
 !EOC
 !------------------------------------------------------------------------------
 
-end module AdvCore_GridCompMod
+end module ADVCORE
