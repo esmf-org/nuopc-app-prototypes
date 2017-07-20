@@ -108,6 +108,8 @@ contains
 
       Iam = trim(COMP_NAME) //"::"// trim(Iam)
 
+    call ESMF_LogWrite(Iam, ESMF_LOGMSG_INFO, rc=rc)      
+
       allocate(mystates)
       mystates_ptr%ptr => mystates
       call ESMF_UserCompSetInternalState(GC, 'MAPL_VarSpec', mystates_ptr, rc)
@@ -125,6 +127,13 @@ contains
 
      ! Register services for this component
      ! ------------------------------------
+    ! Provide InitializeP0 to switch to custom IPD version
+    call ESMF_GridCompSetEntryPoint(GC, ESMF_METHOD_INITIALIZE, &
+      userRoutine=InitializeP0, phase=0, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
      ! set entry point for methods that require specific implementation
      call NUOPC_CompSetEntryPoint(GC, ESMF_METHOD_INITIALIZE, &
         phaseLabelList=(/"IPDv02p1"/), userRoutine=InitAdvertise, rc=rc)
@@ -133,18 +142,20 @@ contains
         file=__FILE__)) &
         return  ! bail out
      call NUOPC_CompSetEntryPoint(GC, ESMF_METHOD_INITIALIZE, &
-        phaseLabelList=(/"IPDv02p2"/), userRoutine=InitRealize, rc=rc)
+        phaseLabelList=(/"IPDv02p3"/), userRoutine=InitRealize, rc=rc)
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
 
+#if 0
      call NUOPC_CompSpecialize(GC, specLabel=model_label_DataInitialize, &
        specRoutine=initTracer, rc=rc)
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
        line=__LINE__, &
        file=__FILE__)) &
        return  ! bail out
+#endif
 
      call NUOPC_CompSpecialize(GC, specLabel=model_label_Advance, &
        specRoutine=ModelAdvance, rc=rc)
@@ -154,6 +165,30 @@ contains
        return  ! bail out
 
   end subroutine SetServices
+
+  !-----------------------------------------------------------------------------
+
+  subroutine InitializeP0(gcomp, importState, exportState, clock, rc)
+    type(ESMF_GridComp)   :: gcomp
+    type(ESMF_State)      :: importState, exportState
+    type(ESMF_Clock)      :: clock
+    integer, intent(out)  :: rc
+    
+    rc = ESMF_SUCCESS
+    call ESMF_LogWrite("dyn InitializeP0", ESMF_LOGMSG_INFO, rc=rc)
+
+    ! Switch to IPDv02 (for datainitialize dependency loop) 
+    ! by filtering all other phaseMap entries
+    call NUOPC_CompFilterPhaseMap(gcomp, ESMF_METHOD_INITIALIZE, &
+      acceptStringList=(/"IPDv02p"/), rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+  end subroutine
+
+  !-----------------------------------------------------------------------------
 
   subroutine InitAdvertise(GC, IMPORT, EXPORT, CLOCK, rc)
      type(ESMF_GridComp)  :: GC
@@ -177,8 +212,11 @@ contains
      CHARACTER(LEN=38400)             :: longList
      character(len=2)                 :: id
      character(len=ESMF_MAXSTR)       :: short_name, long_name
-
+     character(len=ESMF_MAXSTR)       :: units
+     
      rc = ESMF_SUCCESS
+
+    call ESMF_LogWrite("PTRACER:InitAdvertise", ESMF_LOGMSG_INFO, rc=rc)      
 
      configFile = ESMF_ConfigCreate(rc=rc )
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -244,21 +282,31 @@ contains
        file=__FILE__)) &
        return  ! bail out
 
+      call ESMF_UserCompGetInternalState(gc, 'MAPL_VarSpec', mystates_ptr, rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+           line=__LINE__, &
+           file=__FILE__)) &
+           return  ! bail out
+
      !Advertize the import fields
      importSpec => mystates_ptr%ptr%importSpec
 
+     print *, 'PTRACER number of import fields: ', size(importSpec)
+     
      do i=1,size(importSpec)
-        call MAPL_VarSpecGet(importSpec(i), SHORT_NAME=short_name, LONG_NAME=long_name,rc=rc)
+        call MAPL_VarSpecGet(importSpec(i), SHORT_NAME=short_name, &
+        LONG_NAME=long_name, UNITS=units, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
            return  ! bail out
         call NUOPC_Advertise(IMPORT, &
-           StandardName=long_name, name=short_name, rc=rc)
+           StandardName=long_name, name=short_name, units=units, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
            return  ! bail out
+        !print *, 'PTRACER: advertise import field ', long_name
      end do
 
 
@@ -365,17 +413,19 @@ contains
      exportSpec => mystates_ptr%ptr%exportSpec
 
      do i=1,size(exportSpec)
-        call MAPL_VarSpecGet(exportSpec(i), SHORT_NAME=short_name, LONG_NAME=long_name,rc=rc)
+        call MAPL_VarSpecGet(exportSpec(i), SHORT_NAME=short_name, &
+           LONG_NAME=long_name,UNITS=units, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
            return  ! bail out
         call NUOPC_Advertise(EXPORT, &
-           StandardName=long_name, name=short_name, rc=rc) 
+           StandardName=long_name, name=short_name, units=units, rc=rc) 
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
            return  ! bail out
+        !print *, 'PTRACER: advertise export field ', long_name
     end do
 
 #if 0
@@ -446,7 +496,7 @@ contains
       ! Get the target components name and set-up traceback handle.
       ! -----------------------------------------------------------
 
-      call ESMF_GridCompGet ( GC, name=COMP_NAME, RC=STATUS )
+      call ESMF_GridCompGet ( GC, name=COMP_NAME, RC=rc )
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
@@ -454,9 +504,11 @@ contains
 
       Iam = trim(COMP_NAME)//'::InitRealize'
 
+      call ESMF_LogWrite(Iam, ESMF_LOGMSG_INFO, rc=rc)      
+
       ! Get the grid related information
       !---------------------------------
-      call ESMF_GridCompGet ( GC, GRID=esmfGrid, rc=STATUS)
+      call ESMF_GridCompGet ( GC, GRID=esmfGrid, rc=RC)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
@@ -496,6 +548,14 @@ contains
         file=__FILE__)) &
         return  ! bail out
 
+      call initTracer(GC, rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+      return
+
     contains  !--------------------------------------------------------
 
     subroutine realizeConnectedFields(state, spec, grid, rc)
@@ -505,7 +565,8 @@ contains
       type(ESMF_Grid)                 :: grid
       integer, intent(out), optional  :: rc
       ! local variables
-      character(len=80)               :: fieldName
+      character(len=ESMF_MAXSTR)      :: fieldName
+      character(len=ESMF_MAXSTR)      :: name
       integer                         :: i, itemCount, k
       type(ESMF_Field)                :: field
       real(ESMF_KIND_R8), pointer     :: fptr(:)
@@ -517,7 +578,7 @@ contains
       k=1 ! initialize
       do i=1, itemCount 
         ! find the VarSpec with matching long_name
-        call MAPL_VarSpecGet(spec(i),LONG_NAME=fieldName, rc=rc)
+        call MAPL_VarSpecGet(spec(i),LONG_NAME=fieldName, SHORT_NAME=name, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
@@ -527,7 +588,7 @@ contains
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
-       if (NUOPC_IsConnected(state, fieldName=fieldName)) then
+       if (NUOPC_IsConnected(state, fieldName=name)) then
           ! create a Field
           field = NUOPC_FieldCreateFromSpec(spec(i),rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -544,11 +605,13 @@ contains
           ! We might need to keep them for now to allow the connection between
           ! the friendly fields and 
           ! remove a not connected Field from State in a later phase
-          call ESMF_StateRemove(state, (/fieldName/), rc=rc)
+          call ESMF_StateRemove(state, (/name/), rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
+          print *, 'PTRACER remove field ', name
+
         endif
       enddo
 
@@ -587,8 +650,8 @@ contains
       real(REAL8), parameter           :: r1_0=1.0
       type(ESMF_Grid)                  :: esmfGrid
       type(ESMF_Field)                 :: field
-      integer                          :: minIndex(2)
-      integer                          :: maxIndex(2)
+      integer                          :: minIndex(2,6)
+      integer                          :: maxIndex(2,6)
       integer                          :: tileno, nSpc
       integer                          :: i, j, k, ic
       character(len=ESMF_MAXSTR)       :: short_name
@@ -617,13 +680,6 @@ contains
 
       call ESMF_GridCompGet ( GC, GRID=esmfGrid, importState=IMPORT, &
                             exportState=EXPORT, rc=RC)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-           line=__LINE__, &
-           file=__FILE__)) &
-           return  ! bail out
-
-      call ESMF_GridGet(esmfGrid, staggerloc = ESMF_STAGGERLOC_CENTER, &
-           minIndex = minIndex, maxIndex=maxIndex, tile = tileno, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &

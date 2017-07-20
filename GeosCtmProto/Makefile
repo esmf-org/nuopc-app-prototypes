@@ -32,7 +32,7 @@ MAPL_LINKLIBS     = -lMAPL_Base -lMAPL_Base_stubs -lMAPL_cfio_r4 -lGMAO_mpeu
 
 ESMF_F90COMPILEPATHS      += $(MAPL_INCLUDEPATHS)
 ESMF_F90LINKPATHS         += $(MAPL_LINKPATHS)
-ESMF_F90LINKLIBS          += $(MAPL_LINKLIBS)
+ESMF_F90ESMFLINKLIBS          += $(MAPL_LINKLIBS)
 
 ################################################################################
 ################################################################################
@@ -55,7 +55,7 @@ ESMF_F90LINKLIBS          += $(MAPL_LINKLIBS)
 # -----------------------------------------------------------------------------
 #ctmApp: ctmApp.o driver.o ctm.o history.o extdata.o ectm.o ptracer.o advcore.o NUOPC_Generic.o
 ctmApp: ctmApp.o driver.o ctm.o ectm.o ptracer.o advcore.o NUOPC_Generic.o
-	$(ESMF_F90LINKER) $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS) -o $@ $^ $(ESMF_F90ESMFLINKLIBS)
+	$(ESMF_F90LINKER) $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS) -o $@ $^ $(ESMF_F90ESMFLINKLIBS) 
 
 # module dependencies:
 ctmApp.o: driver.o 
