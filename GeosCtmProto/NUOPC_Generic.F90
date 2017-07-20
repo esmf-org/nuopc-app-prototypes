@@ -24,9 +24,9 @@ module NUOPC_Generic
  public NUOPC_AddInternalSpec
 
  type my_States
-    type (MAPL_VarSpec),     pointer   :: ImportSpec(:)
-    type (MAPL_VarSpec),     pointer   :: ExportSpec(:)
-    type (MAPL_VarSpec),     pointer   :: InternalSpec(:)
+    type (MAPL_VarSpec),     pointer   :: ImportSpec(:) => null()
+    type (MAPL_VarSpec),     pointer   :: ExportSpec(:) => null()
+    type (MAPL_VarSpec),     pointer   :: InternalSpec(:) => null()
  end type my_States 
 
  type mystates_WRAP
@@ -102,6 +102,8 @@ contains
        file=__FILE__)) &
        return  ! bail out
 
+    mystate%ptr%importSpec => STATE
+
     return
   end subroutine NUOPC_AddImportSpec
 
@@ -171,6 +173,8 @@ contains
        line=__LINE__, &
        file=__FILE__)) &
        return  ! bail out
+
+    mystate%ptr%exportSpec => STATE
 
     return
   end subroutine NUOPC_AddExportSpec
@@ -305,9 +309,13 @@ contains
        endif
 
        call MAPL_VarSpecAddRefToList(mystate%ptr%exportSpec, STATE(I), RC=RC)
-       VERIFY_(RC)
+       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out 
 
     endif
+    mystate%ptr%internalSpec => STATE
 
     RETURN
 
@@ -323,7 +331,7 @@ contains
 
     !ARGUMENTS:
     type (ESMF_GridComp)            , intent(INOUT)   :: GC
-    type (MAPL_VarSpec)             , pointer         :: STATE(:)
+    type (MAPL_VarSpec), pointer    , intent(INOUT)   :: STATE(:)
     character (len=*)               , intent(IN)      :: SHORT_NAME
     character (len=*)  , optional   , intent(IN)      :: LONG_NAME
     character (len=*)  , optional   , intent(IN)      :: UNITS
@@ -354,17 +362,11 @@ contains
     integer                               :: usable_AI
     integer                               :: usable_RI
     integer                               :: usable_RS
-    real                                  :: dt
+    integer(ESMF_KIND_I4)                 :: dt
     type (ESMF_Config)                    :: CF
 
-    call ESMF_GridCompGet(GC, config=CF, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-       line=__LINE__, &
-       file=__FILE__)) &
-       return  ! bail out
-
  !  Get the clock increment interval
-    call ESMF_ConfigGetAttribute( CF, dt,  Label="RUN_DT:", RC=STATUS)
+    call ESMF_AttributeGet( GC, "RUN_DT:", dt, RC=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
        line=__LINE__, &
        file=__FILE__)) &
@@ -374,13 +376,13 @@ contains
     if (present(REFRESH_INTERVAL)) then
        usable_RI = REFRESH_INTERVAL
     else
-       usable_RI = nint(dt)
+       usable_RI = dt
     endif
 
     if (present(AVERAGING_INTERVAL)) then
        usable_AI = AVERAGING_INTERVAL
     else
-       usable_AI = nint(dt)
+       usable_AI = dt
     endif
 
     if (present(Restart)) then
@@ -416,16 +418,17 @@ contains
        FIELD_TYPE = FIELD_TYPE,                                              &
        STAGGERING = STAGGERING,                                              &
        ROTATION = ROTATION,                                                  &
-       RC=STATUS  )
+       RC=rc  )
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
        line=__LINE__, &
        file=__FILE__)) &
        return  ! bail out
 
+!    print *, "NUOPC_AddVarSpec ", LONG_NAME
 
     ! If DATATYPE is MAPL_Bundleitem, we need to do something different:: what??
     ! ignore it for now
-    if (DATATYPE .ne. MAPL_Bundleitem) then
+    !! if (.not. present(DATATYPE) .or. (DATATYPE .ne. MAPL_Bundleitem)) then
     if (.not. NUOPC_FieldDictionaryHasEntry(LONG_NAME)) then
         call NUOPC_FieldDictionaryAddEntry( &
           standardName=LONG_NAME, &
@@ -435,8 +438,10 @@ contains
           line=__LINE__, &
           file=__FILE__)) &
           return  ! bail out
+!        print *, "NUOPC_AddVarSpec, #585"
      endif
-     endif
+     !!! endif
+     
      RETURN_(ESMF_SUCCESS)
   end subroutine NUOPC_AddVarSpec
 
@@ -448,7 +453,7 @@ contains
 ! Return value
     type(ESMF_Field)      :: NUOPC_FieldCreateFromSpec
 
-    character(len=ESMF_MAXSTR), parameter :: IAm="MAPL_StateCreateFromSpec"
+    character(len=ESMF_MAXSTR), parameter :: IAm="NUOPC_FieldCreateFromSpec"
     integer                               :: STATUS
 
     integer               :: COUNTS(ESMF_MAXDIM)
@@ -508,16 +513,16 @@ contains
     integer                                 :: rstReq
 
 
-   if (present(DEFER)) then
+    if (present(DEFER)) then
       usableDEFER = DEFER
-   else
+    else
       usableDEFER = .false.
-   end if
+    end if
 
-   attr = 0
-   rstReq = 0
+    attr = 0
+    rstReq = 0
 
-      call MAPL_VarSpecGet(SPEC,DIMS=DIMS,VLOCATION=LOCATION,   &
+    call MAPL_VarSpecGet(SPEC,DIMS=DIMS,VLOCATION=LOCATION,   &
                            SHORT_NAME=SHORT_NAME, LONG_NAME=LONG_NAME, UNITS=UNITS,&
                            FIELD=SPEC_FIELD, &
                            BUNDLE=SPEC_BUNDLE, &
@@ -544,8 +549,11 @@ contains
                            FIELD_TYPE=FIELD_TYPE, &
                            STAGGERING=STAGGERING, &
                            ROTATION=ROTATION, &
-                           RC=STATUS )
-      VERIFY_(STATUS)
+                           RC=rc )
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
 
       if (RESTART == MAPL_RestartRequired) then
          rstReq = 1
@@ -563,66 +571,114 @@ contains
 ! Create the appropriate ESMF FIELD
 ! ---------------------------------
 
-         field = MAPL_FieldCreateEmpty(name=SHORT_NAME, grid=grid, rc=status)
-         VERIFY_(STATUS)
+      field = MAPL_FieldCreateEmpty(name=SHORT_NAME, grid=grid, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+         
 
-         has_ungrd = associated(UNGRD)
+      has_ungrd = associated(UNGRD)
 
-         if (.not. deferAlloc) then
+      if (.not. deferAlloc) then
 
 !ALT we check if doNotAllocate is set only for fields that are not deferred
             if (.not. doNotAllocate) then
                if (has_ungrd) then
                   if (defaultProvided) then
                      call MAPL_FieldAllocCommit(field, dims=dims, location=location, typekind=knd, &
-                          hw=hw, ungrid=ungrd, default_value=default_value, rc=status)
-                     VERIFY_(STATUS)
+                          hw=hw, ungrid=ungrd, default_value=default_value, rc=rc)
+                     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                             line=__LINE__, &
+                             file=__FILE__)) &
+                             return  ! bail out
+                     
                   else
                      call MAPL_FieldAllocCommit(field, dims=dims, location=location, typekind=knd, &
-                          hw=hw, ungrid=ungrd, rc=status)
-                     VERIFY_(STATUS)
+                          hw=hw, ungrid=ungrd, rc=rc)
+                     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                             line=__LINE__, &
+                             file=__FILE__)) &
+                             return  ! bail out
+                     
                   endif
                else
                   if (defaultProvided) then
                      call MAPL_FieldAllocCommit(field, dims=dims, location=location, typekind=knd, &
-                          hw=hw, default_value=default_value, rc=status)
-                     VERIFY_(STATUS)
+                          hw=hw, default_value=default_value, rc=rc)
+                     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                             line=__LINE__, &
+                             file=__FILE__)) &
+                             return  ! bail out
+                     
                   else
                      call MAPL_FieldAllocCommit(field, dims=dims, location=location, typekind=knd, &
-                          hw=hw, rc=status)
-                     VERIFY_(STATUS)
+                          hw=hw, rc=rc)
+                     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                             line=__LINE__, &
+                             file=__FILE__)) &
+                             return  ! bail out
+                     
                   end if
 
                end if
             else
-               call ESMF_AttributeSet(FIELD, NAME='doNotAllocate', VALUE=1, RC=STATUS)
-               VERIFY_(STATUS)
+               call ESMF_AttributeSet(FIELD, NAME='doNotAllocate', VALUE=1, RC=RC)
+               if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                       line=__LINE__, &
+                       file=__FILE__)) &
+                       return  ! bail out
+               
             end if
          else
-            call ESMF_AttributeSet(FIELD, NAME='PRECISION', VALUE=KND, RC=STATUS)
-            VERIFY_(STATUS)
+            call ESMF_AttributeSet(FIELD, NAME='PRECISION', VALUE=KND, RC=RC)
+            if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                  line=__LINE__, &
+                  file=__FILE__)) &
+                  return  ! bail out
+            
             call ESMF_AttributeSet(FIELD, NAME='HAS_UNGRIDDED_DIMS', &
-                 value=has_ungrd, RC=STATUS)
-            VERIFY_(STATUS)
+                 value=has_ungrd, RC=RC)
+            if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                  line=__LINE__, &
+                  file=__FILE__)) &
+                  return  ! bail out
+            
             call ESMF_AttributeSet(FIELD, NAME='DEFAULT_PROVIDED', &
-                 value=defaultProvided, RC=STATUS)
-            VERIFY_(STATUS)
+                 value=defaultProvided, RC=RC)
+            if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                  line=__LINE__, &
+                  file=__FILE__)) &
+                  return  ! bail out
+            
             if (defaultProvided) then
                call ESMF_AttributeSet(FIELD, NAME='DEFAULT_VALUE', &
-                    value=default_value, RC=STATUS)
-               VERIFY_(STATUS)
+                    value=default_value, RC=RC)
+            if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                  line=__LINE__, &
+                  file=__FILE__)) &
+                  return  ! bail out
+               
             end if
             if (has_ungrd) then
-               call ESMF_AttributeSet(FIELD, NAME='UNGRIDDED_DIMS', valueList=UNGRD, RC=STATUS)
-               VERIFY_(STATUS)
+               call ESMF_AttributeSet(FIELD, NAME='UNGRIDDED_DIMS', valueList=UNGRD, RC=RC)
+            if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                  line=__LINE__, &
+                  file=__FILE__)) &
+                  return  ! bail out
+               
             end if
          end if
 
 ! Put the FIELD in the MAPL FIELD (VAR SPEC)
 ! --------------------------------
 
-      call MAPL_VarSpecSet(SPEC,FIELD=FIELD,RC=STATUS)
-      VERIFY_(STATUS)
+      call MAPL_VarSpecSet(SPEC,FIELD=FIELD,RC=RC)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+             line=__LINE__, &
+             file=__FILE__)) &
+             return  ! bail out
+      
 ! and in the FIELD in the state
 ! --------------------------
 
@@ -634,57 +690,125 @@ contains
 
 ! Add SPECs to the FIELD
 
-      call ESMF_AttributeSet(FIELD, NAME='STAT', VALUE=STAT, RC=STATUS)
-      VERIFY_(STATUS)
-      call ESMF_AttributeSet(FIELD, NAME='DIMS', VALUE=DIMS, RC=STATUS)
-      VERIFY_(STATUS)
-      call ESMF_AttributeSet(FIELD, NAME='VLOCATION', VALUE=LOCATION, RC=STATUS)
-      VERIFY_(STATUS)
-      call ESMF_AttributeSet(FIELD, NAME='LONG_NAME', VALUE=LONG_NAME, RC=STATUS)
-      VERIFY_(STATUS)
-      call ESMF_AttributeSet(FIELD, NAME='UNITS', VALUE=UNITS, RC=STATUS)
-      VERIFY_(STATUS)
+      call ESMF_AttributeSet(FIELD, NAME='STAT', VALUE=STAT, RC=RC)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+             line=__LINE__, &
+             file=__FILE__)) &
+             return  ! bail out
+      
+      call ESMF_AttributeSet(FIELD, NAME='DIMS', VALUE=DIMS, RC=RC)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+             line=__LINE__, &
+             file=__FILE__)) &
+             return  ! bail out
+      
+      call ESMF_AttributeSet(FIELD, NAME='VLOCATION', VALUE=LOCATION, RC=RC)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+             line=__LINE__, &
+             file=__FILE__)) &
+             return  ! bail out
+      
+      call ESMF_AttributeSet(FIELD, NAME='LONG_NAME', VALUE=LONG_NAME, RC=RC)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+             line=__LINE__, &
+             file=__FILE__)) &
+             return  ! bail out
+      
+      call ESMF_AttributeSet(FIELD, NAME='UNITS', VALUE=UNITS, RC=RC)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+             line=__LINE__, &
+             file=__FILE__)) &
+             return  ! bail out
+      
 
-      call ESMF_AttributeSet(FIELD, NAME='REFRESH_INTERVAL', VALUE=REFRESH, RC=STATUS)
-      VERIFY_(STATUS)
-      call ESMF_AttributeSet(FIELD, NAME='AVERAGING_INTERVAL', VALUE=AVGINT, RC=STATUS)
-      VERIFY_(STATUS)
-      call ESMF_AttributeSet(FIELD, NAME='HALOWIDTH', VALUE=HW, RC=STATUS)
-      VERIFY_(STATUS)
-      call ESMF_AttributeSet(FIELD, NAME='RESTART', VALUE=RESTART, RC=STATUS)
-      VERIFY_(STATUS)
-      call ESMF_AttributeSet(FIELD, NAME='FIELD_TYPE', VALUE=FIELD_TYPE, RC=STATUS)
-      VERIFY_(STATUS)
-      call ESMF_AttributeSet(FIELD, NAME='STAGGERING', VALUE=STAGGERING, RC=STATUS)
-      VERIFY_(STATUS)
-      call ESMF_AttributeSet(FIELD, NAME='ROTATION', VALUE=ROTATION, RC=STATUS)
-      VERIFY_(STATUS)
+      call ESMF_AttributeSet(FIELD, NAME='REFRESH_INTERVAL', VALUE=REFRESH, RC=RC)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+             line=__LINE__, &
+             file=__FILE__)) &
+             return  ! bail out
+      
+      call ESMF_AttributeSet(FIELD, NAME='AVERAGING_INTERVAL', VALUE=AVGINT, RC=RC)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+             line=__LINE__, &
+             file=__FILE__)) &
+             return  ! bail out
+      
+      call ESMF_AttributeSet(FIELD, NAME='HALOWIDTH', VALUE=HW, RC=RC)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+             line=__LINE__, &
+             file=__FILE__)) &
+             return  ! bail out
+      
+      call ESMF_AttributeSet(FIELD, NAME='RESTART', VALUE=RESTART, RC=RC)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+             line=__LINE__, &
+             file=__FILE__)) &
+             return  ! bail out
+      
+      call ESMF_AttributeSet(FIELD, NAME='FIELD_TYPE', VALUE=FIELD_TYPE, RC=RC)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+             line=__LINE__, &
+             file=__FILE__)) &
+             return  ! bail out
+      
+      call ESMF_AttributeSet(FIELD, NAME='STAGGERING', VALUE=STAGGERING, RC=RC)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+             line=__LINE__, &
+             file=__FILE__)) &
+             return  ! bail out
+      
+      call ESMF_AttributeSet(FIELD, NAME='ROTATION', VALUE=ROTATION, RC=RC)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+             line=__LINE__, &
+             file=__FILE__)) &
+             return  ! bail out
+      
       if (associated(UNGRD)) Then
-         call ESMF_AttributeSet(FIELD, NAME='UNGRIDDED_NAME', VALUE=UNGRIDDED_NAME, RC=STATUS)
-         VERIFY_(STATUS)
-         call ESMF_AttributeSet(FIELD, NAME='UNGRIDDED_UNIT', VALUE=UNGRIDDED_UNIT, RC=STATUS)
-         VERIFY_(STATUS)
+         call ESMF_AttributeSet(FIELD, NAME='UNGRIDDED_NAME', VALUE=UNGRIDDED_NAME, RC=RC)
+         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+             line=__LINE__, &
+             file=__FILE__)) &
+             return  ! bail out
+         
+         call ESMF_AttributeSet(FIELD, NAME='UNGRIDDED_UNIT', VALUE=UNGRIDDED_UNIT, RC=RC)
+         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+             line=__LINE__, &
+             file=__FILE__)) &
+             return  ! bail out
+         
          if (associated(UNGRIDDED_COORDS)) then
             szUngrd = size(ungridded_coords)
             call ESMF_AttributeSet(FIELD, NAME='UNGRIDDED_COORDS', itemCount=szUngrd, &
-                                   valuelist=ungridded_coords, rc=status)
-            VERIFY_(STATUS)
+                                   valuelist=ungridded_coords, rc=rc)
+            if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+               line=__LINE__, &
+               file=__FILE__)) &
+               return  ! bail out
+            
          end if      
       end if
 
       if (associated(ATTR_RNAMES)) then
          DO N = 1, size(ATTR_RNAMES) 
             call ESMF_AttributeSet(FIELD, NAME=trim(ATTR_RNAMES(N)), &
-                                        VALUE=ATTR_RVALUES(N), RC=STATUS)
-            VERIFY_(STATUS)
+                                        VALUE=ATTR_RVALUES(N), RC=RC)
+            if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+               line=__LINE__, &
+               file=__FILE__)) &
+               return  ! bail out
+            
          END DO
       end if
 
       if (associated(ATTR_INAMES)) then
          DO N = 1, size(ATTR_INAMES) 
             call ESMF_AttributeSet(FIELD, NAME=trim(ATTR_INAMES(N)), &
-                                        VALUE=ATTR_IVALUES(N), RC=STATUS)
-            VERIFY_(STATUS)
+                                        VALUE=ATTR_IVALUES(N), RC=RC)
+            if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+               line=__LINE__, &
+               file=__FILE__)) &
+               return  ! bail out
+            
          END DO
       end if
 
@@ -707,8 +831,12 @@ contains
 !print *,"DEBUG: setting FieldAttr:FriendlyTo"//trim(FRIENDLYTO(N1:N2))
                   call ESMF_AttributeSet(FIELD, &
                        NAME='FriendlyTo'//trim(FRIENDLYTO(N1:N2)), &
-                       VALUE=.TRUE., RC=STATUS)
-                  VERIFY_(STATUS)
+                       VALUE=.TRUE., RC=RC)
+                  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                     line=__LINE__, &
+                     file=__FILE__)) &
+                     return  ! bail out
+                  
             end if
 
             N1 = N1 + N
