@@ -1,4 +1,6 @@
 #include "MAPL_Generic.h"
+#define PRINT_STATES
+
 !-------------------------------------------------------------------------
 !         NASA/GSFC, Software Systems Support Office, Code 610.3         !
 !-------------------------------------------------------------------------
@@ -131,8 +133,14 @@
 
       Iam = 'SetServices'
       call ESMF_GridCompGet( GC, NAME=COMP_NAME, RC=rc )
-      VERIFY_(STATUS)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
       Iam = trim(COMP_NAME) // "::" // Iam
+
+      call ESMF_LogWrite(Iam, ESMF_LOGMSG_INFO, rc=rc)
 
       ! NUOPC_Driver registers the generic methods
       call NUOPC_CompDerive(GC, driver_routine_SS, rc=rc)
@@ -144,13 +152,6 @@
       ! Register services for this component
       ! ------------------------------------
 
-      call NUOPC_CompSetEntryPoint (GC, ESMF_METHOD_INITIALIZE, &
-      	   phaseLabelList=(/"IPDv00p1"/), userRoutine=Initialize, RC=rc )
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=__LINE__, &
-          file=__FILE__)) &
-          return  ! bail out
-
       ! attach specializing method(s)
       call NUOPC_CompSpecialize(GC, specLabel=driver_label_SetModelServices, &
         specRoutine=SetModelServices, rc=rc)
@@ -158,6 +159,15 @@
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
+
+#if 0
+      call NUOPC_CompSetEntryPoint (GC, ESMF_METHOD_INITIALIZE, &
+      	   phaseLabelList=(/"IPDv02p2"/), userRoutine=Initialize, RC=rc )
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+#endif
 
       return
   end subroutine SetServices
@@ -168,12 +178,15 @@
     type(ESMF_GridComp)  :: GC
     integer, intent(out) :: rc
 
-      type (ESMF_Config)            :: configFile
-      CHARACTER(LEN=ESMF_MAXSTR)    :: rcfilen = 'CTM_GridComp.rc'
-      type (ESMF_CplComp)          :: conn
+      type (ESMF_Config)                  :: configFile
+      CHARACTER(LEN=ESMF_MAXSTR)          :: rcfilen = 'CTM_GridComp.rc'
+      type (ESMF_CplComp)                 :: conn
+      integer                             :: i
+      
+      rc = ESMF_SUCCESS
 
-      RC=ESMF_SUCCESS
-
+      call ESMF_LogWrite("CTM::SetModelServices", ESMF_LOGMSG_INFO, rc=rc)
+    
       ! Choose children to birth and which children not to conceive
       ! -----------------------------------------------------------
       configFile = ESMF_ConfigCreate(rc=rc )
@@ -342,6 +355,12 @@
       !call MAPL_GenericSetServices ( GC, RC=STATUS )
       !VERIFY_(STATUS)
 
+! Move grid creation code from Initialize to here
+      call Initialize(GC, RC)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
       RETURN
   
       end subroutine SetModelServices
@@ -353,13 +372,13 @@
 !
 ! !INTERFACE:
 !
-      subroutine Initialize ( GC, IMPORT, EXPORT, CLOCK, RC )
+      subroutine Initialize ( GC,  RC )
 !
 ! !INPUT/OUTPUT PARAMETERS:
       type(ESMF_GridComp), intent(inout) :: GC     ! Gridded component 
-      type(ESMF_State)     :: IMPORT
-      type(ESMF_State)     :: EXPORT
-      type(ESMF_Clock)     :: CLOCK
+!      type(ESMF_State)     :: IMPORT
+!      type(ESMF_State)     :: EXPORT
+!      type(ESMF_Clock)     :: CLOCK
 
 ! !INPUT/OUTPUT PARAMETERS:
       integer,             intent(  out) :: RC     ! Error code
@@ -390,22 +409,33 @@
       character(len=ESMF_MAXSTR)          :: COMP_NAME
       type(ESMF_Config)                   :: config
       character(len=ESMF_MAXSTR)          :: IAm = "Initialize"
-      integer                             :: heartbeat_dt
-      integer                             :: dt
+      integer(ESMF_KIND_I4)               :: heartbeat_dt
+      integer(ESMF_KIND_I4)               :: dt
       logical                             :: existDT
+
 
       ! Get the target components name and set-up traceback handle.
       ! -----------------------------------------------------------
 
       RC = ESMF_SUCCESS
 
-      call ESMF_GridCompGet ( GC, name=COMP_NAME, config=config, RC=rc )
+      call ESMF_GridCompGet ( GC, name=COMP_NAME, RC=rc )
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
       Iam = trim(COMP_NAME) // "::" // TRIM(Iam)
+      call ESMF_LogWrite(Iam, ESMF_LOGMSG_INFO, rc=rc)
 
+      !call MAPL_TimerOn(STATE,"TOTAL")
+      !call MAPL_TimerOn(STATE,"INITIALIZE")
+
+      call ESMF_GridCompGet ( GC, config=config, RC=rc )
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+ 
       call ESMF_ConfigFindLabel(config, "RUN_DT:", isPresent=existDT, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
@@ -433,9 +463,6 @@
              file=__FILE__)) &
              return  ! bail out
       endif
-
-      !call MAPL_TimerOn(STATE,"TOTAL")
-      !call MAPL_TimerOn(STATE,"INITIALIZE")
 
       ! Create grid for this GC
       !------------------------
@@ -479,13 +506,6 @@
       !  VERIFY_(STATUS)
 
 
-#ifdef PRINT_STATES
-      call WRITE_PARALLEL ( trim(Iam)//": IMPORT State" )
-      if ( MAPL_am_I_root() ) call ESMF_StatePrint ( IMPORT, rc=rc )
-      call WRITE_PARALLEL ( trim(Iam)//": EXPORT State" )
-      if ( MAPL_am_I_root() ) call ESMF_StatePrint ( EXPORT, rc=rc )
-#endif
-
 
 #if DOMAPL
       ! Get children and their im/ex states from my generic state.
@@ -501,10 +521,16 @@
          ! AdvCore Tracers
          !----------------
          call ESMF_StateGet       (GIM(ADV3), 'TRADV', BUNDLE, RC=STATUS )
-         VERIFY_(STATUS)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
   
          call MAPL_GridCompGetFriendlies(GCS(PTRA), "DYNAMICS", BUNDLE, RC=STATUS )
-         VERIFY_(STATUS)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
 
 #ifdef PRINT_STATES
          call WRITE_PARALLEL ( trim(Iam)//": AdvCore Tracer Bundle" )
@@ -812,6 +838,7 @@ subroutine My_GridCreate(GC, rc)
       allocate(regDecomp(2,6))
       regDecomp(1,:)=NX
       regDecomp(2,:)=NY/6
+      print *, regDecomp(:,1), IM_WORLD, trim(Gridname)
       grid = ESMF_GridCreateCubedSphere(IM_WORLD, regDecompPTile = regDecomp, &
            name=trim(Gridname), rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &

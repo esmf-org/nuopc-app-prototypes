@@ -93,7 +93,7 @@ module ADVCORE
 
 ! Tracer I/O History stuff
 ! -------------------------------------
-      integer, parameter         :: ntracers=11
+      integer, parameter         :: ntracers=9
       integer                    :: ntracer
       character(len=ESMF_MAXSTR) :: myTracer
       character(len=ESMF_MAXSTR) :: tMassStr
@@ -151,7 +151,9 @@ contains
         file=__FILE__)) &
         return  ! bail out
 
-      Iam = trim(COMP_NAME) // 'SetServices'
+      Iam = trim(COMP_NAME) // '::SetServices'
+
+      call ESMF_LogWrite(Iam, ESMF_LOGMSG_INFO, rc=rc)      
 
       configFile = ESMF_ConfigCreate(rc=rc )
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -188,15 +190,22 @@ contains
 
      ! Register services for this component
      ! ------------------------------------
+    ! Provide InitializeP0 to switch to custom IPD version
+    call ESMF_GridCompSetEntryPoint(GC, ESMF_METHOD_INITIALIZE, &
+      userRoutine=InitializeP0, phase=0, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
      ! set entry point for methods that require specific implementation
      call NUOPC_CompSetEntryPoint(GC, ESMF_METHOD_INITIALIZE, &
-        phaseLabelList=(/"IPDv00p1"/), userRoutine=InitAdvertise, rc=rc)
+        phaseLabelList=(/"IPDv02p1"/), userRoutine=InitAdvertise, rc=rc)
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
      call NUOPC_CompSetEntryPoint(GC, ESMF_METHOD_INITIALIZE, &
-        phaseLabelList=(/"IPDv00p2"/), userRoutine=InitRealize, rc=rc)
+        phaseLabelList=(/"IPDv02p3"/), userRoutine=InitRealize, rc=rc)
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
@@ -213,6 +222,30 @@ contains
 
   end subroutine SetServices
 
+  !-----------------------------------------------------------------------------
+
+  subroutine InitializeP0(gcomp, importState, exportState, clock, rc)
+    type(ESMF_GridComp)   :: gcomp
+    type(ESMF_State)      :: importState, exportState
+    type(ESMF_Clock)      :: clock
+    integer, intent(out)  :: rc
+    
+    rc = ESMF_SUCCESS
+    call ESMF_LogWrite("dyn InitializeP0", ESMF_LOGMSG_INFO, rc=rc)
+
+    ! Switch to IPDv02 (for datainitialize dependency loop) 
+    ! by filtering all other phaseMap entries
+    call NUOPC_CompFilterPhaseMap(gcomp, ESMF_METHOD_INITIALIZE, &
+      acceptStringList=(/"IPDv02p"/), rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+  end subroutine
+
+  !-----------------------------------------------------------------------------
+
   subroutine InitAdvertise(GC, IMPORT, EXPORT, CLOCK, rc)
      type(ESMF_GridComp)  :: GC
      type(ESMF_State)     :: IMPORT
@@ -225,11 +258,14 @@ contains
      type(MAPL_VarSpec), pointer  :: exportSpec(:)
      character(len=ESMF_MAXSTR)   :: short_name
      character(len=ESMF_MAXSTR)   :: long_name
+     character(len=ESMF_MAXSTR)   :: units
      integer                      :: mytype
      integer                      :: i
          
 ! !IMPORT STATE:
 !
+    call ESMF_LogWrite("ADVCORE:InitAdvertise", ESMF_LOGMSG_INFO, rc=rc)      
+
     call NUOPC_AddImportSpec ( gc,                                  &
          SHORT_NAME = 'MFX',                                       &
          LONG_NAME  = 'pressure_weighted_eastward_mass_flux',      &
@@ -257,7 +293,7 @@ contains
     call NUOPC_AddImportSpec ( gc,                                  &
          SHORT_NAME = 'CX',                                        &
          LONG_NAME  = 'eastward_accumulated_courant_number',       &
-         UNITS      = '',                                          &
+         UNITS      = '1',                                          &
          PRECISION  = ESMF_KIND_R8,                                &
          DIMS       = MAPL_DimsHorzVert,                           &
          VLOCATION  = MAPL_VLocationCenter,             RC=RC  )
@@ -269,7 +305,7 @@ contains
     call NUOPC_AddImportSpec ( gc,                                  &
          SHORT_NAME = 'CY',                                        &
          LONG_NAME  = 'northward_accumulated_courant_number',      &
-         UNITS      = '',                                          &
+         UNITS      = '1',                                          &
          PRECISION  = ESMF_KIND_R8,                                &
          DIMS       = MAPL_DimsHorzVert,                           &
          VLOCATION  = MAPL_VLocationCenter,             RC=RC  )
@@ -280,7 +316,7 @@ contains
 
     call NUOPC_AddImportSpec ( gc,                                  &
          SHORT_NAME = 'PLE0',                                      &
-         LONG_NAME  = 'pressure_at_layer_edges_before_advection',  &
+         LONG_NAME  = 'pressure_at_layer_edges_before_advection_0',  &
          UNITS      = 'Pa',                                        &
          PRECISION  = ESMF_KIND_R8,                                &
          DIMS       = MAPL_DimsHorzVert,                           &
@@ -292,7 +328,7 @@ contains
 
     call NUOPC_AddImportSpec ( gc,                                  &
          SHORT_NAME = 'PLE1',                                      &
-         LONG_NAME  = 'pressure_at_layer_edges_after_advection',   &                
+         LONG_NAME  = 'pressure_at_layer_edges_after_advection_1',   &                
          UNITS      = 'Pa',                                        &
          PRECISION  = ESMF_KIND_R8,                                &
          DIMS       = MAPL_DimsHorzVert,                           &
@@ -308,7 +344,7 @@ contains
        units              = 'X',                                 &
        DIMS               = MAPL_DimsHorzVert,                   &
        VLOCATION          = MAPL_VLocationCenter,                &
-       DATATYPE           = MAPL_BundleItem,                     &
+!       DATATYPE           = MAPL_BundleItem,                     &
                                                       RC=RC  )
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
        line=__LINE__, &
@@ -322,11 +358,11 @@ contains
            return  ! bail out
      
      !Advertize the import fields
-     importSpec => mystates_ptr%ptr%importSpec
-
-     do i=1,size(importSpec)
+     importSpec => mystates_ptr%ptr%importSpec 
+     !print *, 'ADVCORE number of import fields: ', size(importSpec)
+    do i=1,size(importSpec)
         call MAPL_VarSpecGet(importSpec(i), SHORT_NAME=short_name, LONG_NAME=long_name, &
-             STAT=mytype, rc=rc)
+             STAT=mytype, UNITS=units, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
@@ -334,14 +370,15 @@ contains
 
        !!! Need to do something different if mytype is MAPL_BundleItem, Nothing has been added into
        !!! the bundle yet.  Ignore it for now
-       if (mytype .ne. MAPL_BundleItem) then
+       !!! if (mytype .ne. MAPL_BundleItem) then
         call NUOPC_Advertise(IMPORT, &
-           StandardName=long_name, name=short_name, rc=rc)
+           StandardName=long_name, name=short_name, units=units, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
            return  ! bail out
-       endif
+        !print *, 'ADVCORE: advertise import field ', long_name
+       !!! endif
      end do
 
 ! !EXPORT STATE:
@@ -374,10 +411,11 @@ contains
 
      !Advertize the import fields
      exportSpec => mystates_ptr%ptr%exportSpec
+     !print *, 'ADVCORE number of export fields: ', size(exportSpec)
 
      do i=1,size(exportSpec)
         call MAPL_VarSpecGet(exportSpec(i), SHORT_NAME=short_name, LONG_NAME=long_name, &
-             STAT=mytype, rc=rc)
+             STAT=mytype, UNITS=units, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
@@ -385,14 +423,15 @@ contains
 
        !!! Need to do something different if mytype is MAPL_BundleItem, Nothing has been added into
        !!! the bundle yet.  Ignore it for now
-       if (mytype .ne. MAPL_BundleItem) then
+       !!! if (mytype .ne. MAPL_BundleItem) then
         call NUOPC_Advertise(EXPORT, &
-           StandardName=long_name, name=short_name, rc=rc)
+           StandardName=long_name, name=short_name, units=units, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
            return  ! bail out
-       endif
+        !print *, 'ADVCORE: advertise export field ', long_name
+       !!! endif
      end do
 
 !EOS
@@ -460,16 +499,56 @@ contains
       real, pointer                      :: temp2d(:,:)
       integer                            :: IS, IE, JS, JE
       integer                            :: dt
+      type(ESMF_Grid)               :: esmfGrid
+      type(mystates_wrap)           :: mystates_ptr
+      type(MAPL_VarSpec), pointer   :: importSpec(:)
+      type(MAPL_VarSpec), pointer   :: exportSpec(:)
 
 ! Begin... 
 
 ! Get the target components name and set-up traceback handle.
 ! -----------------------------------------------------------
 
-      Iam = "Initialize"
-      call ESMF_GridCompGet ( GC, name=COMP_NAME, config=CF, vm=VM, RC=STATUS )
-      VERIFY_(STATUS)
+      Iam = "::InitRealize"
+
+      !  Get my name and set-up traceback handle
+      !  ---------------------------------------
+      call ESMF_GridCompGet( GC, NAME=COMP_NAME, GRID=esmfGrid, RC=rc )
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
       Iam = trim(COMP_NAME) // trim(Iam)
+
+     call ESMF_LogWrite(Iam, ESMF_LOGMSG_INFO, rc=rc)      
+
+      !call MAPL_TimerOn(ggSTATE,"TOTAL")
+      !call MAPL_TimerOn(ggSTATE,"INITIALIZE")
+
+      !Get VarSpec info
+      call ESMF_UserCompGetInternalState(GC, "MAPL_VarSpec", mystates_ptr, rc) 
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      importSpec => mystates_ptr%ptr%importSpec
+      exportSpec => mystates_ptr%ptr%exportSpec
+ 
+      ! Create the fields in the import and export state
+      !---------------------------------
+      ! realize connected Fields in the importState
+      call realizeConnectedFields(IMPORT, importSpec, esmfGrid, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+      ! realize connected Fields in the importState
+      call realizeConnectedFields(EXPORT, exportSpec, esmfGrid, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
 
 #if 0
       call MAPL_TimerOn(MAPL,"TOTAL")
@@ -590,9 +669,78 @@ contains
       call MAPL_TimerOff(MAPL,"TOTAL")
 #endif
 
+      if ( MAPL_am_I_root() ) then
+         print *,  trim(Iam)//": IMPORT State" 
+                                 call ESMF_StatePrint ( IMPORT)
+!         print *,  trim(Iam)//": INTERNAL State" 
+!                                 call ESMF_StatePrint ( WRAP )
+         print *,  trim(Iam)//": EXPORT State" 
+                                 call ESMF_StatePrint ( EXPORT )
+      end if
+
       RETURN_(ESMF_SUCCESS)
 
-      end subroutine InitRealize
+    contains  !--------------------------------------------------------
+
+    subroutine realizeConnectedFields(state, spec, grid, rc)
+      ! TODO: this method may move into the NUOPC_ utility layer
+      type(ESMF_State)                :: state
+      type(MAPL_VarSpec), pointer     :: spec(:)
+      type(ESMF_Grid)                 :: grid
+      integer, intent(out), optional  :: rc
+      ! local variables
+      character(len=ESMF_MAXSTR)      :: fieldName
+      character(len=ESMF_MAXSTR)      :: name
+      integer                         :: i, itemCount, k
+      type(ESMF_Field)                :: field
+      real(ESMF_KIND_R8), pointer     :: fptr(:)
+
+      if (present(rc)) rc = ESMF_SUCCESS
+      
+      itemCount=size(spec)
+
+      k=1 ! initialize
+      do i=1, itemCount 
+       ! find the VarSpec with matching long_name
+       call MAPL_VarSpecGet(spec(i),LONG_NAME=fieldName, SHORT_NAME=name, rc=rc)
+       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+       call MAPL_VarSpecSet(spec(i), GRID=grid,rc=rc)
+       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+       if (NUOPC_IsConnected(state, fieldName=name)) then
+          ! create a Field
+          field = NUOPC_FieldCreateFromSpec(spec(i),rc=rc)
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+          ! realize the connected Field using the just created Field
+          call NUOPC_Realize(state, field=field, rc=rc)
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+          ! print *, 'ADVCORE Realize field ', name
+        else
+          ! remove a not connected Field from State
+          call ESMF_StateRemove(state, (/name/), rc=rc)
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+          print *, 'ADVCORE remove field ', name
+        endif
+      enddo
+
+    end subroutine realizeConnectedFields
+
+  end subroutine initRealize
+
 !EOC
 !------------------------------------------------------------------------------
 !BOP

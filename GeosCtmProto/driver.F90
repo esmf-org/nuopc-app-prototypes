@@ -31,6 +31,7 @@ module driverCTM
     integer, intent(out) :: rc
     
     rc = ESMF_SUCCESS
+    call ESMF_LogWrite("driver SetServices", ESMF_LOGMSG_INFO, rc=rc)
     
     ! NUOPC_Driver registers the generic methods
     call NUOPC_CompDerive(driver, driver_routine_SS, rc=rc)
@@ -67,6 +68,7 @@ module driverCTM
     type(ESMF_GridComp)           :: comp
     type(ESMF_CplComp)            :: conn
     type(ESMF_Config)             :: config
+    type(ESMF_Config)             :: ctmconfig
     character(len=ESMF_MAXSTR)    :: hisConfigfile
     character(len=ESMF_MAXSTR)    :: extConfigfile
     character(len=ESMF_MAXSTR)    :: ctmConfigfile
@@ -91,6 +93,8 @@ module driverCTM
 
     rc = ESMF_SUCCESS
 
+    call ESMF_LogWrite("driver setModelService", ESMF_LOGMSG_INFO, rc=rc);
+
     ! Get config
     call ESMF_GridCompGet(driver, config=config, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -109,6 +113,8 @@ module driverCTM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+    print *, 'ROOT_CF:', trim(ctmConfigfile)
 
     call ESMF_ConfigGetAttribute(config, value=hisConfigfile, label='HISTORY_CF:',default='HIST.rc', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -148,18 +154,29 @@ module driverCTM
       return  ! bail out
 #endif
     
-    ! SetServices for OCN with petList on second section of PETs
     call NUOPC_DriverAddComp(driver, "CTM", ctmSS, &
       comp=comp, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call ESMF_GridCompSet(comp, configFile=ctmConfigfile, rc=rc)
+    ctmconfig = ESMF_ConfigCreate(rc=rc )
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+           line=__LINE__, &
+           file=__FILE__)) &
+           return  ! bail out
+
+    call ESMF_ConfigLoadFile(ctmconfig, TRIM(ctmConfigfile), rc=rc )
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+           line=__LINE__, &
+           file=__FILE__)) &
+           return  ! bail out
+    call ESMF_GridCompSet(comp, config=ctmconfig, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
     call NUOPC_CompAttributeSet(comp, name="Verbosity", value="high", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -218,13 +235,13 @@ module driverCTM
       file=__FILE__)) &
       return  ! bail out
 
-    call GetUnpackTime(config, "BEG_DATE", BEG_YY, BEG_MM, BEG_DD, BEG_H, BEG_M, BEG_S, rc=rc)
+    call GetUnpackTime(config, "BEG_DATE:", BEG_YY, BEG_MM, BEG_DD, BEG_H, BEG_M, BEG_S, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 
-    call GetUnpackTime(config, "END_DATE", END_YY, END_MM, END_DD, END_H, END_M, END_S, rc=rc)
+    call GetUnpackTime(config, "END_DATE:", END_YY, END_MM, END_DD, END_H, END_M, END_S, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -288,16 +305,21 @@ module driverCTM
      character(len=*)       :: label
      integer, intent(  OUT) :: YY, MM, DD, H, M, S
      integer                :: rc
-
+     logical                :: ispresent
      integer                :: datetime(2)
 
      rc=ESMF_SUCCESS
 
-     call ESMF_ConfigFindLabel(config, label, rc=rc)
+     call ESMF_ConfigFindLabel(config, label, isPresent=ispresent, rc=rc)
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
        line=__LINE__, &
        file=__FILE__)) &
        return  ! bail out
+     if (.not. ispresent) then
+        print *, label, ' is not present'
+        rc=ESMF_FAILURE
+        return
+     endif
 
      call ESMF_ConfigGetAttribute(config, datetime(1), rc=rc)
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
