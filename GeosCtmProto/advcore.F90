@@ -316,7 +316,7 @@ contains
 
     call NUOPC_AddImportSpec ( gc,                                  &
          SHORT_NAME = 'PLE0',                                      &
-         LONG_NAME  = 'pressure_at_layer_edges_before_advection_0',  &
+         LONG_NAME  = 'pressure_at_layer_edges_before_advection',  &
          UNITS      = 'Pa',                                        &
          PRECISION  = ESMF_KIND_R8,                                &
          DIMS       = MAPL_DimsHorzVert,                           &
@@ -328,7 +328,7 @@ contains
 
     call NUOPC_AddImportSpec ( gc,                                  &
          SHORT_NAME = 'PLE1',                                      &
-         LONG_NAME  = 'pressure_at_layer_edges_after_advection_1',   &                
+         LONG_NAME  = 'pressure_at_layer_edges_after_advection',   &                
          UNITS      = 'Pa',                                        &
          PRECISION  = ESMF_KIND_R8,                                &
          DIMS       = MAPL_DimsHorzVert,                           &

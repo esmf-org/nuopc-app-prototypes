@@ -229,7 +229,7 @@
 
      call NUOPC_AddImportSpec ( GC,                                  &
            SHORT_NAME = 'PLE0',                                      &
-           LONG_NAME  = 'pressure_at_layer_edges_before_advection_0',  &
+           LONG_NAME  = 'pressure_at_layer_edges_before_advection',  &
            UNITS      = 'Pa',                                        &
            DIMS       = MAPL_DimsHorzVert,                           &
            VLOCATION  = MAPL_VLocationEdge,             RC=rc  )
@@ -241,7 +241,7 @@
 
      call NUOPC_AddImportSpec ( GC,                                  &
            SHORT_NAME = 'PLE1',                                      &
-           LONG_NAME  = 'pressure_at_layer_edges_after_advection_1',   &
+           LONG_NAME  = 'pressure_at_layer_edges_after_advection',   &
            UNITS      = 'Pa',                                        &
            DIMS       = MAPL_DimsHorzVert,                           &
            VLOCATION  = MAPL_VLocationEdge,             RC=rc  )
@@ -250,7 +250,6 @@
         file=__FILE__)) &
         return  ! bail out
       
-
      call NUOPC_AddImportSpec ( GC,                                  &
            SHORT_NAME = 'UC0',                                       &
            LONG_NAME  = 'eastward_wind_on_C-Grid_before_advection',  &
@@ -305,7 +304,7 @@
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-      
+ 
      !Advertize the import fields
      call ESMF_UserCompGetInternalState(GC, "MAPL_VarSpec", mystates_ptr, rc) 
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -363,7 +362,9 @@
 
      call NUOPC_AddExportSpec ( GC,                                  &
            SHORT_NAME = 'MFXr8',                                     &
-           LONG_NAME  = 'pressure_weighted_accumulated_eastward_mass_flux', &
+!  name inconsistent with the name used in ADVCORE
+!           LONG_NAME  = 'pressure_weighted_accumulated_eastward_mass_flux', &   
+           LONG_NAME  = 'pressure_weighted_eastward_mass_flux', &
            UNITS      = 'Pa m+2 s-1',                                &
            PRECISION  = ESMF_KIND_R8,                                &
            DIMS       = MAPL_DimsHorzVert,                           &
@@ -376,7 +377,9 @@
 
      call NUOPC_AddExportSpec ( GC,                                  &
            SHORT_NAME = 'MFYr8',                                     &
-           LONG_NAME  = 'pressure_weighted_accumulated_northward_mass_flux', &
+!  name inconsistent with the name used in ADVCORE
+!           LONG_NAME  = 'pressure_weighted_accumulated_northward_mass_flux', &
+           LONG_NAME  = 'pressure_weighted_northward_mass_flux', &
            UNITS      = 'Pa m+2 s-1',                                &
            PRECISION  = ESMF_KIND_R8,                                &
            DIMS       = MAPL_DimsHorzVert,                           &
@@ -389,7 +392,7 @@
 
      call NUOPC_AddExportSpec ( GC,                                  &
            SHORT_NAME = 'PLE1r8',                                    &
-           LONG_NAME  = 'pressure_at_layer_edges_after_advection_1',   &
+           LONG_NAME  = 'pressure_at_layer_edges_after_advection',   &
            UNITS      = 'Pa',                                        &
            PRECISION  = ESMF_KIND_R8,                                &
            DIMS       = MAPL_DimsHorzVert,                           &
@@ -402,7 +405,7 @@
 
      call NUOPC_AddExportSpec ( GC,                                  &
            SHORT_NAME = 'PLE0r8',                                    &
-           LONG_NAME  = 'pressure_at_layer_edges_before_advection_0',  &
+           LONG_NAME  = 'pressure_at_layer_edges_before_advection',  &
            UNITS      = 'Pa',                                        &
            PRECISION  = ESMF_KIND_R8,                                &
            DIMS       = MAPL_DimsHorzVert,                           &
