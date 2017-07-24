@@ -272,7 +272,9 @@ contains
 
      call NUOPC_AddImportSpec(GC,                                  &
           SHORT_NAME = 'PLE',                                       &
-          LONG_NAME  = 'air_pressure',                              &
+!  name inconsistent with the name used in ECTM
+!          LONG_NAME  = 'air_pressure',                              &
+          LONG_NAME  = 'pressure_at_layer_edges',                     &
           UNITS      = 'Pa',                                        &
           DIMS       =  MAPL_DimsHorzVert,                          &
           VLOCATION  =  MAPL_VLocationEdge,                         &

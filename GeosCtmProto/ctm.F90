@@ -167,6 +167,13 @@
           line=__LINE__, &
           file=__FILE__)) &
           return  ! bail out
+
+      call NUOPC_CompSetEntryPoint (GC, ESMF_METHOD_RUN, &
+      	   phaseLabelList=(/'RunPhase1'/), userRoutine=Run, RC=rc )
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
 #endif
 
       return
@@ -301,12 +308,15 @@
             return  ! bail out
          ! Add connectors to connect the components
          ! PTRACERS -> ADVCORE
+#if 0
+         ! This is the friendly fields TRACER_Q00 to Q04from PTRACER to the fieldbundle TRADV
          call NUOPC_DriverAddComp(GC, srcCompLabel="PTRACERS", dstCompLabel="DYNAMICS", &
               compSetServicesRoutine=cplSS, comp=conn, rc=rc)
          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
+#endif
          ! Add connectors to connect the components
          ! ADVCORE -> PTRACERS
          call NUOPC_DriverAddComp(GC, srcCompLabel="DYNAMICS", dstCompLabel="PTRACERS", &
@@ -591,6 +601,9 @@
 !=============================================================================
 !BOC
 !
+
+
+
 ! !LOCAL VARIABLES:
       integer                             :: STATUS
       type (MAPL_MetaComp),      pointer  :: STATE
@@ -862,6 +875,66 @@ subroutine My_GridCreate(GC, rc)
 
     return
 end subroutine My_GridCreate
+
+#if 0
+  subroutine SetRunSequence(driver, rc)
+    type(ESMF_GridComp)  :: driver
+    integer, intent(out) :: rc
+    
+    ! local variables
+    character(ESMF_MAXSTR)              :: name
+    type(NUOPC_FreeFormat)              :: runSeqFF
+
+    rc = ESMF_SUCCESS
+    
+    ! query the Component for info
+    call ESMF_GridCompGet(driver, name=name, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+    
+    ! set up free format run sequence
+    runSeqFF = NUOPC_FreeFormatCreate(stringList=(/ &
+      " @1800         ",    &
+      "   MED         ",    &
+      "   MED -> ATM  ",    &
+      "   MED -> OCN  ",    &
+      "   ATM         ",    &
+      "   OCN         ",    &
+      "   ATM -> MED  ",    &
+      "   OCN -> MED  ",    &
+      "   MED         ",    &
+      " @             " /), &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+      
+#if 1
+    call NUOPC_FreeFormatPrint(runSeqFF, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+#endif
+
+    ! ingest FreeFormat run sequence
+    call NUOPC_DriverIngestRunSequence(driver, runSeqFF, &
+      autoAddConnectors=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+
+#if 0
+    ! Diagnostic output
+    call NUOPC_DriverPrint(driver, orderflag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+#endif
+
+    ! clean-up
+    call NUOPC_FreeFormatDestroy(runSeqFF, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+      
+  end subroutine
+#endif
+
 
 !EOC
 !------------------------------------------------------------------------------
