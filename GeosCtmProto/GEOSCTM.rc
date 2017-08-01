@@ -1,0 +1,108 @@
+
+# Model Resolution and Timestep Parameters
+# ----------------------------------------
+               NX: 1
+               NY: 6
+       GEOSCTM_IM: 48
+       GEOSCTM_JM: 288
+               LM: 72
+         GRIDNAME: PE48x288-CF
+AdvCore_Advection: 1
+           DYCORE: OFF
+     HEARTBEAT_DT: 900
+
+
+# Print Resource Parameters (0: Non-Default values, 1: ALL values)
+#-----------------------------------------------------------------
+PRINTRC: 1
+
+# Set the number of parallel I/O processes to use when
+# RESTART_TYPE and or CHECKPOINT_TYPE are set to pbinary or pnc4
+#---------------------------------------------------------------
+PARALLEL_READFORCING: 1
+NUM_READERS: 1
+NUM_WRITERS: 1
+
+MAPL_ENABLE_BOOTSTRAP: YES
+
+# GEOSCTM Model Restart Files
+# ---------------------------------
+
+#PCHEM_INTERNAL_RESTART_FILE:            pchem_internal_rst
+#PCHEM_INTERNAL_CHECKPOINT_FILE:         pchem_internal_checkpoint
+#PCHEM_INTERNAL_CHECKPOINT_TYPE:         default
+
+
+##GOCART_INTERNAL_RESTART_FILE:           gocart_internal_rst
+##GOCART_INTERNAL_CHECKPOINT_FILE:        gocart_internal_checkpoint
+##GOCART_INTERNAL_CHECKPOINT_TYPE:        default
+
+##CARMA_INTERNAL_RESTART_FILE:            carma_internal_rst
+##CARMA_INTERNAL_CHECKPOINT_FILE:         carma_internal_checkpoint
+##CARMA_INTERNAL_CHECKPOINT_TYPE:         default
+
+##STRATCHEM_INTERNAL_RESTART_FILE:        stratchem_internal_rst
+##STRATCHEM_INTERNAL_CHECKPOINT_FILE:     stratchem_internal_checkpoint
+##STRATCHEM_INTERNAL_CHECKPOINT_TYPE:     default
+
+##GMICHEM_INTERNAL_RESTART_FILE:          gmichem_internal_rst
+##GMICHEM_INTERNAL_CHECKPOINT_FILE:       gmichem_internal_checkpoint
+##GMICHEM_INTERNAL_CHECKPOINT_TYPE:       default
+
+##GMICHEM_IMPORT_RESTART_FILE:            gmichem_import_rst
+##GMICHEM_IMPORT_CHECKPOINT_FILE:         gmichem_import_checkpoint
+##GMICHEM_IMPORT_CHECKPOINT_TYPE:         default
+
+##MAM_INTERNAL_RESTART_FILE:              mam_internal_rst
+##MAM_INTERNAL_CHECKPOINT_FILE:           mam_internal_checkpoint
+##MAM_INTERNAL_CHECKPOINT_TYPE:           default
+
+#TR_INTERNAL_RESTART_FILE:               tr_internal_rst
+#TR_INTERNAL_CHECKPOINT_FILE:            tr_internal_checkpoint
+#TR_INTERNAL_CHECKPOINT_TYPE:            default
+
+PTRACERS_INTERNAL_RESTART_FILE:         -pTracers_internal_rst
+PTRACERS_INTERNAL_CHECKPOINT_FILE:       pTracers_internal_checkpoint
+PTRACERS_INTERNAL_CHECKPOINT_TYPE:       default
+
+
+# AeroChem Environment
+# --------------------
+     OX_RELAXTIME: 259200.    # Standard Options:  GCM: 259200., DAS: 0.000
+    CH4_RELAXTIME: 259200.
+    N2O_RELAXTIME: 259200.
+  CFC11_RELAXTIME: 259200.
+  CFC12_RELAXTIME: 259200.
+ HCFC22_RELAXTIME: 259200.
+    H2O_RELAXTIME: 259200.
+    OX_FRIENDLIES: ANALYSIS:DYNAMICS:TURBULENCE:MOIST
+   CH4_FRIENDLIES: DYNAMICS:TURBULENCE:MOIST
+   N2O_FRIENDLIES: DYNAMICS:TURBULENCE:MOIST
+ CFC11_FRIENDLIES: DYNAMICS:TURBULENCE:MOIST
+ CFC12_FRIENDLIES: DYNAMICS:TURBULENCE:MOIST
+   H2O_FRIENDLIES: DYNAMICS:TURBULENCE:MOIST
+HCFC22_FRIENDLIES: DYNAMICS:TURBULENCE:MOIST
+       pchem_clim: species.data
+       pchem_clim_years: 228
+
+# Age-of-Air Parameters
+# ---------------------
+#AOA_FRIENDLIES: DYNAMICS:TURBULENCE:MOIST
+
+
+# GOCART broadband aerosol optics tables
+# -----------------------------------------------------
+DU_OPTICS: ExtData/g5chem/x/opticsBands_DU.v15_3.nc
+SS_OPTICS: ExtData/g5chem/x/opticsBands_SS.v3_3.nc
+SU_OPTICS: ExtData/g5chem/x/opticsBands_SU.v1_3.nc
+OC_OPTICS: ExtData/g5chem/x/opticsBands_OC.v1_3.nc
+BC_OPTICS: ExtData/g5chem/x/opticsBands_BC.v1_3.nc
+NI_OPTICS: ExtData/g5chem/x/opticsBands_NI.v2_5.nc
+NUM_BANDS: 18
+
+DIURNAL_BIOMASS_BURNING: yes
+
+       RATS_PROVIDER:    # options: PCHEM, GMICHEM, STRATCHEM (Radiatively active tracers)
+       AERO_PROVIDER:    # options: GOCART.data, GOCART, MAM  (Radiatively active aerosols)
+ANALYSIS_OX_PROVIDER:    # options: PCHEM, GMICHEM, STRATCHEM, GOCART
+

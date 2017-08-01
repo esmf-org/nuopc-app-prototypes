@@ -101,7 +101,7 @@
       VERIFY_(STATUS)
       Iam = trim(COMP_NAME) // TRIM(Iam)
 
-     call ESMF_LogWrite(Iam, ESMF_LOGMSG_INFO, rc=rc)      
+      call ESMF_LogWrite(Iam, ESMF_LOGMSG_INFO, rc=rc)      
 
       allocate(mystates)
       mystates_ptr%ptr => mystates
@@ -120,13 +120,13 @@
 
      ! Register services for this component
      ! ------------------------------------
-    ! Provide InitializeP0 to switch to custom IPD version
-    call ESMF_GridCompSetEntryPoint(GC, ESMF_METHOD_INITIALIZE, &
-      userRoutine=InitializeP0, phase=0, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
+     ! Provide InitializeP0 to switch to custom IPD version
+     call ESMF_GridCompSetEntryPoint(GC, ESMF_METHOD_INITIALIZE, &
+        userRoutine=InitializeP0, phase=0, rc=rc)
+     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
      ! set entry point for methods that require specific implementation
      call NUOPC_CompSetEntryPoint(GC, ESMF_METHOD_INITIALIZE, &
         phaseLabelList=(/"IPDv02p1"/), userRoutine=InitAdvertise, rc=rc)
