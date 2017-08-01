@@ -138,6 +138,7 @@ module OCN
     integer               :: iCount, jCount, petCount, localPet, ind, i
     type(ESMF_Field)      :: fieldArb, fieldAux, sstField
     real(ESMF_KIND_R8),   pointer :: fptr(:), dataPtr(:)
+    real(ESMF_KIND_R8),   pointer :: coordPtr(:,:)
     type(ESMF_RouteHandle):: rh
     real(ESMF_KIND_R8),   pointer :: factorList(:)
     integer(ESMF_KIND_I4),pointer :: factorIndexList(:,:)
@@ -145,7 +146,8 @@ module OCN
     type(ESMF_Array)      :: array
     integer               :: dimCount, rank
     integer               :: coordDimMap(2,2)
-    
+    character(160)        :: msgString
+
     rc = ESMF_SUCCESS
     
     !--- regDecomp Grid -------------------------------------------------------
@@ -159,7 +161,8 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
       
-#if 1
+#define TESTGRIDEDGEWIDTHS
+#ifdef TESTGRIDEDGEWIDTHS
     ! Test Grid created from DG -> test transfer of various pieces of info
     ! Note that the DG holds the topology info of the original GridCreate()
     ! short-cut, so here simple periodic connection along dim=1.
@@ -187,12 +190,13 @@ module OCN
       indexflag=ESMF_INDEX_GLOBAL, &
       gridEdgeLWidth=(/1,1/),     &
       gridEdgeUWidth=(/1,1/),     &
+      name="OCN-GridInFromDG", &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
- 
+      
 #ifdef KEEPFACTORIZEDCOORDS
     call ESMF_GridGetCoord(gridAux, coordDim=1, array=array, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -219,20 +223,36 @@ module OCN
     ! Caution: make sure to choose staggerEdge widths that are consistent
     ! with the topology. Here because of periodicity in dim=1, there cannot
     ! be any staggerEdge L/U width along the 1st dimension!
+    ! - actually let CENTER just default to its typical (/0,0/) edge widths
     call ESMF_GridAddCoord(gridIn, staggerloc=ESMF_STAGGERLOC_CENTER, &
-      staggerEdgeLWidth = (/0,1/), &
-      staggerEdgeUWidth = (/0,1/), &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    ! - set some values in the coordinates so that output does look messed up
+    call ESMF_GridGetCoord(gridIn, coordDim=1, farrayPtr=coordPtr, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    do i=lbound(coordPtr,1), ubound(coordPtr,1)
+      coordPtr(i,:) = real(i, ESMF_KIND_R8)
+    enddo
+    call ESMF_GridGetCoord(gridIn, coordDim=2, farrayPtr=coordPtr, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    do i=lbound(coordPtr,2), ubound(coordPtr,2)
+      coordPtr(:,i) = real(i, ESMF_KIND_R8)
+    enddo
 #endif
 
 #if 1
     call ESMF_GridAddCoord(gridIn, staggerloc=ESMF_STAGGERLOC_CORNER, &
-      staggerEdgeLWidth = (/0,0/), &
-      staggerEdgeUWidth = (/1,1/), &
+      staggerEdgeLWidth = (/1,1/), &
+      staggerEdgeUWidth = (/0,0/), &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -248,7 +268,7 @@ module OCN
       return  ! bail out
     call ESMF_GridAddCoord(gridIn, staggerloc=ESMF_STAGGERLOC_EDGE2, &
       staggerEdgeLWidth = (/1,0/), &
-      staggerEdgeUWidth = (/1,1/), &
+      staggerEdgeUWidth = (/0,1/), &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -258,7 +278,7 @@ module OCN
       
 #endif
   
-#if 0
+#if 1
     ! testing the output of coord arrays
     ! they are currently written in 2D index space although there is coordinate
     ! factorization used in the Ufrm() GridCreate. Therefore the coord arrays 
@@ -271,7 +291,7 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call ESMF_ArrayWrite(array, "array_OCN-gridIn_coord1.nc", rc=rc)
+    call ESMF_ArrayWrite(array, "array_OCN-gridIn_center_coord1.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -285,14 +305,37 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call ESMF_ArrayWrite(array, "array_OCN-gridIn_coord2.nc", rc=rc)
+    call ESMF_ArrayWrite(array, "array_OCN-gridIn_center_coord2.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+    call ESMF_GridGetCoord(gridIn, staggerloc=ESMF_STAGGERLOC_CORNER, &
+      coordDim=1, array=array, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_ArrayWrite(array, "array_OCN-gridIn_corner_coord1.nc", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_GridGetCoord(gridIn, staggerloc=ESMF_STAGGERLOC_CORNER, &
+      coordDim=2, array=array, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_ArrayWrite(array, "array_OCN-gridIn_corner_coord2.nc", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
 #endif
-      
-    
+   
 #if 1
     ! write out the Grid into VTK file for inspection
     call ESMF_GridWriteVTK(gridIn, staggerloc=ESMF_STAGGERLOC_CENTER, &
@@ -349,7 +392,7 @@ module OCN
     ! write out the Grid into VTK file for inspection
     ! -> This currently only works if there are no holes in the index space
     ! -> coverage. If the deBlocks do not fully cover the index space, the
-    ! -> GridToMesh conversion fails: therefore no VTK output of regrid.
+    ! -> GridToMesh conversion fails: therefore no VTK output or regrid.
     call ESMF_GridWriteVTK(gridOut, staggerloc=ESMF_STAGGERLOC_CENTER, &
       filename="OCN-GridOut_centers", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -568,7 +611,7 @@ module OCN
 
     ! finally write the destination side (which is located in the exportState)
     ! to file for inspection
-    call NUOPC_Write(exportState, fileNamePrefix="field_ocn_export_init_", &
+    call NUOPC_Write(exportState, fileNamePrefix="field_ocn_init_export_", &
       relaxedFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &

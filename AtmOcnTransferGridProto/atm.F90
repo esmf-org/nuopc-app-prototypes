@@ -733,6 +733,9 @@ module ATM
     character(80)                 :: name
     character(160)                :: msgString
     type(ESMF_FieldStatus_Flag)   :: fieldStatus
+    integer                       :: staggerEdgeLWidth(2)
+    integer                       :: staggerEdgeUWidth(2)
+    integer                       :: staggerAlign(2)
 
     rc = ESMF_SUCCESS
 
@@ -833,6 +836,130 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+      
+#define TESTGRIDEDGEWIDTHS
+#ifdef TESTGRIDEDGEWIDTHS
+    ! check the staggerEdgeWidth of the transferred grid 
+    
+    ! center stagger
+    call ESMF_GridGet(grid, staggerloc=ESMF_STAGGERLOC_CENTER, &
+      staggerEdgeLWidth=staggerEdgeLWidth, &
+      staggerEdgeUWidth=staggerEdgeUWidth, &
+      staggerAlign=staggerAlign, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    print *, "staggerEdgeLWidth", staggerEdgeLWidth
+    print *, "staggerEdgeUWidth", staggerEdgeUWidth
+    print *, "staggerAlign", staggerAlign
+    if (any(staggerEdgeLWidth /= (/0,0/))) then
+      call ESMF_LogSetError(ESMF_RC_VAL_WRONG, &
+        msg="Wrong staggerEdgeLWidth for ESMF_STAGGERLOC_CENTER", &
+        line=__LINE__, &
+        file=__FILE__, &
+        rcToReturn=rc)
+      return  ! bail out
+    endif
+    if (any(staggerEdgeUWidth /= (/0,0/))) then
+      call ESMF_LogSetError(ESMF_RC_VAL_WRONG, &
+        msg="Wrong staggerEdgeUWidth for ESMF_STAGGERLOC_CENTER", &
+        line=__LINE__, &
+        file=__FILE__, &
+        rcToReturn=rc)
+      return  ! bail out
+    endif
+      
+    ! corner stagger
+    call ESMF_GridGet(grid, staggerloc=ESMF_STAGGERLOC_CORNER, &
+      staggerEdgeLWidth=staggerEdgeLWidth, &
+      staggerEdgeUWidth=staggerEdgeUWidth, &
+      staggerAlign=staggerAlign, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    print *, "staggerEdgeLWidth", staggerEdgeLWidth
+    print *, "staggerEdgeUWidth", staggerEdgeUWidth
+    print *, "staggerAlign", staggerAlign
+    if (any(staggerEdgeLWidth /= (/1,1/))) then
+      call ESMF_LogSetError(ESMF_RC_VAL_WRONG, &
+        msg="Wrong staggerEdgeLWidth for ESMF_STAGGERLOC_CORNER", &
+        line=__LINE__, &
+        file=__FILE__, &
+        rcToReturn=rc)
+      return  ! bail out
+    endif
+    if (any(staggerEdgeUWidth /= (/0,0/))) then
+      call ESMF_LogSetError(ESMF_RC_VAL_WRONG, &
+        msg="Wrong staggerEdgeuWidth for ESMF_STAGGERLOC_CORNER", &
+        line=__LINE__, &
+        file=__FILE__, &
+        rcToReturn=rc)
+      return  ! bail out
+    endif
+
+    ! edge1 stagger
+    call ESMF_GridGet(grid, staggerloc=ESMF_STAGGERLOC_EDGE1, &
+      staggerEdgeLWidth=staggerEdgeLWidth, &
+      staggerEdgeUWidth=staggerEdgeUWidth, &
+      staggerAlign=staggerAlign, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    print *, "staggerEdgeLWidth", staggerEdgeLWidth
+    print *, "staggerEdgeUWidth", staggerEdgeUWidth
+    print *, "staggerAlign", staggerAlign
+    if (any(staggerEdgeLWidth /= (/0,1/))) then
+      call ESMF_LogSetError(ESMF_RC_VAL_WRONG, &
+        msg="Wrong staggerEdgeLWidth for ESMF_STAGGERLOC_EDGE1", &
+        line=__LINE__, &
+        file=__FILE__, &
+        rcToReturn=rc)
+      return  ! bail out
+    endif
+    if (any(staggerEdgeUWidth /= (/1,1/))) then
+      call ESMF_LogSetError(ESMF_RC_VAL_WRONG, &
+        msg="Wrong staggerEdgeUWidth for ESMF_STAGGERLOC_EDGE1", &
+        line=__LINE__, &
+        file=__FILE__, &
+        rcToReturn=rc)
+      return  ! bail out
+    endif
+
+    ! edge2 stagger
+    call ESMF_GridGet(grid, staggerloc=ESMF_STAGGERLOC_EDGE2, &
+      staggerEdgeLWidth=staggerEdgeLWidth, &
+      staggerEdgeUWidth=staggerEdgeUWidth, &
+      staggerAlign=staggerAlign, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    print *, "staggerEdgeLWidth", staggerEdgeLWidth
+    print *, "staggerEdgeUWidth", staggerEdgeUWidth
+    print *, "staggerAlign", staggerAlign
+    if (any(staggerEdgeLWidth /= (/1,0/))) then
+      call ESMF_LogSetError(ESMF_RC_VAL_WRONG, &
+        msg="Wrong staggerEdgeLWidth for ESMF_STAGGERLOC_EDGE2", &
+        line=__LINE__, &
+        file=__FILE__, &
+        rcToReturn=rc)
+      return  ! bail out
+    endif
+    if (any(staggerEdgeUWidth /= (/0,1/))) then
+      call ESMF_LogSetError(ESMF_RC_VAL_WRONG, &
+        msg="Wrong staggerEdgeUWidth for ESMF_STAGGERLOC_EDGE2", &
+        line=__LINE__, &
+        file=__FILE__, &
+        rcToReturn=rc)
+      return  ! bail out
+    endif
+
+#endif
+      
+      
 #if 1
     ! write out the Grid into VTK file for inspection
     call ESMF_GridWriteVTK(grid, staggerloc=ESMF_STAGGERLOC_CENTER, &
@@ -934,7 +1061,7 @@ module ATM
       enddo
     enddo
     ! output to file
-    call NUOPC_Write(field, fileName="field_atm_pmsl_init.nc", &
+    call NUOPC_Write(field, fileName="field_atm_init_export_pmsl.nc", &
       status=ESMF_FILESTATUS_REPLACE, relaxedflag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -972,7 +1099,7 @@ module ATM
       enddo
     enddo
     ! output to file
-    call NUOPC_Write(field, fileName="field_atm_rsns_init.nc", &
+    call NUOPC_Write(field, fileName="field_atm_init_export_rsns.nc", &
       status=ESMF_FILESTATUS_REPLACE, relaxedflag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -1003,7 +1130,7 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
     ! output to file
-    call NUOPC_Write(field, fileName="field_atm_precip_init.nc", &
+    call NUOPC_Write(field, fileName="field_atm_init_export_precip.nc", &
       status=ESMF_FILESTATUS_REPLACE, relaxedflag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
