@@ -611,13 +611,6 @@
                                  call ESMF_StatePrint ( exportState )
       end if
 
-      if ( MAPL_am_I_root() ) then
-         print *,  trim(Iam)//": IMPORT State" 
-                                 call ESMF_StatePrint ( importState)
-         print *,  trim(Iam)//": EXPORT State" 
-                                 call ESMF_StatePrint ( exportState )
-      end if
-
     contains  !--------------------------------------------------------
 
     subroutine realizeConnectedFields(state, spec, grid, rc)
