@@ -489,6 +489,7 @@
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
+      nullify(childcomp)
       call NUOPC_DriverGetComp(GC, compList=childcomp, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &

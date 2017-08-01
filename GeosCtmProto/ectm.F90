@@ -98,7 +98,7 @@
      ! Get my name and set-up traceback handle
      ! ---------------------------------------
       call ESMF_GridCompGet( GC, NAME=COMP_NAME, RC=rc )
-      VERIFY_(STATUS)
+      VERIFY_(rc)
       Iam = trim(COMP_NAME) // TRIM(Iam)
 
       call ESMF_LogWrite(Iam, ESMF_LOGMSG_INFO, rc=rc)      
