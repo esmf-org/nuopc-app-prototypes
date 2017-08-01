@@ -87,7 +87,6 @@
 ! 
 !EOP
 !------------------------------------------------------------------------------
-#define PRINT_STATES
 
       logical :: enable_pTracers  = .FALSE.
       logical :: do_ctmConvection = .FALSE.
@@ -334,36 +333,36 @@
 
       call MAPL_TimerAdd(GC, name="RUN"           ,RC=rc)
       VERIFY_(STATUS)
-#endif
 
       ! -------------------------------
       ! Connectivities between Children
       ! -------------------------------
-      !CALL MAPL_AddConnectivity ( GC, &
-      !         SHORT_NAME  = (/'AREA'/), &
-      !         DST_ID = ECTM, SRC_ID = ADV3, __RC__  )
+      CALL MAPL_AddConnectivity ( GC, &
+               SHORT_NAME  = (/'AREA'/), &
+               DST_ID = ECTM, SRC_ID = ADV3, __RC__  )
 
-      !CALL MAPL_AddConnectivity ( GC, &
-      !         SRC_NAME  = (/ 'CXr8  ', 'CYr8  ', 'MFXr8 ', 'MFYr8 ', 'PLE0r8', 'PLE1r8' /), &
-      !         DST_NAME  = (/ 'CX    ', 'CY    ', 'MFX   ', 'MFY   ', 'PLE0  ', 'PLE1  ' /), &
-      !         DST_ID = ADV3, SRC_ID = ECTM, __RC__  )
-      !CALL MAPL_TerminateImport    ( GC,    &
-      !         SHORT_NAME = (/'TRADV'/),          &
-      !         CHILD = ADV3,    __RC__  )
+      CALL MAPL_AddConnectivity ( GC, &
+               SRC_NAME  = (/ 'CXr8  ', 'CYr8  ', 'MFXr8 ', 'MFYr8 ', 'PLE0r8', 'PLE1r8' /), &
+               DST_NAME  = (/ 'CX    ', 'CY    ', 'MFX   ', 'MFY   ', 'PLE0  ', 'PLE1  ' /), &
+               DST_ID = ADV3, SRC_ID = ECTM, __RC__  )
+      CALL MAPL_TerminateImport    ( GC,    &
+               SHORT_NAME = (/'TRADV'/),          &
+               CHILD = ADV3,    __RC__  )
 
 
-      !IF (enable_pTracers) THEN
-      !   CALL MAPL_AddConnectivity ( GC, &
-      !           SHORT_NAME  = (/'AREA'/), &
-      !           DST_ID = PTRA, SRC_ID = ADV3, __RC__  )
+      IF (enable_pTracers) THEN
+         CALL MAPL_AddConnectivity ( GC, &
+                 SHORT_NAME  = (/'AREA'/), &
+                 DST_ID = PTRA, SRC_ID = ADV3, __RC__  )
 
-      !   CALL MAPL_AddConnectivity ( GC, &
-      !           SHORT_NAME  = (/'PLE'/), &
-      !           DST_ID = PTRA, SRC_ID = ECTM, __RC__  )
-      !END IF
+         CALL MAPL_AddConnectivity ( GC, &
+                 SHORT_NAME  = (/'PLE'/), &
+                 DST_ID = PTRA, SRC_ID = ECTM, __RC__  )
+      END IF
 
-      !call MAPL_GenericSetServices ( GC, RC=STATUS )
-      !VERIFY_(STATUS)
+      call MAPL_GenericSetServices ( GC, RC=STATUS )
+      VERIFY_(STATUS)
+#endif
 
 ! Move grid creation code from Initialize to here
       call Initialize(GC, RC)
