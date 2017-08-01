@@ -22,6 +22,7 @@ module NUOPC_Generic
  public NUOPC_AddImportSpec
  public NUOPC_AddExportSpec
  public NUOPC_AddInternalSpec
+ public NUOPC_FieldCreateFromSpec
 
  type my_States
     type (MAPL_VarSpec),     pointer   :: ImportSpec(:) => null()
