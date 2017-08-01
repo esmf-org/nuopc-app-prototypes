@@ -597,6 +597,20 @@
         file=__FILE__)) &
         return  ! bail out
 
+      ! realize connected Fields in the importState
+      call realizeConnectedFields(exportState, exportSpec, esmfGrid, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+      if ( MAPL_am_I_root() ) then
+         print *,  trim(Iam)//": IMPORT State" 
+                                 call ESMF_StatePrint ( importState)
+         print *,  trim(Iam)//": EXPORT State" 
+                                 call ESMF_StatePrint ( exportState )
+      end if
+
       if ( MAPL_am_I_root() ) then
          print *,  trim(Iam)//": IMPORT State" 
                                  call ESMF_StatePrint ( importState)
