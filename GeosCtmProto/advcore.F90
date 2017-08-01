@@ -118,8 +118,8 @@ contains
       subroutine SetServices(GC, rc)
 !
 ! !ARGUMENTS:
-      type(ESMF_GridComp), intent(inout) :: GC
-      integer, optional,   intent(  out) :: RC
+      type(ESMF_GridComp) :: GC
+      integer, intent(  out) :: RC
 !
 ! !DESCRIPTION:
 !
@@ -470,13 +470,13 @@ contains
   subroutine InitRealize(GC, IMPORT, EXPORT, CLOCK, RC)
 !
 ! !INPUT/OUTPUT PARAMETERS:
-      type(ESMF_GridComp), intent(inout) :: GC     ! Gridded component 
-      type(ESMF_State),    intent(inout) :: IMPORT ! Import state
-      type(ESMF_State),    intent(inout) :: EXPORT ! Export state
-      type(ESMF_Clock),    intent(inout) :: CLOCK  ! The clock
+      type(ESMF_GridComp) :: GC     ! Gridded component 
+      type(ESMF_State)    :: IMPORT ! Import state
+      type(ESMF_State)    :: EXPORT ! Export state
+      type(ESMF_Clock)    :: CLOCK  ! The clock
 !
 ! !OUTPUT PARAMETERS:
-      integer, optional,   intent(  out) :: RC     ! Error code
+      integer, intent(  out) :: RC     ! Error code
 !
 ! !DESCRIPTION:
 !     This initialization routine creates the import and export states,
@@ -749,9 +749,9 @@ contains
 !
 ! !INTERFACE:
 !
-      subroutine modelAdvance(GC, RC)
+      subroutine ModelAdvance(GC, RC)
 !
-      type(ESMF_GridComp), intent(inout) :: GC     ! Gridded component 
+      type(ESMF_GridComp)                :: GC     ! Gridded component 
       integer,             intent(  out) :: RC     ! Error code
 !
 ! !DESCRIPTION:
