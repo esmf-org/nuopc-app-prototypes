@@ -106,7 +106,7 @@
       subroutine SetServices ( GC, RC )
 !
 ! !INPUT/OUTPUT PARAMETERS:
-    type(ESMF_GridComp), intent(INOUT) :: GC  ! gridded component
+    type(ESMF_GridComp)                :: GC  ! gridded component
 !
 ! !OUTPUT PARAMETERS:
     integer,             intent(  OUT) :: RC  ! return code

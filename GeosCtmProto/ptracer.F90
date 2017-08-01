@@ -78,10 +78,10 @@ contains
       subroutine SetServices ( GC, RC )
 !
 ! !OUTPUT PARAMETERS:
-      integer, optional :: RC  ! return code
+      integer, intent(out) :: RC  ! return code
 !
 ! !INPUT/OUTPUT PARAMETERS:
-      type(ESMF_GridComp), intent(INOUT) :: GC  ! gridded component
+      type(ESMF_GridComp) :: GC  ! gridded component
 
 ! !DESCRIPTION: Sets Initialize and Run services. 
 ! \newline
@@ -449,7 +449,7 @@ contains
 
       RETURN
   
-      end subroutine initAdvertise
+    end subroutine InitAdvertise
 !EOC
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !BOP
@@ -458,16 +458,15 @@ contains
 ! 
 ! !INTERFACE:
 !
-      subroutine initRealize ( GC, IMPORT, EXPORT, CLOCK, RC )
+    subroutine InitRealize ( GC, IMPORT, EXPORT, CLOCK, RC )
 !
-! !INPUT/OUTPUT PARAMETERS:
-      type(ESMF_GridComp), intent(inout) :: GC     ! Gridded component 
-      type(ESMF_State),    intent(inout) :: IMPORT ! Import state
-      type(ESMF_State),    intent(inout) :: EXPORT ! Export state
-      type(ESMF_Clock),    intent(inout) :: CLOCK  ! The clock
+      type(ESMF_GridComp) :: GC     ! Gridded component 
+      type(ESMF_State)    :: IMPORT ! Import state
+      type(ESMF_State)    :: EXPORT ! Export state
+      type(ESMF_Clock)    :: CLOCK  ! The clock
 !
 ! !OUTPUT PARAMETERS:
-      integer, optional,   intent(  out) :: RC     ! Error code
+      integer, intent(  out) :: RC     ! Error code
 !
 ! !DESCRIPTION: The Initialize method of pTracers gridded component.
 !   \newline
@@ -863,13 +862,13 @@ contains
 !
 ! !INTERFACE:
 !
-      subroutine modelAdvance( GC, RC )
+      subroutine ModelAdvance( GC, RC )
 !
 ! !INPUT/OUTPUT PARAMETERS:
-      type(ESMF_GridComp), intent(inout) :: GC     ! Gridded component 
+      type(ESMF_GridComp) :: GC     ! Gridded component 
 !
 ! !OUTPUT PARAMETERS:
-      integer, optional,   intent(  out) :: RC     ! Error code
+      integer, intent(  out) :: RC     ! Error code
 !
 ! !DESCRIPTION: Does nothing for now.
 ! \newline
