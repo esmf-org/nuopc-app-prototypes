@@ -1,3 +1,7 @@
+! Make sure to define test macros consistently across all source files:
+#define TEST_GRID_EDGE_WIDTHS
+#define TEST_MULTI_TILE_GRID
+
 module ATM
 
   !-----------------------------------------------------------------------------
@@ -134,6 +138,23 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
+    ! importable field: sea_surface_height_above_sea_level
+    ! -> marked as "can provide"
+    call NUOPC_Advertise(importState, &
+      StandardName="sea_surface_height_above_sea_level", name="ssh", &
+      TransferOfferGeomObject="cannot provide", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call ESMF_LogWrite("Done advertising fields in ATM importState", &
+      ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! exportable field: air_pressure_at_sea_level
     ! -> marked as "cannot provide"
     call NUOPC_Advertise(exportState, &
@@ -163,6 +184,13 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
     
+    call ESMF_LogWrite("Done advertising fields in ATM exportState", &
+      ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
   end subroutine
   
   !-----------------------------------------------------------------------------
@@ -249,6 +277,13 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_Realize(exportState, field=field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call ESMF_LogWrite("Done realizing fields in ATM import/exportStates "// &
+      "that do not need grid transfer", ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -730,6 +765,7 @@ module ATM
     ! local variables
     type(ESMF_Field)              :: field
     type(ESMF_Grid)               :: grid
+    type(ESMF_Array)              :: array
     character(80)                 :: name
     character(160)                :: msgString
     type(ESMF_FieldStatus_Flag)   :: fieldStatus
@@ -745,14 +781,13 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
     ! the transferred Grid is already set, allocate memory for data by complete
     call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+    ! log a message
     call ESMF_LogWrite("ATM - Just completed the 'sss' Field", &
       ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -766,7 +801,6 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
     ! check status of "sst" field and decide on action
     call ESMF_FieldGet(field, status=fieldStatus, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -774,7 +808,7 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
     if (fieldStatus==ESMF_FIELDSTATUS_COMPLETE) then
-      ! log info
+      ! log a message
       call ESMF_LogWrite("ATM - The 'sst' Field was already complete", &
         ESMF_LOGMSG_INFO, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -788,7 +822,7 @@ module ATM
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-      ! log info
+      ! log a message
       call ESMF_LogWrite("ATM - Just completed the 'sst' Field", &
         ESMF_LOGMSG_INFO, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -797,13 +831,46 @@ module ATM
         return  ! bail out
     endif
 
+    ! access the "ssh" field in the importState
+    call ESMF_StateGet(importState, field=field, itemName="ssh", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! the transferred Grid is already set, allocate memory for data by complete
+    call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! log a message
+    call ESMF_LogWrite("ATM - Just completed the 'ssh' Field", &
+      ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#ifdef TEST_MULTI_TILE_GRID    
+    ! write cubed sphere grid out to VTK
+    call ESMF_FieldGet(field, grid=grid, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_GridWriteVTK(grid, staggerloc=ESMF_STAGGERLOC_CENTER, &
+      filename="ATM-accepted-Grid-ssh_centers", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
     ! access the "pmsl" field in the exportState
     call ESMF_StateGet(exportState, field=field, itemName="pmsl", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
     ! the transferred Grid is already set, allocate memory for data by complete
     call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, &
       totalLWidth=(/1,1/), totalUWidth=(/1,1/), rc=rc)
@@ -811,7 +878,7 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+    ! log a message
     call ESMF_LogWrite("ATM - Just completed the 'pmsl' Field", &
       ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -836,11 +903,8 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
-#define TESTGRIDEDGEWIDTHS
-#ifdef TESTGRIDEDGEWIDTHS
     ! check the staggerEdgeWidth of the transferred grid 
-    
+#ifdef TEST_GRID_EDGE_WIDTHS
     ! center stagger
     call ESMF_GridGet(grid, staggerloc=ESMF_STAGGERLOC_CENTER, &
       staggerEdgeLWidth=staggerEdgeLWidth, &
@@ -869,7 +933,6 @@ module ATM
         rcToReturn=rc)
       return  ! bail out
     endif
-      
     ! corner stagger
     call ESMF_GridGet(grid, staggerloc=ESMF_STAGGERLOC_CORNER, &
       staggerEdgeLWidth=staggerEdgeLWidth, &
@@ -898,7 +961,6 @@ module ATM
         rcToReturn=rc)
       return  ! bail out
     endif
-
     ! edge1 stagger
     call ESMF_GridGet(grid, staggerloc=ESMF_STAGGERLOC_EDGE1, &
       staggerEdgeLWidth=staggerEdgeLWidth, &
@@ -927,7 +989,6 @@ module ATM
         rcToReturn=rc)
       return  ! bail out
     endif
-
     ! edge2 stagger
     call ESMF_GridGet(grid, staggerloc=ESMF_STAGGERLOC_EDGE2, &
       staggerEdgeLWidth=staggerEdgeLWidth, &
@@ -956,10 +1017,112 @@ module ATM
         rcToReturn=rc)
       return  ! bail out
     endif
-
 #endif
-      
-      
+
+#if 1
+    ! testing the output of coord arrays
+    !TODO:
+    ! Coords are currently written in 2D index space even if there is coordinate
+    ! factorization used, e.g. in the Ufrm() GridCreate. Therefore the coord
+    ! arrays have replicated dims, and underlying allocation is only 1D. This 
+    ! should be changed in the ArrayWrite() where Arrays with replicated dims
+    ! should write out only the non-degenerate data, i.e. according to the 
+    ! actual data allocation. 
+    ! -> here that would be a 1D array for each coordiante dim.
+    ! center:
+    call ESMF_GridGetCoord(grid, coordDim=1, array=array, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_ArrayWrite(array, "array_ATM-grid_center_coord1.nc", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_GridGetCoord(grid, coordDim=2, array=array, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_ArrayWrite(array, "array_ATM-grid_center_coord2.nc", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#ifdef TEST_GRID_EDGE_WIDTHS
+    ! corner:
+    call ESMF_GridGetCoord(grid, staggerloc=ESMF_STAGGERLOC_CORNER, &
+      coordDim=1, array=array, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_ArrayWrite(array, "array_ATM-grid_corner_coord1.nc", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_GridGetCoord(grid, staggerloc=ESMF_STAGGERLOC_CORNER, &
+      coordDim=2, array=array, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_ArrayWrite(array, "array_ATM-grid_corner_coord2.nc", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! edge1:
+    call ESMF_GridGetCoord(grid, staggerloc=ESMF_STAGGERLOC_EDGE1, &
+      coordDim=1, array=array, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_ArrayWrite(array, "array_ATM-grid_edge1_coord1.nc", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_GridGetCoord(grid, staggerloc=ESMF_STAGGERLOC_EDGE1, &
+      coordDim=2, array=array, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_ArrayWrite(array, "array_ATM-grid_edge1_coord2.nc", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! edge2:
+    call ESMF_GridGetCoord(grid, staggerloc=ESMF_STAGGERLOC_EDGE2, &
+      coordDim=1, array=array, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_ArrayWrite(array, "array_ATM-grid_edge2_coord1.nc", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_GridGetCoord(grid, staggerloc=ESMF_STAGGERLOC_EDGE2, &
+      coordDim=2, array=array, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_ArrayWrite(array, "array_ATM-grid_edge2_coord2.nc", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+#endif
+
 #if 1
     ! write out the Grid into VTK file for inspection
     call ESMF_GridWriteVTK(grid, staggerloc=ESMF_STAGGERLOC_CENTER, &
@@ -982,7 +1145,6 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
     ! the transferred Grid is already set, allocate memory for data by complete
     call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -1004,7 +1166,7 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 #endif
-
+    ! log a message
     call ESMF_LogWrite("ATM - Just completed the 'precip' Field", &
       ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -1196,12 +1358,15 @@ module ATM
       return  ! bail out
 
     ! write out the Fields in the importState and exportState
+#ifndef TEST_MULTI_TILE_GRID
+! Write() does not currently support fields on multi-tile grids
     call NUOPC_Write(importState, fileNamePrefix="field_atm_import_", &
       timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     call NUOPC_Write(exportState, fileNamePrefix="field_atm_export_", &
       timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &

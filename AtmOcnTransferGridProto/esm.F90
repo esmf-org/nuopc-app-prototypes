@@ -116,7 +116,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="0", rc=rc)
+    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="max", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -129,7 +129,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="0", rc=rc)
+    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="max", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -223,17 +223,17 @@ module ESM
           return  ! bail out
         ! go through all of the entries in the cplList
         do j=1, cplListSize
-          if (trim(cplList(j))=="air_pressure_at_sea_level") then
-            ! switch remapping to redist, b/c holes in index space
-            cplList(j) = trim(cplList(j))//":REMAPMETHOD=redist"
-          elseif (trim(cplList(j))=="precipitation_flux") then
+          if (trim(cplList(j))=="precipitation_flux") then
             ! switch remapping to redist, b/c arbDistr Grid
             cplList(j) = trim(cplList(j))//":REMAPMETHOD=redist"
           elseif (trim(cplList(j))=="sea_surface_salinity") then
             ! switch remapping to redist, b/c holes in index space
             cplList(j) = trim(cplList(j))//":REMAPMETHOD=redist"
           elseif (trim(cplList(j))=="sea_surface_temperature") then
-            ! switch remapping to redist, more efficient anyway 
+            ! switch remapping to redist, b/c can have holes in index space
+            cplList(j) = trim(cplList(j))//":REMAPMETHOD=redist"
+          elseif (trim(cplList(j))=="sea_surface_height_above_sea_level") then
+            ! switch remapping to redist, b/c can have holes in index space
             cplList(j) = trim(cplList(j))//":REMAPMETHOD=redist"
           endif
         enddo
