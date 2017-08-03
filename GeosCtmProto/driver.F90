@@ -39,6 +39,16 @@ module driverCTM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+    ! set driver CompLabel
+    ! this is defaulted to "_uninitialized" and as such
+    ! connectors will NOT automatically be added between
+    ! this driver component and its children
+    call NUOPC_CompAttributeSet(driver, name="CompLabel", value="driver", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
       
     ! attach specializing method(s)
     call NUOPC_CompSpecialize(driver, specLabel=driver_label_SetModelServices, &
