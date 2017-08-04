@@ -11,7 +11,7 @@ module driverCTM
     driver_label_SetModelServices => label_SetModelServices
   
   use CTM, only: ctmSS => SetServices
-!  use ExtData, only: extDataSS => SetServices
+  use ExtData, only: extDataSS => SetServices
 !  use HISTORY, only: historySS => SetServices
   
   use NUOPC_Connector, only: cplSS => SetServices
@@ -35,16 +35,6 @@ module driverCTM
     
     ! NUOPC_Driver registers the generic methods
     call NUOPC_CompDerive(driver, driver_routine_SS, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    ! set driver CompLabel
-    ! this is defaulted to "_uninitialized" and as such
-    ! connectors will NOT automatically be added between
-    ! this driver component and its children
-    call NUOPC_CompAttributeSet(driver, name="CompLabel", value="driver", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -138,6 +128,18 @@ module driverCTM
       file=__FILE__)) &
       return  ! bail out
 
+    ctmconfig = ESMF_ConfigCreate(rc=rc )
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, &
+         file=__FILE__)) &
+         return  ! bail out
+    
+    call ESMF_ConfigLoadFile(ctmconfig, TRIM(ctmConfigfile), rc=rc )
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, &
+         file=__FILE__)) &
+         return  ! bail out
+
     ! set driver verbosity
     call NUOPC_CompAttributeSet(driver, name="Verbosity", value="high", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -145,24 +147,33 @@ module driverCTM
       file=__FILE__)) &
       return  ! bail out
 
-#if 0
-    call NUOPC_DriverAddComp(driver, "ExtData", extDataSS  &
+    call NUOPC_DriverAddComp(driver, "ExtData", extDataSS,  &
       comp=comp, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call ESMF_GridCompSet(comp, configFile=extConfigfile, rc=rc)
+
+    call ESMF_GridCompSet(comp, configFile=trim(extConfigfile), rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, &
+         file=__FILE__)) &
+         return  ! bail out
+
+    !FIXME: for now, explicitly setting ExtData to use ctmconfig object
+    ! so that the grid parameters are available - this needs to be changed
+    call ESMF_GridCompSet(comp, config=ctmconfig, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
     call NUOPC_CompAttributeSet(comp, name="Verbosity", value="high", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-#endif
+
     
     call NUOPC_DriverAddComp(driver, "CTM", ctmSS, &
       comp=comp, rc=rc)
@@ -170,17 +181,7 @@ module driverCTM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    ctmconfig = ESMF_ConfigCreate(rc=rc )
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-           line=__LINE__, &
-           file=__FILE__)) &
-           return  ! bail out
-
-    call ESMF_ConfigLoadFile(ctmconfig, TRIM(ctmConfigfile), rc=rc )
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-           line=__LINE__, &
-           file=__FILE__)) &
-           return  ! bail out
+    
     call ESMF_GridCompSet(comp, config=ctmconfig, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -211,7 +212,8 @@ module driverCTM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-
+#endif
+    
     ! SetServices for ExtData to CTM
     call NUOPC_DriverAddComp(driver, srcCompLabel="ExtData", dstCompLabel="CTM", &
       compSetServicesRoutine=cplSS, comp=conn, rc=rc)
@@ -224,7 +226,8 @@ module driverCTM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
+#if 0
     ! SetServices for CTM to HISTORY
     call NUOPC_DriverAddComp(driver, srcCompLabel="CTM", dstCompLabel="HISTORY", &
       compSetServicesRoutine=cplSS, comp=conn, rc=rc)
