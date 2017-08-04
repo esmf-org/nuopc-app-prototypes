@@ -54,13 +54,13 @@ ESMF_F90ESMFLINKLIBS          += $(MAPL_LINKLIBS)
 
 # -----------------------------------------------------------------------------
 #ctmApp: ctmApp.o driver.o ctm.o history.o extdata.o ectm.o ptracer.o advcore.o NUOPC_Generic.o
-ctmApp: ctmApp.o driver.o ctm.o ectm.o ptracer.o advcore.o NUOPC_Generic.o
+ctmApp: ctmApp.o driver.o extdata.o ctm.o ectm.o ptracer.o advcore.o NUOPC_Generic.o
 	$(ESMF_F90LINKER) $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS) -o $@ $^ $(ESMF_F90ESMFLINKLIBS) 
 
 # module dependencies:
 ctmApp.o: driver.o 
 #driver.o: ctm.o history.o extdata.o
-driver.o: ctm.o 
+driver.o: ctm.o extdata.o
 #ctm.o: ectm.o ptracer.o advcore.o
 ctm.o: ectm.o ptracer.o advcore.o
 ectm.o: NUOPC_Generic.o

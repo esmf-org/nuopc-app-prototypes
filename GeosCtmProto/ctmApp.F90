@@ -19,7 +19,6 @@ program ctmApp
   character(len=*), parameter :: Iam = 'GEOSctm_App'
 
   type(ESMF_GridComp)     :: driver
-  type(ESMF_State)        :: driverImport, driverExport
   
   ! Initialize ESMF
   call ESMF_Initialize(logkindflag=ESMF_LOGKIND_MULTI, &
@@ -58,25 +57,9 @@ program ctmApp
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-  ! explicitly create import/export states
-  ! since this is a top-level driver and it
-  ! will not automatically happen in NUOPC
-  driverImport = ESMF_StateCreate(name="driver import", rc=rc)
-  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-    line=__LINE__, &
-    file=__FILE__)) &
-    call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-  driverExport = ESMF_StateCreate(name="driver export", rc=rc)
-  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-    line=__LINE__, &
-    file=__FILE__)) &
-    call ESMF_Finalize(endflag=ESMF_END_ABORT)
   
   ! Call Initialize for the earth system Component
-  call ESMF_GridCompInitialize(driver, importState=driverImport, &
-       exportState=driverExport, userRc=urc, rc=rc)
+  call ESMF_GridCompInitialize(driver, userRc=urc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
@@ -87,8 +70,7 @@ program ctmApp
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
   
   ! Call Run  for earth the system Component
-  call ESMF_GridCompRun(driver, importState=driverImport, &
-       exportState=driverExport, userRc=urc, rc=rc)
+  call ESMF_GridCompRun(driver, userRc=urc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
@@ -99,8 +81,7 @@ program ctmApp
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
   
   ! Call Finalize for the earth system Component
-  call ESMF_GridCompFinalize(driver, importState=driverImport, &
-       exportState=driverExport, userRc=urc, rc=rc)
+  call ESMF_GridCompFinalize(driver, userRc=urc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
