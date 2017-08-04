@@ -514,6 +514,12 @@ contains
     integer                                 :: rstReq
 
 
+#define DEBUGPRINT__OFF
+#ifdef DEBUGPRINT
+    integer :: fieldDimCount, gridDimCount, arbDimCount
+    integer, allocatable :: ungriddedLBound(:), ungriddedUBound(:)
+#endif
+    
     if (present(DEFER)) then
       usableDEFER = DEFER
     else
@@ -586,6 +592,7 @@ contains
 !ALT we check if doNotAllocate is set only for fields that are not deferred
             if (.not. doNotAllocate) then
                if (has_ungrd) then
+                  
                   if (defaultProvided) then
                      call MAPL_FieldAllocCommit(field, dims=dims, location=location, typekind=knd, &
                           hw=hw, ungrid=ungrd, default_value=default_value, rc=rc)
@@ -604,6 +611,7 @@ contains
                      
                   endif
                else
+                  
                   if (defaultProvided) then
                      call MAPL_FieldAllocCommit(field, dims=dims, location=location, typekind=knd, &
                           hw=hw, default_value=default_value, rc=rc)
@@ -845,6 +853,43 @@ contains
 
       end if
 
+#ifdef DEBUGPRINT
+      ! debug print
+      call ESMF_FieldGet(FIELD, grid=GRID, &
+           dimCount=fieldDimCount, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+           line=__LINE__, file=__FILE__)) return  ! bail out
+      call ESMF_GridGet(grid, dimCount=gridDimCount, &
+           arbDimCount=arbDimCount, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+           line=__LINE__, file=__FILE__)) return  ! bail out
+
+      print *, "NUOPC_FieldCreateFromSpec: fieldDimCount=", fieldDimCount, &
+           " gridDimCount=", gridDimCount, " arbDimCount=", arbDimCount
+      
+      if (fieldDimCount - gridDimCount > 0) then
+         ! query ungridded dim bounds
+         allocate(ungriddedLBound(fieldDimCount-gridDimCount),stat=stat)
+         if (ESMF_LogFoundAllocError(statusToCheck=stat, &
+              msg="Allocation of internal ungriddedLBound failed.", &
+              line=__LINE__, file=__FILE__, rcToReturn=rc)) &
+              return  ! bail out
+         allocate(ungriddedUBound(fieldDimCount-gridDimCount),stat=stat)
+         if (ESMF_LogFoundAllocError(statusToCheck=stat, &
+              msg="Allocation of internal ungriddedUBound failed.", &
+              line=__LINE__, file=__FILE__, rcToReturn=rc)) &
+              return  ! bail out
+         call ESMF_FieldGet(FIELD, ungriddedLBound=ungriddedLBound, &
+              ungriddedUBound=ungriddedUBound, rc=rc)
+         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+              line=__LINE__, file=__FILE__)) return  ! bail out
+         print *, "ungriddedLBound = ", ungriddedLBound(:)
+         print *, "ungriddedUBound = ", ungriddedUBound(:)
+         deallocate(ungriddedLBound)
+         deallocate(ungriddedUBound)
+      endif
+#endif      
+         
    NUOPC_FieldCreateFromSpec = FIELD
 
    RETURN
