@@ -98,26 +98,24 @@ contains
            return  ! bail out
       ! set entry point for methods that require specific implementation
       call NUOPC_CompSetEntryPoint(GC, ESMF_METHOD_INITIALIZE, &
-           phaseLabelList=(/"IPDv02p1"/), userRoutine=InitAdvertise, rc=rc)
+           phaseLabelList=(/"IPDv05p1"/), userRoutine=InitAdvertise, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
         return  ! bail out
       call NUOPC_CompSetEntryPoint(GC, ESMF_METHOD_INITIALIZE, &
-           phaseLabelList=(/"IPDv02p3"/), userRoutine=InitRealize, rc=rc)
+           phaseLabelList=(/"IPDv05p6"/), userRoutine=InitRealize, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
            return  ! bail out
       
-#if 0
-      call NUOPC_CompSpecialize(GC, specLabel=model_label_DataInitialize, &
-           specRoutine=initTracer, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-           line=__LINE__, &
+     call NUOPC_CompSpecialize(GC, specLabel=model_label_DataInitialize, &
+       specRoutine=dataInitialize, rc=rc)
+     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+       line=__LINE__, &
        file=__FILE__)) &
        return  ! bail out
-#endif
       
       call NUOPC_CompSpecialize(GC, specLabel=model_label_Advance, &
            specRoutine=ModelAdvance, rc=rc)
@@ -142,7 +140,7 @@ contains
       ! Switch to IPDv02 (for datainitialize dependency loop) 
       ! by filtering all other phaseMap entries
       call NUOPC_CompFilterPhaseMap(gcomp, ESMF_METHOD_INITIALIZE, &
-           acceptStringList=(/"IPDv02p"/), rc=rc)
+           acceptStringList=(/"IPDv05p"/), rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
@@ -181,58 +179,6 @@ contains
            line=__LINE__, &
            file=__FILE__)) &
            return  ! bail out
-
-      
-#if 0      
-      ! explicit field advertising below
-      
-      call ESMF_UserCompGetInternalState(gc, 'MAPL_VarSpec', mystates_ptr, rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-           line=__LINE__, &
-           file=__FILE__)) &
-           return  ! bail out
-
-      !FIXME: Not sure how ExtData interacts with RUN_DT
-      !Setting here because required by NUOPC_AddExportSpec call below.
-      !This needs to be cleaned up.
-      call ESMF_AttributeSet(GC, "RUN_DT:", 900, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-           line=__LINE__, &
-            file=__FILE__)) &
-            return  ! bail out
-      
-      call NUOPC_AddExportSpec(GC,                                  &
-           SHORT_NAME         = 'TRADV',                             &
-           LONG_NAME          = 'advected_quantities',               &
-           units              = 'X',                                 &
-           DIMS               = MAPL_DimsHorzVert,                   &
-           VLOCATION          = MAPL_VLocationCenter,                &
-           !DATATYPE           = MAPL_BundleItem,                     &
-           RC=RC  )
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-           line=__LINE__, &
-           file=__FILE__)) &
-           return  ! bail out
-
-      exportSpec => mystates_ptr%ptr%exportSpec
-                  
-      ! below is a candidate for a generic behavior to move into NUOPC
-      do i=1,size(exportSpec)
-         call MAPL_VarSpecGet(exportSpec(i), SHORT_NAME=short_name, LONG_NAME=long_name, &
-              STAT=mytype, UNITS=units, rc=rc)
-         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-              line=__LINE__, &
-              file=__FILE__)) &
-              return  ! bail out
-         
-         call NUOPC_Advertise(EXPORT, &
-              StandardName=long_name, name=short_name, units=units, rc=rc)
-         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-              line=__LINE__, &
-              file=__FILE__)) &
-              return  ! bail out        
-      end do
-#endif
       
     end subroutine InitAdvertise
 !EOC
@@ -251,8 +197,7 @@ contains
       type(ESMF_Clock)    :: CLOCK  ! The clock
 !
 ! !OUTPUT PARAMETERS:
-      integer, intent(  out) :: RC     ! Error code
-!
+      integer, intent(  out) :: RC     ! Error code!
 ! !DESCRIPTION:
 !
 !EOP
@@ -264,10 +209,6 @@ contains
       character(len=ESMF_MAXSTR)       :: COMP_NAME
 
       ! locals
-      type(ESMF_Grid)              :: esmfGrid
-      type (mystates_WRAP)         :: mystates_ptr
-      type(MAPL_VarSpec), pointer  :: exportSpec(:)
-      
 
       RC = ESMF_SUCCESS
       
@@ -281,98 +222,292 @@ contains
 
       call ESMF_LogWrite(Iam, ESMF_LOGMSG_INFO, rc=rc)      
 
-      !FIXME:  Explicitly create a grid here
-      call My_GridCreate  (GC, rc )
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-           line=__LINE__, &
-           file=__FILE__)) &
-           return  ! bail out
-            
-      ! Get the grid related information
-      !---------------------------------
-      call ESMF_GridCompGet ( GC, GRID=esmfGrid, rc=RC)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-      
-      ! Get the exportSpec from internal state
-      call ESMF_UserCompGetInternalState(GC, "MAPL_VarSpec", mystates_ptr, rc) 
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-           line=__LINE__, &
-           file=__FILE__)) &
-           return  ! bail out
-      exportSpec => mystates_ptr%ptr%exportSpec
-      
-      ! realize connected Fields in the importState
-      call realizeConnectedFields(EXPORT, exportspec, esmfGrid, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
+      call MirrorFieldsInState(EXPORT, rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return ! bail out
 
-    contains  !--------------------------------------------------------
-      
-      subroutine realizeConnectedFields(state, spec, grid, rc)
-        ! TODO: this method may move into the NUOPC_ utility layer
-        type(ESMF_State)                :: state
-        type(MAPL_VarSpec),pointer      :: spec(:)
-        type(ESMF_Grid)                 :: grid
-        integer, intent(out), optional  :: rc
-        ! local variables
-        character(len=ESMF_MAXSTR)      :: fieldName
-        character(len=ESMF_MAXSTR)      :: name
-        integer                         :: i, itemCount, k
-        type(ESMF_Field)                :: field
-        real(ESMF_KIND_R8), pointer     :: fptr(:)
-        
-        if (present(rc)) rc = ESMF_SUCCESS
-        
-        itemCount=size(spec)
-        
-        k=1 ! initialize
-        do i=1, itemCount 
-           ! find the VarSpec with matching long_name
-           call MAPL_VarSpecGet(spec(i),LONG_NAME=fieldName, SHORT_NAME=name, rc=rc)
-           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-                line=__LINE__, &
-                file=__FILE__)) &
-                return  ! bail out
-           call MAPL_VarSpecSet(spec(i), GRID=grid,rc=rc)
-           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-                line=__LINE__, &
-                file=__FILE__)) &
-                return  ! bail out
-           if (NUOPC_IsConnected(state, fieldName=name)) then
-              ! create a Field
-              field = NUOPC_FieldCreateFromSpec(spec(i),rc=rc)
-              if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-                   line=__LINE__, &
-                   file=__FILE__)) &
-                   return  ! bail out
-              ! realize the connected Field using the just created Field
-              call NUOPC_Realize(state, field=field, rc=rc)
-              if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-                   line=__LINE__, &
-                   file=__FILE__)) &
-                   return  ! bail out
-           else
-              ! We might need to keep them for now to allow the connection between
-              ! the friendly fields and 
-              ! remove a not connected Field from State in a later phase
-              call ESMF_StateRemove(state, (/name/), rc=rc)
-              if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-                   line=__LINE__, &
-                   file=__FILE__)) &
-                   return  ! bail out
-              print *, 'ExtData remove field ', name
-              
-           endif
-        enddo
-        
-      end subroutine realizeConnectedFields
-      
+      if ( MAPL_am_I_root() ) then
+         print *,  trim(Iam)//": EXPORT State" 
+                                 call ESMF_StatePrint ( EXPORT )
+      endif
+
     end subroutine initRealize
+
+    subroutine MirrorFieldsInState(state, rc)
+        type(ESMF_State), intent(in) :: state
+        integer, intent(out) :: rc
+
+        integer                :: i, itemCount, stat
+        character(ESMF_MAXSTR) :: transferGeom
+        character(ESMF_MAXSTR), allocatable :: itemNameList(:)
+        type(ESMF_StateItem_Flag), allocatable :: itemTypeList(:)
+        type(ESMF_Field)       :: field
+
+        type(ESMF_Grid)        :: grid
+        type(ESMF_DistGrid)    :: distgrid
+        integer, allocatable   :: minIndexPTile(:,:), maxIndexPTile(:,:)
+        integer                :: dimCount
+        character(len=80)      :: valueString, attrString
+        logical                :: isPresent
+        type(ESMF_AttPack)     :: attpack
+        integer, pointer       :: ungriddedLBound(:), ungriddedUBound(:)
+
+        rc = ESMF_SUCCESS
+
+        call ESMF_StateGet(state, itemCount=itemCount, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, file=__FILE__)) return  ! bail out
+
+        print *, "EXTDATA export items;", itemCount
+
+        allocate(itemNameList(itemCount),stat=stat)
+        if (ESMF_LogFoundAllocError(statusToCheck=stat, &
+            msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, file=__FILE__, rcToReturn=rc)) &
+            return  ! bail out
+
+        allocate(itemTypeList(itemCount),stat=stat)
+        if (ESMF_LogFoundAllocError(statusToCheck=stat, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, file=__FILE__, rcToReturn=rc)) &
+            return  ! bail out
+
+        call ESMF_StateGet(state, itemNameList=itemNameList, &
+            itemTypeList=itemTypeList, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+
+        ! WARNING: does not currently deal with nested states or field bundles
+        do i=lbound(itemNameList,1), ubound(itemNameList,1)
+            if (itemTypeList(i)==ESMF_STATEITEM_FIELD) then
+
+                ! TODO: condition on NUOPC_IsConnected first
+                ! NUOPC_IsConnected(state, fieldName=fieldNameList(i))
+
+                call ESMF_StateGet(state, &
+                    itemNameList(i), field, rc=rc)
+                if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                    line=__LINE__, &
+                    file=__FILE__)) &
+                    return  ! bail out
+
+                call NUOPC_GetAttribute(field, name="TransferActionGeomObject", &
+                    value=transferGeom, rc=rc)
+                if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                    line=__LINE__, &
+                    file=__FILE__)) &
+                    return  ! bail out
+
+                call ESMF_LogWrite(trim(itemNameList(i))//trim(transferGeom), &
+                              ESMF_LOGMSG_INFO, rc=rc)
+
+!                if (trim(transferGeom)=="accept") then
+
+                    call ESMF_LogWrite("Completing mirrored field: "//itemNameList(i), &
+                        ESMF_LOGMSG_INFO, rc=rc)
+                    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                        line=__LINE__, file=__FILE__)) &
+                        return  ! bail out
+
+                    nullify(ungriddedLBound)
+                    nullify(ungriddedUBound)
+
+                    call ESMF_AttributeGetAttPack(field, attpack=attpack, &
+                      convention="NUOPC", purpose="Instance", isPresent=isPresent, rc=rc)
+                    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                        line=__LINE__, file=__FILE__)) &
+                        return  ! bail out
+                    if (.not. isPresent) then
+                      ! attpack not present
+                      call ESMF_LogWrite("Field level attpack NOT present!", &
+                          ESMF_LOGMSG_WARNING, rc=rc)
+                      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                        line=__LINE__, file=__FILE__)) &
+                        return  ! bail out
+                    else
+                      ! retrieve ungridded dimension bounds and mirror
+                      ! match those as well
+                      call ESMF_AttributeGet(field, name="UngriddedLBound", &
+                        attpack=attpack, itemCount=itemCount, isPresent=isPresent, &
+                        attnestflag=ESMF_ATTNEST_ON, rc=rc)
+                      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                        line=__LINE__, file=__FILE__)) &
+                        return  ! bail out
+
+                      if (isPresent .and. itemCount > 0) then
+                        allocate(ungriddedLBound(itemCount),stat=stat)
+                        if (ESMF_LogFoundAllocError(statusToCheck=stat, &
+                          msg="Allocation of internal ungriddedLBound failed.", &
+                          line=__LINE__, file=__FILE__, rcToReturn=rc)) &
+                          return  ! bail out
+
+                        call ESMF_AttributeGet(field, &
+                          name="UngriddedLBound", valueList=ungriddedLBound, &
+                          convention="NUOPC", purpose="Instance", &
+                          attnestflag=ESMF_ATTNEST_ON, rc=rc)
+                        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                          line=__LINE__, &
+                          file=__FILE__)) &
+                          return  ! bail out
+
+                        !print *, "UNGRIDDED LBOUND = ", ungriddedLBound
+                      endif
+
+                      call ESMF_AttributeGet(field, name="UngriddedUBound", &
+                        attpack=attpack, itemCount=itemCount, isPresent=isPresent, &
+                        attnestflag=ESMF_ATTNEST_ON, rc=rc)
+                      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                        line=__LINE__, file=__FILE__)) &
+                        return  ! bail out
+
+                      if (isPresent .and. itemCount > 0) then
+                        allocate(ungriddedUBound(itemCount),stat=stat)
+                        if (ESMF_LogFoundAllocError(statusToCheck=stat, &
+                          msg="Allocation of internal ungriddedUBound failed.", &
+                          line=__LINE__, file=__FILE__, rcToReturn=rc)) &
+                          return  ! bail out
+
+                        call ESMF_AttributeGet(field, &
+                          name="UngriddedUBound", valueList=ungriddedUBound, &
+                          convention="NUOPC", purpose="Instance", &
+                          attnestflag=ESMF_ATTNEST_ON, rc=rc)
+                        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                          line=__LINE__, &
+                          file=__FILE__)) &
+                          return  ! bail out
+
+                        print *, "UNGRIDDED UBOUND = ", ungriddedUBound
+                      endif
+                    endif
+
+                    if (associated(ungriddedLBound) .and. &
+                        associated(ungriddedUBound)) then
+                      call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, &
+                        ungriddedLBound=ungriddedLBound, &
+                        ungriddedUBound=ungriddedUBound, &
+                        rc=rc)
+                      deallocate(ungriddedLBound)
+                      deallocate(ungriddedUBound)
+                    else
+                      call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
+                    endif
+
+                    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                          line=__LINE__, &
+                          file=__FILE__)) &
+                          return  ! bail out
+
+#define DEBUG_DISTGRID
+#ifdef DEBUG_DISTGRID
+
+                    call ESMF_FieldGet(field, grid=grid, rc=rc)
+                    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                        line=__LINE__, &
+                        file=__FILE__)) &
+                        return  ! bail out
+                    call ESMF_GridGet(grid, distgrid=distgrid, rc=rc)
+                    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                        line=__LINE__, &
+                        file=__FILE__)) &
+                        return  ! bail out
+                    call ESMF_DistGridGet(distgrid, dimCount=dimCount, rc=rc)
+                    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                        line=__LINE__, &
+                        file=__FILE__)) &
+                        return  ! bail out
+
+                    allocate(minIndexPTile(dimCount,1), maxIndexPTile(dimCount,1))
+
+                    call ESMF_DistGridGet(distgrid, minIndexPTile=minIndexPTile, &
+                        maxIndexPTile=maxIndexPTile, rc=rc)
+                    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                        line=__LINE__, &
+                        file=__FILE__)) &
+                        return  ! bail out
+
+                    write(valueString, *) "DistGrid minIndexPTile(:,1) = ", minIndexPTile(:,1)
+                    call ESMF_LogWrite(valueString, ESMF_LOGMSG_INFO, rc=rc)
+                    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                        line=__LINE__, &
+                        file=__FILE__)) &
+                        return  ! bail out
+
+                    write(valueString, *) "DistGrid maxIndexPTile(:,1) = ", maxIndexPTile(:,1)
+                    call ESMF_LogWrite(valueString, ESMF_LOGMSG_INFO, rc=rc)
+                    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                        line=__LINE__, &
+                        file=__FILE__)) &
+                        return  ! bail out
+
+                    deallocate(minIndexPTile)
+                    deallocate(maxIndexPTile)
+
+#endif
+#if 0
+                else
+                    !print *, "NOT COMPLETING FIELD: ", itemNameList(i), trim(transferGeom)
+                    call ESMF_LogWrite("CANNOT complete mirrored field: "//itemNameList(i), &
+                        ESMF_LOGMSG_INFO, rc=rc)
+                    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                        line=__LINE__, &
+                        file=__FILE__)) &
+                        return  ! bail out
+                end if
+#endif
+            end if
+        end do
+
+        deallocate(itemNameList)
+        deallocate(itemTypeList)
+
+    end subroutine
+
+!----------------------------------------------------------------------
+      subroutine dataInitialize ( GC, RC )
+!
+      type(ESMF_GridComp)      :: GC     ! Gridded component 
+      integer,   intent(  out) :: RC     ! Error code
+!
+    ! local variables
+    type(ESMF_Clock)              :: clock
+    type(ESMF_State)              :: importState, exportState
+
+    RC = ESMF_SUCCESS
+
+    call ESMF_LogWrite("EXTDATA:dataInitialize", ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+           line=__LINE__, &
+           file=__FILE__)) &
+           return  ! bail out
+
+    ! query the Component for its clock, importState and exportState
+    call NUOPC_ModelGet(GC, modelClock=clock, importState=importState, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! must explicitly set time stamp on all export fields
+    call NUOPC_UpdateTimestamp(exportState, clock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! indicate that data initialization is complete (breaking out of init-loop)
+    call NUOPC_CompAttributeSet(GC, &
+      name="InitializeDataComplete", value="true", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+     return
+     end subroutine dataInitialize
     
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !BOP
@@ -439,104 +574,6 @@ contains
 !EOC
 !---------------------------------------------------------------------------
 
-    
-    ! FIXME:  this copied over from ctm.F90 temporarily
-    ! so we have a way of getting the grid.  How does ExtData
-    ! currently deal with grids?  Can each component ask for
-    ! data on its own grid?
-    subroutine My_GridCreate(GC, rc)
-      type(ESMF_GridComp) :: GC
-      integer             :: rc
-      
-      ! local variables
-      type(ESMF_Config)               :: config
-      integer                         :: NX, NY
-      character(len=ESMF_MAXSTR)      :: Gridname
-      type (ESMF_Grid)                :: GRID
-      integer                         :: IM_WORLD
-      integer                         :: JM_WORLD
-      integer                         :: LM,L,NN
-      character(len=4)                :: imsz
-      character(len=5)                :: jmsz
-      character(len=2)                :: date
-      character(len=2)                :: pole
-      integer, allocatable            :: regDecomp(:,:)
-      
-      rc = ESMF_SUCCESS
-      
-      call ESMF_GridCompGet(GC, config=config, rc=rc)   
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-           line=__LINE__, &
-           file=__FILE__)) &
-           return  ! bail out
-      call ESMF_ConfigGetAttribute(config, value=NX, label='NX:', rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-           line=__LINE__, &
-           file=__FILE__)) &
-           return  ! bail out
-      call ESMF_ConfigGetAttribute(config, value=NY, label='NY:', rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-           line=__LINE__, &
-           file=__FILE__)) &
-           return  ! bail out
-      call ESMF_ConfigGetAttribute(config, value=Gridname, label='GRIDNAME:', rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-           line=__LINE__, &
-           file=__FILE__)) &
-           return  ! bail out
-      call ESMF_ConfigGetAttribute(config, value=LM, label='LM:', default=1, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-           line=__LINE__, &
-           file=__FILE__)) &
-           return  ! bail out
-      
-      Gridname = AdjustL(Gridname)
-      nn   = len_trim(Gridname)
-      imsz = Gridname(3:index(Gridname,'x')-1)
-      jmsz = Gridname(index(Gridname,'x')+1:nn-3)
-      pole = Gridname(1:2)
-      date = Gridname(nn-1:nn)
-      
-      read(IMSZ,*) IM_WORLD
-      read(JMSZ,*) JM_WORLD
-      
-      ! date='CF' for cubed sphere
-      if (date=='CF' .or. date=='DP') then
-         ! make sure NY is divisble by 6 and JM_WORLD is IM_WORLD*6
-         if (mod(NY, 6) /= 0) then
-            call ESMF_LogSetError(ESMF_RC_ARG_BAD, msg='NY has to be multiple of 6', &
-                 line=__LINE__, &
-                 file=__FILE__, rcToReturn=rc) 
-            return
-         endif
-         allocate(regDecomp(2,6))
-         regDecomp(1,:)=NX
-         regDecomp(2,:)=NY/6
-         print *, regDecomp(:,1), IM_WORLD, trim(Gridname)
-         grid = ESMF_GridCreateCubedSphere(IM_WORLD, regDecompPTile = regDecomp, &
-              name=trim(Gridname), rc=rc)
-         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-              line=__LINE__, &
-              file=__FILE__)) &
-              return  ! bail out
-      endif
-      
-      call ESMF_AttributeSet(grid, name='GRID_LM', value=LM, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-           line=__LINE__, &
-           file=__FILE__)) &
-           return  ! bail out
-      
-      ! Set grid to the GridComp
-      call ESMF_GridCompSet(GC, grid=grid, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-           line=__LINE__, &
-           file=__FILE__)) &
-           return  ! bail out
-      
-      return
-    end subroutine My_GridCreate
-    
     
     
   end module EXTDATA

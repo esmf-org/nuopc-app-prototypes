@@ -92,7 +92,6 @@ contains
 !
 ! ErrLog Variables
       character(len=ESMF_MAXSTR)       :: IAm = 'SetServices'
-      integer                          :: STATUS
       character(len=ESMF_MAXSTR)       :: COMP_NAME
 ! Local derived type aliases
       type (ESMF_Config )              :: configFile
@@ -103,8 +102,11 @@ contains
       ! Get my name and set-up traceback handle
       !----------------------------------------
 
-      call ESMF_GridCompGet( GC, NAME=COMP_NAME, RC=STATUS )
-      VERIFY_(STATUS)
+      call ESMF_GridCompGet( GC, NAME=COMP_NAME, RC=rc )
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
 
       Iam = trim(COMP_NAME) //"::"// trim(Iam)
 
@@ -148,14 +150,12 @@ contains
         file=__FILE__)) &
         return  ! bail out
 
-#if 0
      call NUOPC_CompSpecialize(GC, specLabel=model_label_DataInitialize, &
        specRoutine=initTracer, rc=rc)
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
        line=__LINE__, &
        file=__FILE__)) &
        return  ! bail out
-#endif
 
      call NUOPC_CompSpecialize(GC, specLabel=model_label_Advance, &
        specRoutine=ModelAdvance, rc=rc)
@@ -549,12 +549,13 @@ contains
         file=__FILE__)) &
         return  ! bail out
 
+#if 0
       call initTracer(GC, rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-
+#endif
       return
 
     contains  !--------------------------------------------------------
@@ -659,9 +660,16 @@ contains
       character(len=ESMF_MAXSTR)       :: Iam = 'SetServices'
       type(ESMF_State)                 :: IMPORT, EXPORT
       type(ESMF_State)                 :: INTERNAL
+      type(ESMF_Clock)              :: clock
+
 
       ! Get my private state from the component
       !----------------------------------------
+    call ESMF_LogWrite("PTRACER:dataInitialize", ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+           line=__LINE__, &
+           file=__FILE__)) &
+           return  ! bail out
 
       call ESMF_UserCompGetInternalState(gc, 'MAPL_VarSpec', mystates_ptr, rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -680,7 +688,7 @@ contains
       pTracers_STATE => WRAP%PTR
 
       call ESMF_GridCompGet ( GC, GRID=esmfGrid, importState=IMPORT, &
-                            exportState=EXPORT, rc=RC)
+                            exportState=EXPORT, clock=clock, rc=RC)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
@@ -844,6 +852,22 @@ contains
                                  call ESMF_StatePrint ( EXPORT )
       end if
 #endif
+
+
+    ! indicate that data initialization is complete (breaking out of init-loop)
+    call NUOPC_CompAttributeSet(GC, &
+      name="InitializeDataComplete", value="true", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! must explicitly set time stamp on all export fields
+    call NUOPC_UpdateTimestamp(EXPORT, clock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 
       !call MAPL_TimerOff (ggState,"INITIALIZE" )
       !call MAPL_TimerOff (ggState,"TOTAL"      )
