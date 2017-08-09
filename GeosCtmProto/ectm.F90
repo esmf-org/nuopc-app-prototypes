@@ -16,6 +16,7 @@
       use NUOPC
       use NUOPC_Model, &
            model_routine_SS      => SetServices, &
+           model_label_DataInitialize   => label_DataInitialize, &
            model_label_Advance   => label_Advance
       use NUOPC_Generic  
       implicit none
@@ -98,7 +99,10 @@
      ! Get my name and set-up traceback handle
      ! ---------------------------------------
       call ESMF_GridCompGet( GC, NAME=COMP_NAME, RC=rc )
-      VERIFY_(rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
       Iam = trim(COMP_NAME) // TRIM(Iam)
 
       call ESMF_LogWrite(Iam, ESMF_LOGMSG_INFO, rc=rc)      
@@ -140,6 +144,13 @@
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
+
+     call NUOPC_CompSpecialize(GC, specLabel=model_label_DataInitialize, &
+       specRoutine=dataInitialize, rc=rc)
+     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+       line=__LINE__, &
+       file=__FILE__)) &
+       return  ! bail out
 
      call NUOPC_CompSpecialize(GC, specLabel=model_label_Advance, &
        specRoutine=ModelAdvance, rc=rc)
@@ -249,7 +260,7 @@
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-      
+
      call NUOPC_AddImportSpec ( GC,                                  &
            SHORT_NAME = 'UC0',                                       &
            LONG_NAME  = 'eastward_wind_on_C-Grid_before_advection',  &
@@ -304,7 +315,7 @@
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
- 
+
      !Advertize the import fields
      call ESMF_UserCompGetInternalState(GC, "MAPL_VarSpec", mystates_ptr, rc) 
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -672,6 +683,50 @@
     end subroutine realizeConnectedFields
 
   end subroutine initRealize
+
+!----------------------------------------------------------------------
+      subroutine dataInitialize ( GC, RC )
+!
+      type(ESMF_GridComp)      :: GC     ! Gridded component 
+      integer,   intent(  out) :: RC     ! Error code
+!
+
+    ! local variables
+    type(ESMF_Clock)          :: clock
+    type(ESMF_State)          :: importState, exportState
+
+    RC = ESMF_SUCCESS
+    call ESMF_LogWrite("ECTM:dataInitialize", ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+           line=__LINE__, &
+           file=__FILE__)) &
+           return  ! bail out
+
+    ! query the Component for its clock, importState and exportState
+    call NUOPC_ModelGet(GC, modelClock=clock, importState=importState, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! must explicitly set time stamp on all export fields
+    call NUOPC_UpdateTimestamp(exportState, clock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! indicate that data initialization is complete (breaking out of init-loop)
+    call NUOPC_CompAttributeSet(GC, &
+      name="InitializeDataComplete", value="true", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+     return
+     end subroutine dataInitialize
 
 !EOC
 !-------------------------------------------------------------------------
