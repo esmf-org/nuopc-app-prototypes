@@ -60,6 +60,7 @@ module ADVCORE
       use NUOPC
       use NUOPC_Model, &
            model_routine_SS      => SetServices, &
+           model_label_DataInitialize   => label_DataInitialize, &
            model_label_Advance   => label_Advance
       use NUOPC_Generic
 #if 0
@@ -210,6 +211,13 @@ contains
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
+
+     call NUOPC_CompSpecialize(GC, specLabel=model_label_DataInitialize, &
+       specRoutine=dataInitialize, rc=rc)
+     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+       line=__LINE__, &
+       file=__FILE__)) &
+       return  ! bail out
 
      call NUOPC_CompSpecialize(GC, specLabel=model_label_Advance, &
        specRoutine=ModelAdvance, rc=rc)
@@ -740,6 +748,50 @@ contains
     end subroutine realizeConnectedFields
 
   end subroutine initRealize
+
+!----------------------------------------------------------------------
+      subroutine dataInitialize ( GC, RC )
+!
+      type(ESMF_GridComp)      :: GC     ! Gridded component 
+      integer,   intent(  out) :: RC     ! Error code
+!
+    ! local variables
+    type(ESMF_Clock)              :: clock
+    type(ESMF_State)              :: importState, exportState
+
+    RC = ESMF_SUCCESS
+
+    call ESMF_LogWrite("ADVCORE:dataInitialize", ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+           line=__LINE__, &
+           file=__FILE__)) &
+           return  ! bail out
+
+    ! query the Component for its clock, importState and exportState
+    call NUOPC_ModelGet(GC, modelClock=clock, importState=importState, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! must explicitly set time stamp on all export fields
+    call NUOPC_UpdateTimestamp(exportState, clock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! indicate that data initialization is complete (breaking out of init-loop)
+    call NUOPC_CompAttributeSet(GC, &
+      name="InitializeDataComplete", value="true", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+     return
+     end subroutine dataInitialize
 
 !EOC
 !------------------------------------------------------------------------------
