@@ -25,8 +25,8 @@ endif
 include $(ESMFMKFILE)
 
 # add MAPL includes and libs
-MAPL_INSTALL_ROOT = $(ESMF_DIR)/src/addon/MAPL5_1/Linux
-MAPL_INCLUDEPATHS = -I$(MAPL_INSTALL_ROOT)/include/MAPL_Base -I$(ESMF_DIR)/src/include
+MAPL_INSTALL_ROOT = $(ESMF_INTERNAL_DIR)/src/addon/MAPL5_1/Linux
+MAPL_INCLUDEPATHS = -I$(MAPL_INSTALL_ROOT)/include/MAPL_Base -I$(ESMF_INTERNAL_DIR)/src/include
 MAPL_LINKPATHS    = -L$(MAPL_INSTALL_ROOT)/lib
 MAPL_LINKLIBS     = -lMAPL_Base -lMAPL_Base_stubs -lMAPL_cfio_r4 -lGMAO_mpeu
 
