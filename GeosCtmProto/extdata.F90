@@ -104,6 +104,12 @@ contains
            file=__FILE__)) &
         return  ! bail out
       call NUOPC_CompSetEntryPoint(GC, ESMF_METHOD_INITIALIZE, &
+           phaseLabelList=(/"IPDv05p4"/), userRoutine=InitForceGridTransfer, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+           line=__LINE__, &
+           file=__FILE__)) &
+        return  ! bail out
+      call NUOPC_CompSetEntryPoint(GC, ESMF_METHOD_INITIALIZE, &
            phaseLabelList=(/"IPDv05p6"/), userRoutine=InitRealize, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
@@ -137,7 +143,7 @@ contains
       rc = ESMF_SUCCESS
       call ESMF_LogWrite("ExtData InitializeP0", ESMF_LOGMSG_INFO, rc=rc)
       
-      ! Switch to IPDv02 (for datainitialize dependency loop) 
+      ! Switch to IPDv05
       ! by filtering all other phaseMap entries
       call NUOPC_CompFilterPhaseMap(gcomp, ESMF_METHOD_INITIALIZE, &
            acceptStringList=(/"IPDv05p"/), rc=rc)
@@ -182,6 +188,89 @@ contains
       
     end subroutine InitAdvertise
 !EOC
+
+
+  !-----------------------------------------------------------------------------
+
+    subroutine InitForceGridTransfer(gcomp, importState, exportState, clock, rc)
+      type(ESMF_GridComp)   :: gcomp
+      type(ESMF_State)      :: importState, exportState
+      type(ESMF_Clock)      :: clock
+      integer, intent(out)  :: rc
+      
+      ! local variables
+      integer                   :: i
+      type(ESMF_Field), pointer :: fieldList(:)
+      character(len=40)         :: value
+      
+      rc = ESMF_SUCCESS
+      call ESMF_LogWrite("ExtData InitForceGridTransfer", ESMF_LOGMSG_INFO, rc=rc)
+      
+      ! By default all of the mirrored fields will have "TransferActionGeomObject"
+      ! set to "provide". This is because transfers are not transitive through the
+      ! hierarchy right now!! This means that a grid that is being transferred from
+      ! a child to its parent level, e.g. from unsatisfied fields in child import
+      ! states, cannot also be transferred on to a sibling of the parent.
+      
+      ! For the case of the extData component the above is really more a protocol
+      ! level limitation rather than a fundamental issue. Specifically, by the time
+      ! the driver component (which is the parent to the sub-components) would need
+      ! to transfer the grid to one of its sibling components, it actually does have
+      ! the grid available to do so (already transferred from the children). However,
+      ! the decision about whether this transfer is possible had to be made earlier,
+      ! following current NUOPC protocol. At that time the driver was still on the 
+      ! receiving end of the transfer on the lower level of the hierarchy, and could
+      ! not act as a provider yet.
+      
+      ! The implementation in this routine works around this protocol limitation 
+      ! and forces a transfer. It does so by directly setting the 
+      ! "TransferActionGeomObject" attribute to "accept". This triggers the connector
+      ! to go through the actual GeomObject transfer.
+      !
+      ! Note that "TransferActionGeomObject" is NOT an attribute that should typically
+      ! be modified by user level code. However, we know what we are doing here, 
+      ! so let's do it!
+      
+      call NUOPC_GetStateMemberLists(exportState, fieldList=fieldList, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      
+      if (associated(fieldList)) then
+        do i=1, size(fieldList)
+          ! first diagnose what the default setting ended up being on the
+          ! mirrored fields, expect "will provide"
+          call NUOPC_GetAttribute(fieldList(i), name="TransferActionGeomObject",&
+            value=value, rc=rc)
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+          call ESMF_LogWrite("TransferActionGeomObject in InitForceGridTransfer: "//&
+            trim(value), ESMF_LOGMSG_INFO, rc=rc)
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+          ! now force the TransferActionGeomObject setting on the mirrored fields
+          ! to be "cannot provide"
+          call NUOPC_SetAttribute(fieldList(i), name="TransferActionGeomObject",&
+            value="accept", rc=rc)
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+        enddo
+        deallocate(fieldList)
+      endif
+      
+    end subroutine InitForceGridTransfer
+
+  !-----------------------------------------------------------------------------
+
+
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !BOP
 !
@@ -240,7 +329,7 @@ contains
         integer, intent(out) :: rc
 
         integer                :: i, itemCount, stat
-        character(ESMF_MAXSTR) :: transferGeom
+        type(ESMF_FieldStatus_Flag)   :: fieldStatus
         character(ESMF_MAXSTR), allocatable :: itemNameList(:)
         type(ESMF_StateItem_Flag), allocatable :: itemTypeList(:)
         type(ESMF_Field)       :: field
@@ -294,17 +383,13 @@ contains
                     file=__FILE__)) &
                     return  ! bail out
 
-                call NUOPC_GetAttribute(field, name="TransferActionGeomObject", &
-                    value=transferGeom, rc=rc)
+                call ESMF_FieldGet(field, status=fieldStatus, rc=rc)
                 if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                     line=__LINE__, &
                     file=__FILE__)) &
                     return  ! bail out
 
-                call ESMF_LogWrite(trim(itemNameList(i))//trim(transferGeom), &
-                              ESMF_LOGMSG_INFO, rc=rc)
-
-!                if (trim(transferGeom)=="accept") then
+                if (fieldStatus/=ESMF_FIELDSTATUS_COMPLETE) then
 
                     call ESMF_LogWrite("Completing mirrored field: "//itemNameList(i), &
                         ESMF_LOGMSG_INFO, rc=rc)
@@ -400,7 +485,7 @@ contains
                           file=__FILE__)) &
                           return  ! bail out
 
-#define DEBUG_DISTGRID
+#define DEBUG_DISTGRID_off
 #ifdef DEBUG_DISTGRID
 
                     call ESMF_FieldGet(field, grid=grid, rc=rc)
@@ -446,9 +531,7 @@ contains
                     deallocate(maxIndexPTile)
 
 #endif
-#if 0
                 else
-                    !print *, "NOT COMPLETING FIELD: ", itemNameList(i), trim(transferGeom)
                     call ESMF_LogWrite("CANNOT complete mirrored field: "//itemNameList(i), &
                         ESMF_LOGMSG_INFO, rc=rc)
                     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -456,7 +539,6 @@ contains
                         file=__FILE__)) &
                         return  ! bail out
                 end if
-#endif
             end if
         end do
 
