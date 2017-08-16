@@ -349,8 +349,6 @@ contains
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, file=__FILE__)) return  ! bail out
 
-        print *, "EXTDATA export items;", itemCount
-
         allocate(itemNameList(itemCount),stat=stat)
         if (ESMF_LogFoundAllocError(statusToCheck=stat, &
             msg=ESMF_LOGERR_PASSTHRU, &
@@ -464,7 +462,6 @@ contains
                           file=__FILE__)) &
                           return  ! bail out
 
-                        print *, "UNGRIDDED UBOUND = ", ungriddedUBound
                       endif
                     endif
 
