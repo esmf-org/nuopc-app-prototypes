@@ -851,8 +851,9 @@ subroutine My_GridCreate(GC, rc)
       allocate(regDecomp(2,6))
       regDecomp(1,:)=NX
       regDecomp(2,:)=NY/6
-      print *, regDecomp(:,1), IM_WORLD, trim(Gridname)
+      !print *, regDecomp(:,1), IM_WORLD, trim(Gridname)
       grid = ESMF_GridCreateCubedSphere(IM_WORLD, regDecompPTile = regDecomp, &
+           staggerLocList=(/ESMF_STAGGERLOC_CENTER, ESMF_STAGGERLOC_CORNER/), &
            name=trim(Gridname), rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &

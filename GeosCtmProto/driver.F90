@@ -114,8 +114,6 @@ module driverCTM
       file=__FILE__)) &
       return  ! bail out
 
-    print *, 'ROOT_CF:', trim(ctmConfigfile)
-
     call ESMF_ConfigGetAttribute(config, value=hisConfigfile, label='HISTORY_CF:',default='HIST.rc', rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
