@@ -293,8 +293,6 @@ contains
      !Advertize the import fields
      importSpec => mystates_ptr%ptr%importSpec
 
-     print *, 'PTRACER number of import fields: ', size(importSpec)
-     
      do i=1,size(importSpec)
         call MAPL_VarSpecGet(importSpec(i), SHORT_NAME=short_name, &
         LONG_NAME=long_name, UNITS=units, rc=rc)
@@ -657,7 +655,7 @@ contains
       integer                          :: tileno, nSpc
       integer                          :: i, j, k, ic
       character(len=ESMF_MAXSTR)       :: short_name
-      character(len=ESMF_MAXSTR)       :: Iam = 'SetServices'
+      character(len=ESMF_MAXSTR)       :: Iam = 'PTRACER:initTracer'
       type(ESMF_State)                 :: IMPORT, EXPORT
       type(ESMF_State)                 :: INTERNAL
       type(ESMF_Clock)              :: clock
@@ -729,7 +727,7 @@ contains
       JS = lbound(LONS,2)
       JE = ubound(LONS,2)
 
-      print *, 'Local grid dimension:', IS, IE, JS, JE, KS, KE
+      !print *, 'Local grid dimension:', IS, IE, JS, JE, KS, KE
 
       if (do_AdvColdStart) then
          ! Get AKs and BKs for vertical grid
