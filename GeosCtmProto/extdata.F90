@@ -115,8 +115,19 @@ contains
            line=__LINE__, &
            file=__FILE__)) &
            return  ! bail out
-      call NUOPC_CompSetEntryPoint(GC, ESMF_METHOD_INITIALIZE, &
-           phaseLabelList=(/"IPDv05p8"/), userRoutine=dataInitialize, rc=rc)
+
+      ! Changing to DataInitialize specialization after change to
+      ! NUOPC_Model.F90 to use default IPDv05p8 implementation
+      
+ !     call NUOPC_CompSetEntryPoint(GC, ESMF_METHOD_INITIALIZE, &
+ !          phaseLabelList=(/"IPDv05p8"/), userRoutine=dataInitialize, rc=rc)
+ !     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+ !          line=__LINE__, &
+ !          file=__FILE__)) &
+ !          return  ! bail out
+
+      call NUOPC_CompSpecialize(GC, specLabel=model_label_DataInitialize, &
+        specRoutine=dataInitialize, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
@@ -543,58 +554,105 @@ contains
 
     end subroutine
 
-!----------------------------------------------------------------------
-      subroutine dataInitialize ( GC, IMPORT, EXPORT, CLOCK, RC )
+!------------------------------------------------------------------
+    subroutine DataInitialize( GC, RC )
 !
-      type(ESMF_GridComp)      :: GC     ! Gridded component 
-      type(ESMF_State)         :: IMPORT ! Import state
-      type(ESMF_State)         :: EXPORT ! Export state
-      type(ESMF_Clock)         :: CLOCK
-      integer,   intent(  out) :: RC     ! Error code
+! !INPUT/OUTPUT PARAMETERS:
+      type(ESMF_GridComp) :: GC     ! Gridded component 
 !
-    ! local variables
-      logical                  :: clockIsPresent
+! !OUTPUT PARAMETERS:
+      integer, intent(  out) :: RC     ! Error code
 
-    clockIsPresent = .FALSE.
+      ! locals
+      type(ESMF_Clock) :: clock
+      type(ESMF_State) :: importState, exportState
+      
+      RC = ESMF_SUCCESS
+      
+      call ESMF_LogWrite("EXTDATA:dataInitialize", ESMF_LOGMSG_INFO, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
 
-    RC = ESMF_SUCCESS
+      call NUOPC_ModelGet(GC, modelClock=clock, importState=importState, &
+        exportState=exportState, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
 
-    call ESMF_LogWrite("EXTDATA:dataInitialize", ESMF_LOGMSG_INFO, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-           line=__LINE__, &
-           file=__FILE__)) &
-           return  ! bail out
+      ! must explicitly set time stamp on all export fields
+      call NUOPC_UpdateTimestamp(exportState, clock, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      
+      ! indicate that data initialization is complete (breaking out of init-loop)
+      call NUOPC_CompAttributeSet(GC, &
+        name="InitializeDataComplete", value="true", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      
+    end subroutine DataInitialize
 
-    ! test whether internal Clock has already been set in the Component
-!    call ESMF_GridCompGet(GC, clockIsPresent=clockIsPresent, rc=rc)
-!    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!      line=__LINE__, file=__FILE__)) &
-!      return  ! bail out
-
-!    if (.not.clockIsPresent .and. ESMF_ClockIsCreated(clock)) then
-!      ! set the internal Clock as a copy of the incoming Clock by a default
-!      call NUOPC_CompSetClock(GC, CLOCK, rc=rc)
-!      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-!        line=__LINE__, file=__FILE__)) return  ! bail out
-!    endif
-
-    ! must explicitly set time stamp on all export fields
-    call NUOPC_UpdateTimestamp(EXPORT, CLOCK, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    ! indicate that data initialization is complete (breaking out of init-loop)
-    call NUOPC_CompAttributeSet(GC, &
-      name="InitializeDataComplete", value="true", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-     return
-     end subroutine dataInitialize
+    ! Commenting out below since we are changing to use the above
+    ! specialization subroutine, instead of this phase.
+!!$!----------------------------------------------------------------------
+!!$      subroutine dataInitialize ( GC, IMPORT, EXPORT, CLOCK, RC )
+!!$!
+!!$      type(ESMF_GridComp)      :: GC     ! Gridded component 
+!!$      type(ESMF_State)         :: IMPORT ! Import state
+!!$      type(ESMF_State)         :: EXPORT ! Export state
+!!$      type(ESMF_Clock)         :: CLOCK
+!!$      integer,   intent(  out) :: RC     ! Error code
+!!$!
+!!$    ! local variables
+!!$      logical                  :: clockIsPresent
+!!$
+!!$    clockIsPresent = .FALSE.
+!!$
+!!$    RC = ESMF_SUCCESS
+!!$
+!!$    call ESMF_LogWrite("EXTDATA:dataInitialize", ESMF_LOGMSG_INFO, rc=rc)
+!!$    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+!!$           line=__LINE__, &
+!!$           file=__FILE__)) &
+!!$           return  ! bail out
+!!$
+!!$    ! test whether internal Clock has already been set in the Component
+!!$    call ESMF_GridCompGet(GC, clockIsPresent=clockIsPresent, rc=rc)
+!!$    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+!!$      line=__LINE__, file=__FILE__)) &
+!!$      return  ! bail out
+!!$
+!!$    if (.not.clockIsPresent .and. ESMF_ClockIsCreated(clock)) then
+!!$      ! set the internal Clock as a copy of the incoming Clock by a default
+!!$      call NUOPC_CompSetClock(GC, CLOCK, rc=rc)
+!!$      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+!!$        line=__LINE__, file=__FILE__)) return  ! bail out
+!!$    endif
+!!$
+!!$    ! must explicitly set time stamp on all export fields
+!!$    call NUOPC_UpdateTimestamp(EXPORT, CLOCK, rc=rc)
+!!$    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+!!$      line=__LINE__, &
+!!$      file=__FILE__)) &
+!!$      return  ! bail out
+!!$
+!!$    ! indicate that data initialization is complete (breaking out of init-loop)
+!!$    call NUOPC_CompAttributeSet(GC, &
+!!$      name="InitializeDataComplete", value="true", rc=rc)
+!!$    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+!!$      line=__LINE__, &
+!!$      file=__FILE__)) &
+!!$      return  ! bail out
+!!$
+!!$     return
+!!$     end subroutine dataInitialize
     
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !BOP
