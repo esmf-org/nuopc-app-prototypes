@@ -69,6 +69,7 @@ module driverCTM
     type(ESMF_CplComp)            :: conn
     type(ESMF_Config)             :: config
     type(ESMF_Config)             :: ctmconfig
+    type(ESMF_Config)             :: extconfig
     character(len=ESMF_MAXSTR)    :: hisConfigfile
     character(len=ESMF_MAXSTR)    :: extConfigfile
     character(len=ESMF_MAXSTR)    :: ctmConfigfile
@@ -126,18 +127,6 @@ module driverCTM
       file=__FILE__)) &
       return  ! bail out
 
-    ctmconfig = ESMF_ConfigCreate(rc=rc )
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-         line=__LINE__, &
-         file=__FILE__)) &
-         return  ! bail out
-    
-    call ESMF_ConfigLoadFile(ctmconfig, TRIM(ctmConfigfile), rc=rc )
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-         line=__LINE__, &
-         file=__FILE__)) &
-         return  ! bail out
-
     ! set driver verbosity
     call NUOPC_CompAttributeSet(driver, name="Verbosity", value="65521", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -152,7 +141,20 @@ module driverCTM
       file=__FILE__)) &
       return  ! bail out
 
-    call ESMF_GridCompSet(comp, configFile=trim(extConfigfile), rc=rc)
+    extconfig = ESMF_ConfigCreate(rc=rc )
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, &
+         file=__FILE__)) &
+         return  ! bail out
+    
+    call ESMF_ConfigLoadFile(extconfig, TRIM(extConfigfile), rc=rc )
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, &
+         file=__FILE__)) &
+         return  ! bail out
+
+
+    call ESMF_GridCompSet(comp, config=extconfig, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
          line=__LINE__, &
          file=__FILE__)) &
@@ -171,6 +173,19 @@ module driverCTM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+    ctmconfig = ESMF_ConfigCreate(rc=rc )
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, &
+         file=__FILE__)) &
+         return  ! bail out
+    
+    call ESMF_ConfigLoadFile(ctmconfig, TRIM(ctmConfigfile), rc=rc )
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, &
+         file=__FILE__)) &
+         return  ! bail out
+
     
     call ESMF_GridCompSet(comp, config=ctmconfig, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
