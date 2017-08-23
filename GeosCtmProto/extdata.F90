@@ -228,7 +228,8 @@ contains
       ! Note that "TransferActionGeomObject" is NOT an attribute that should typically
       ! be modified by user level code. However, we know what we are doing here, 
       ! so let's do it!
-      
+
+      nullify(fieldList)
       call NUOPC_GetStateMemberLists(exportState, fieldList=fieldList, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
@@ -565,17 +566,17 @@ contains
            return  ! bail out
 
     ! test whether internal Clock has already been set in the Component
-    call ESMF_GridCompGet(GC, clockIsPresent=clockIsPresent, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, file=__FILE__)) &
-      return  ! bail out
+!    call ESMF_GridCompGet(GC, clockIsPresent=clockIsPresent, rc=rc)
+!    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+!      line=__LINE__, file=__FILE__)) &
+!      return  ! bail out
 
-    if (.not.clockIsPresent .and. ESMF_ClockIsCreated(clock)) then
-      ! set the internal Clock as a copy of the incoming Clock by a default
-      call NUOPC_CompSetClock(GC, CLOCK, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, file=__FILE__)) return  ! bail out
-    endif
+!    if (.not.clockIsPresent .and. ESMF_ClockIsCreated(clock)) then
+!      ! set the internal Clock as a copy of the incoming Clock by a default
+!      call NUOPC_CompSetClock(GC, CLOCK, rc=rc)
+!      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+!        line=__LINE__, file=__FILE__)) return  ! bail out
+!    endif
 
     ! must explicitly set time stamp on all export fields
     call NUOPC_UpdateTimestamp(EXPORT, CLOCK, rc=rc)
