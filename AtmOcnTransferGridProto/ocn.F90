@@ -500,6 +500,7 @@ module OCN
 #ifdef TEST_MULTI_TILE_GRID    
     !--- 6-tile cubed-sphere Grid: for ssh field below ------------------------
     gridOut = ESMF_GridCreateCubedSphere(tileSize=16, name="OCN-CubedSphere", &
+      staggerLocList=(/ESMF_STAGGERLOC_CENTER/), &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
