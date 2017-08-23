@@ -115,13 +115,12 @@ contains
            line=__LINE__, &
            file=__FILE__)) &
            return  ! bail out
-      
-     call NUOPC_CompSpecialize(GC, specLabel=model_label_DataInitialize, &
-       specRoutine=dataInitialize, rc=rc)
-     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-       line=__LINE__, &
-       file=__FILE__)) &
-       return  ! bail out
+      call NUOPC_CompSetEntryPoint(GC, ESMF_METHOD_INITIALIZE, &
+           phaseLabelList=(/"IPDv05p8"/), userRoutine=dataInitialize, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+           line=__LINE__, &
+           file=__FILE__)) &
+           return  ! bail out
       
       call NUOPC_CompSpecialize(GC, specLabel=model_label_Advance, &
            specRoutine=ModelAdvance, rc=rc)
@@ -129,7 +128,6 @@ contains
            line=__LINE__, &
            file=__FILE__)) &
            return  ! bail out
-      
     end subroutine SetServices
 
     !-----------------------------------------------------------------------------
@@ -545,14 +543,18 @@ contains
     end subroutine
 
 !----------------------------------------------------------------------
-      subroutine dataInitialize ( GC, RC )
+      subroutine dataInitialize ( GC, IMPORT, EXPORT, CLOCK, RC )
 !
       type(ESMF_GridComp)      :: GC     ! Gridded component 
+      type(ESMF_State)         :: IMPORT ! Import state
+      type(ESMF_State)         :: EXPORT ! Export state
+      type(ESMF_Clock)         :: CLOCK
       integer,   intent(  out) :: RC     ! Error code
 !
     ! local variables
-    type(ESMF_Clock)              :: clock
-    type(ESMF_State)              :: importState, exportState
+      logical                  :: clockIsPresent
+
+    clockIsPresent = .FALSE.
 
     RC = ESMF_SUCCESS
 
@@ -562,16 +564,21 @@ contains
            file=__FILE__)) &
            return  ! bail out
 
-    ! query the Component for its clock, importState and exportState
-    call NUOPC_ModelGet(GC, modelClock=clock, importState=importState, &
-      exportState=exportState, rc=rc)
+    ! test whether internal Clock has already been set in the Component
+    call ESMF_GridCompGet(GC, clockIsPresent=clockIsPresent, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
+      line=__LINE__, file=__FILE__)) &
       return  ! bail out
 
+    if (.not.clockIsPresent .and. ESMF_ClockIsCreated(clock)) then
+      ! set the internal Clock as a copy of the incoming Clock by a default
+      call NUOPC_CompSetClock(GC, CLOCK, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, file=__FILE__)) return  ! bail out
+    endif
+
     ! must explicitly set time stamp on all export fields
-    call NUOPC_UpdateTimestamp(exportState, clock, rc=rc)
+    call NUOPC_UpdateTimestamp(EXPORT, CLOCK, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -616,10 +623,31 @@ contains
       character(len=ESMF_MAXSTR)        :: COMP_NAME
 ! Local derived types
 
+    ! local variables
+    type(ESMF_Clock)              :: clock
+    type(ESMF_State)              :: importState, exportState
+    type(ESMF_TimeInterval)       :: timestep
+
       ! Get the target components name and set-up traceback handle.
       ! -----------------------------------------------------------
       
       RC = ESMF_SUCCESS
+
+#if 0
+    ! query the Component for its clock, importState and exportState
+    call NUOPC_ModelGet(GC, modelClock=clock, importState=importState, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call ESMF_ClockPrint(clock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
       
     end subroutine modelAdvance
 !EOC
