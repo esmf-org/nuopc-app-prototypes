@@ -260,14 +260,14 @@
       IF (enable_pTracers) THEN
          ! Doing passive tracer experiment
          !--------------------------------
-         call NUOPC_DriverAddComp(GC, 'DYNAMICS', AdvCSetServices, &
+         call NUOPC_DriverAddComp(GC, 'CTMenv', EctmSetServices, &
             rc=rc)
          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
            return  ! bail out
- 
-         call NUOPC_DriverAddComp(GC, 'CTMenv', EctmSetServices, &
+
+         call NUOPC_DriverAddComp(GC, 'DYNAMICS', AdvCSetServices, &
             rc=rc)
          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &

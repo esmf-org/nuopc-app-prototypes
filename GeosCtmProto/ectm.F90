@@ -35,7 +35,7 @@
 !
 ! !DESCRIPTION:
 ! This GC is used to derive variables needed by the CTM GC children.
-!
+
 ! !AUTHORS:
 ! Jules.Kouatchou-1@nasa.gov
 !
@@ -240,7 +240,7 @@
 
      call NUOPC_AddImportSpec ( GC,                                  &
            SHORT_NAME = 'PLE0',                                      &
-           LONG_NAME  = 'pressure_at_layer_edges_before_advection',  &
+           LONG_NAME  = 'pressure_at_layer_edges_before_advection_from_extdata',  &
            UNITS      = 'Pa',                                        &
            DIMS       = MAPL_DimsHorzVert,                           &
            VLOCATION  = MAPL_VLocationEdge,             RC=rc  )
@@ -252,7 +252,7 @@
 
      call NUOPC_AddImportSpec ( GC,                                  &
            SHORT_NAME = 'PLE1',                                      &
-           LONG_NAME  = 'pressure_at_layer_edges_after_advection',   &
+           LONG_NAME  = 'pressure_at_layer_edges_after_advection_from_extdata',   &
            UNITS      = 'Pa',                                        &
            DIMS       = MAPL_DimsHorzVert,                           &
            VLOCATION  = MAPL_VLocationEdge,             RC=rc  )
