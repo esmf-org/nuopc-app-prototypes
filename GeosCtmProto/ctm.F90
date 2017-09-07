@@ -289,6 +289,12 @@
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
+         call NUOPC_CompAttributeSet(conn, name="Verbosity", value="65521", &
+            rc=rc)
+         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
          ! Add connectors to connect the components
          ! ADVCORE -> ECTM
          call NUOPC_DriverAddComp(GC, srcCompLabel="DYNAMICS", dstCompLabel="CTMenv", &
@@ -297,10 +303,22 @@
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
+         call NUOPC_CompAttributeSet(conn, name="Verbosity", value="65521", &
+            rc=rc)
+         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
          ! Add connectors to connect the components
          ! ECTM -> PTRACER
          call NUOPC_DriverAddComp(GC, srcCompLabel="CTMenv", dstCompLabel="PTRACERS", &
               compSetServicesRoutine=cplSS, comp=conn, rc=rc)
+         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+         call NUOPC_CompAttributeSet(conn, name="Verbosity", value="65521", &
+            rc=rc)
          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
@@ -315,11 +333,23 @@
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
+         call NUOPC_CompAttributeSet(conn, name="Verbosity", value="65521", &
+            rc=rc)
+         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
 #endif
          ! Add connectors to connect the components
          ! ADVCORE -> PTRACERS
          call NUOPC_DriverAddComp(GC, srcCompLabel="DYNAMICS", dstCompLabel="PTRACERS", &
               compSetServicesRoutine=cplSS, comp=conn, rc=rc)
+         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+         call NUOPC_CompAttributeSet(conn, name="Verbosity", value="65521", &
+            rc=rc)
          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
