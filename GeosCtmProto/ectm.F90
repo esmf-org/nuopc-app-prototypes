@@ -240,7 +240,7 @@
 
      call NUOPC_AddImportSpec ( GC,                                  &
            SHORT_NAME = 'PLE0',                                      &
-           LONG_NAME  = 'pressure_at_layer_edges_before_advection_from_extdata',  &
+           LONG_NAME  = 'pressure_at_layer_edges_before_advection',  &
            UNITS      = 'Pa',                                        &
            DIMS       = MAPL_DimsHorzVert,                           &
            VLOCATION  = MAPL_VLocationEdge,             RC=rc  )
@@ -252,7 +252,7 @@
 
      call NUOPC_AddImportSpec ( GC,                                  &
            SHORT_NAME = 'PLE1',                                      &
-           LONG_NAME  = 'pressure_at_layer_edges_after_advection_from_extdata',   &
+           LONG_NAME  = 'pressure_at_layer_edges_after_advection',   &
            UNITS      = 'Pa',                                        &
            DIMS       = MAPL_DimsHorzVert,                           &
            VLOCATION  = MAPL_VLocationEdge,             RC=rc  )
