@@ -320,7 +320,7 @@ contains
          do ic = 1, numTracers
             write (id  ,'(i2.2)') ic-1
             state%vname (ic) = 'Q'//id
-            state%vtitle(ic) = 'Tracer Q'//id
+            state%vtitle(ic) = 'advected_quantity_'//id
             state%vunits(ic) = 'mol/mol'
          end do
 
@@ -359,7 +359,7 @@ contains
       IF ( MAPL_AM_I_ROOT() ) THEN
          WRITE(*,101) numTracers
          DO n = 1, numTracers
-            WRITE(*,201) n, TRIM(state%vname(n)), TRIM(state%vunits(n))
+            WRITE(*,201) n, TRIM(state%vname(n)), TRIM(state%vunits(n)), TRIM(state%vtitle(n))
          END DO
          PRINT *," "
       ENDIF
@@ -369,7 +369,7 @@ contains
              ' ---',2X,'----------------',2X,'----------------',/, &
              ' ID ',2X,'      Name      ',2X,'      Unit      ',/, &
              ' ---',2X,'----------------',2X,'----------------')
-  201 FORMAT(' ',I3,2X,A16,2X,A16)
+  201 FORMAT(' ',I3,2X,A16,2X,A16,4X,A22)
       
       !call ESMF_GridCompGet( GC, GRID=grid, RC=STATUS )
       !VERIFY_(STATUS)

@@ -323,9 +323,9 @@
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
+
          ! Add connectors to connect the components
          ! PTRACERS -> ADVCORE
-#if 0
          ! This is the friendly fields TRACER_Q00 to Q04from PTRACER to the fieldbundle TRADV
          call NUOPC_DriverAddComp(GC, srcCompLabel="PTRACERS", dstCompLabel="DYNAMICS", &
               compSetServicesRoutine=cplSS, comp=conn, rc=rc)
@@ -339,7 +339,7 @@
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
-#endif
+
          ! Add connectors to connect the components
          ! ADVCORE -> PTRACERS
          call NUOPC_DriverAddComp(GC, srcCompLabel="DYNAMICS", dstCompLabel="PTRACERS", &
