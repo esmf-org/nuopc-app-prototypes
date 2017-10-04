@@ -141,20 +141,7 @@ module driverCTM
       file=__FILE__)) &
       return  ! bail out
 
-    extconfig = ESMF_ConfigCreate(rc=rc )
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-         line=__LINE__, &
-         file=__FILE__)) &
-         return  ! bail out
-    
-    call ESMF_ConfigLoadFile(extconfig, TRIM(extConfigfile), rc=rc )
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-         line=__LINE__, &
-         file=__FILE__)) &
-         return  ! bail out
-
-
-    call ESMF_GridCompSet(comp, config=extconfig, rc=rc)
+    call ESMF_GridCompSet(comp, configfile=trim(extConfigfile), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
          line=__LINE__, &
          file=__FILE__)) &
