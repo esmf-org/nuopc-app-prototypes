@@ -268,8 +268,10 @@ contains
      character(len=ESMF_MAXSTR)   :: long_name
      character(len=ESMF_MAXSTR)   :: units
      integer                      :: mytype
-     integer                      :: i
-         
+     integer                      :: i, ic
+     integer                      :: numTracers
+     character(len=2)             :: id
+     
 ! !IMPORT STATE:
 !
     call ESMF_LogWrite("ADVCORE:InitAdvertise", ESMF_LOGMSG_INFO, rc=rc)      
@@ -346,6 +348,8 @@ contains
        file=__FILE__)) &
        return  ! bail out
 
+    ! Changed TRADV into five import fields with long_name "advected_quantities_n"
+#if 0
     call NUOPC_AddImportSpec(GC,                                  &
        SHORT_NAME         = 'TRADV',                             &
        LONG_NAME          = 'advected_quantities',               &
@@ -358,7 +362,23 @@ contains
        line=__LINE__, &
        file=__FILE__)) &
        return  ! bail out
-
+#else
+     numTracers = 5
+     do ic=1, numTracers
+       write (id  ,'(i2.2)') ic-1
+       call NUOPC_AddImportSpec(GC,                                  &
+          SHORT_NAME         = 'TRADV'//id,                          &
+          LONG_NAME          = 'advected_quantity_'//id,            &
+          units              = 'mol/mol',                            &
+          DIMS               = MAPL_DimsHorzVert,                   &
+          VLOCATION          = MAPL_VLocationCenter,                &
+                                                      RC=RC  )
+       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+      enddo
+#endif
       call ESMF_UserCompGetInternalState(gc, 'MAPL_VarSpec', mystates_ptr, rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
