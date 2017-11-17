@@ -32,6 +32,7 @@
 ! !PUBLIC MEMBER FUNCTIONS:
 
       public SetServices
+
 !
 ! !DESCRIPTION: 
 !   This gridded component (GC) combines Transport (AdvCore), 

@@ -23,6 +23,7 @@ module NUOPC_Generic
  public NUOPC_AddExportSpec
  public NUOPC_AddInternalSpec
  public NUOPC_FieldCreateFromSpec
+ public AppGridCreateF
 
  type my_States
     type (MAPL_VarSpec),     pointer   :: ImportSpec(:) => null()
@@ -896,5 +897,45 @@ contains
 
   end function NUOPC_FieldCreateFromSpec
 
+! Create a cubed sphere grid with NX x NY decomposition and JM_WORLD = IM_WORLD*6
+! don't know if this is the right place to put it
+function AppGridCreateF(IM_WORLD, JM_WORLD, LM, NX, NY, rc)
+
+! return value:
+   type(ESMF_Grid) :: AppGridCreateF
+
+   integer :: IM_WORLD
+   integer :: JM_WORLD
+   integer :: LM
+   integer :: NX
+   integer :: NY
+   integer :: rc
+
+   integer, allocatable            :: regDecomp(:,:)
+   type(ESMF_Grid)                 :: grid
+
+   allocate(regDecomp(2,6))
+   regDecomp(1,:)=NX
+   regDecomp(2,:)=NY/6
+   !print *, regDecomp(:,1), IM_WORLD, trim(Gridname)
+   grid = ESMF_GridCreateCubedSphere(IM_WORLD, regDecompPTile = regDecomp, &
+           staggerLocList=(/ESMF_STAGGERLOC_CENTER, ESMF_STAGGERLOC_CORNER/), &
+           rc=rc)
+   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+   call ESMF_AttributeSet(grid, name='GRID_LM', value=LM, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+   AppGridCreateF = grid
+    
+   rc=ESMF_SUCCESS
+
+end function AppGridCreateF
 
 end module NUOPC_Generic

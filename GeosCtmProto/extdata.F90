@@ -13,6 +13,7 @@
       use ESMF
 !   use MAPL_Mod
 #if 1
+   USE ESMF
    use MAPL_BaseMod
    use MAPL_CommsMod
    use ESMFL_Mod
@@ -22,34 +23,43 @@
    use ESMF_CFIOMod
    use ESMF_CFIOUtilMod
    use MAPL_CFIOMod
-   use MAPL_HorzTransformMod
+!   use MAPL_HorzTransformMod
    use MAPL_NewArthParserMod
    use MAPL_ConstantsMod, only: MAPL_PI,MAPL_PI_R8
    use MAPL_IOMod, only: MAPL_NCIOParseTimeUnits
+   use MAPL_regridderSpecMod
    use, intrinsic :: iso_fortran_env, only: REAL64
+   use linearVerticalInterpolation_mod
 #endif
-      use NUOPC
-      use NUOPC_Model, &
+   use NUOPC
+   use NUOPC_Model, &
            model_routine_SS      => SetServices, &
            model_label_Advance   => label_Advance, &
            model_label_DataInitialize   => label_DataInitialize
-      use NUOPC_Generic
+   use NUOPC_Generic
       
-      implicit none
+   implicit none
 !
-      private
+   private
 !
 ! !PUBLIC MEMBER FUNCTIONS:
-      public SetServices
+
+   public SetServices
+!   public T_EXTDATA_STATE
+!   public EXTDATA_WRAP
 !
 ! !DESCRIPTION: 
 !
 !EOP
 !=============================================================================
 
-  integer, parameter :: MAPL_ExtDataVectorItem    = 32
-  integer, parameter :: MAPL_ExtDataNullFrac      = -9999
-  logical            :: hasRun
+  integer                    :: Ext_Debug
+  character(len=ESMF_MAXSTR) :: Ext_TilePath
+  integer, parameter         :: MAPL_ExtDataVectorItem    = 32
+  integer, parameter         :: MAPL_ExtDataNullFrac      = -9999
+  integer, parameter         :: MAPL_ExtDataLeft          = 1
+  integer, parameter         :: MAPL_ExtDataRight         = 2
+  logical                    :: hasRun
 
 ! Primary Exports
 ! ---------------
@@ -95,17 +105,31 @@
      ! the corresponding names of the two vector components on file
      character(len=ESMF_MAXSTR)   :: fcomp1, fcomp2
 
+     ! Experimental: store CFIO and time vectors for each file
+     type(ESMF_CFIO), pointer     :: cfio1, cfio2
+     type(ESMF_Time), Allocatable :: tSeries1(:), tSeries2(:)
+     logical                      :: isAssigned1 = .False.
+     logical                      :: isAssigned2 = .False.
+     
      logical                      :: ExtDataAlloc
      ! time shifting during continuous update
      type(ESMF_TimeInterval)      :: tshift
      type(ESMF_Alarm)             :: update_alarm
      logical                      :: alarmIsEnabled = .false.
-     integer                      :: FracVal = MAPL_ExtDataNullFrac 
+     integer                      :: FracVal = MAPL_ExtDataNullFrac
+     ! do we have to do vertical interpolation
+     logical                      :: do_VertInterp = .false.
+     logical                      :: do_Fill = .false.
+     integer                      :: LM
+     real, allocatable            :: levs(:)
+     character(len=ESMF_MAXSTR)   :: levUnit
+     logical                      :: havePressure = .false.
   end type PrimaryExport
 
   type PrimaryExports
      PRIVATE
      integer :: nItems = 0
+     logical :: have_phis
      type(PrimaryExport), pointer :: item(:) => null() 
   end type PrimaryExports
 
@@ -142,8 +166,11 @@
      ! needed by a derived field where the primary fields
      ! are not actually required
      type(ESMF_State)     :: ExtDataState
+     type(ESMF_Config)    :: CF
      logical              :: active
      logical              :: ignoreCase
+     logical              :: AllowExtrap
+     integer, allocatable :: PrimaryOrder(:)
   end type MAPL_ExtData_State
 
 ! Hook for the ESMF
@@ -152,25 +179,18 @@
      type (MAPL_ExtData_State), pointer :: PTR => null()
   end type MAPL_ExtData_WRAP
 
-! This EXTERNAL subroutine is in the fv directory
-!  and has real*8 interfaces
-
-  interface
-     subroutine A2D2C(U, V, lm, getC)
-       real,    intent(INOUT)           :: U(:,:,:)
-       real,    intent(INOUT)           :: V(:,:,:)
-       integer, intent(   IN)           :: lm
-       logical, intent(   IN), optional :: getC
-     end subroutine A2D2C
-  end interface
-
 #if 0
   type T_EXTDATA_STATE
      type(ESMF_State)    :: expState
      type(ESMF_GridComp) :: gc
   end type T_EXTDATA_STATE
-#endif
 
+  ! Wrapper for extracting internal state
+  ! -------------------------------------
+  type EXTDATA_WRAP
+     type (T_EXTDATA_STATE), pointer :: PTR
+  end type EXTDATA_WRAP
+#endif
 !
 !=============================================================================
 contains
@@ -203,6 +223,8 @@ contains
 ! Local derived type aliases
       type (mystates_WRAP)             :: mystates_ptr
       type (my_States), pointer        :: mystates
+      type (MAPL_ExtData_State), pointer  :: self   ! internal, that is
+      type (MAPL_ExtData_wrap)            :: wrap
       
       ! Get my name and set-up traceback handle
       !----------------------------------------
@@ -281,6 +303,25 @@ contains
            line=__LINE__, &
            file=__FILE__)) &
            return  ! bail out
+
+  !   Wrap internal state for storing in GC; rename legacyState
+  !   -------------------------------------
+      allocate ( self, stat=STATUS )
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+           line=__LINE__, &
+           file=__FILE__)) &
+           return  ! bail out
+      wrap%ptr => self
+
+  !   Store internal state in GC
+  !   --------------------------
+      call ESMF_UserCompSetInternalState ( GC, 'MAPL_ExtData_state', wrap, STATUS )
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+           line=__LINE__, &
+           file=__FILE__)) &
+           return  ! bail out
+
+
     end subroutine SetServices
 
     !-----------------------------------------------------------------------------
@@ -730,15 +771,15 @@ contains
         file=__FILE__)) &
         return  ! bail out
 
-      ! Initialize the data by reading the EXTDATA config file
-      call initialize_(GC, RC)
+      call NUOPC_ModelGet(GC, modelClock=clock, importState=importState, &
+        exportState=exportState, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
 
-      call NUOPC_ModelGet(GC, modelClock=clock, importState=importState, &
-        exportState=exportState, rc=rc)
+      ! Initialize the data by reading the EXTDATA config file
+      call initialize_(GC, importState, exportState, clock, RC)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
@@ -761,6 +802,874 @@ contains
       
     end subroutine DataInitialize
 
+!-------------------------------------------------------------------------
+!     NASA/GSFC, Global Modeling and Assimilation Office, Code 610.1     !
+!-------------------------------------------------------------------------
+!BOP
+!
+! !IROUTINE:  Initialize_ --- Initialize MAPL_ExtData
+!
+! !INTERFACE:
+!
+
+   SUBROUTINE Initialize_ ( GC, IMPORT, EXPORT, CLOCK, rc )
+
+! !USES:
+
+   implicit NONE
+
+! !INPUT PARAMETERS:
+
+   type(ESMF_Clock),  intent(inout)   :: CLOCK   ! The clock
+
+! !OUTPUT PARAMETERS:
+
+   type(ESMF_GridComp), intent(inout) :: GC      ! Grid Component
+   type(ESMF_State), intent(inout)    :: IMPORT  ! Import State
+   type(ESMF_State), intent(inout)    :: EXPORT  ! Export State
+   integer, intent(out)               :: rc      ! Error return code:
+                                                 !  0 - all is well
+                                                 !  1 - 
+
+! !DESCRIPTION: This is a simple ESMF wrapper.
+!
+! !REVISION HISTORY:
+!
+!  12Dec2009  da Silva  Design and first implementation.
+!
+!EOP
+!-------------------------------------------------------------------------
+
+   type(MAPL_ExtData_state), pointer :: self        ! Legacy state
+   type(ESMF_Grid)                   :: GRID        ! Grid
+   type(ESMF_Config)                 :: CF_master          ! Universal Config 
+
+   character(len=ESMF_MAXSTR)        :: comp_name
+   character(len=ESMF_MAXSTR)        :: Iam
+   integer                           :: Status
+   character(len=ESMF_MAXSTR)        :: buffer
+
+   type(PrimaryExports)              :: Primary
+   type(PrimaryExport), pointer      :: item
+   type(DerivedExports)              :: Derived
+   type(DerivedExport), pointer      :: derivedItem 
+   integer                           :: nLines
+   integer                           :: i
+   integer                           :: ItemCount, itemCounter, j
+   integer                           :: PrimaryItemCount, DerivedItemCount
+   logical                           :: found
+
+   type(ESMF_Time)                   :: time
+   character(len=ESMF_MAXSTR)        :: VarName
+
+   type (ESMF_Field)                 :: field,fieldnew
+   integer                           :: fieldRank, lm
+   type (ESMF_FieldBundle)           :: bundle
+   integer                           :: fieldcount
+   type (ESMF_StateItem_Flag), pointer    :: ITEMTYPES(:)
+   character(len=ESMF_MAXSTR), allocatable   :: ITEMNAMES(:)
+
+   character(len=ESMF_MAXSTR),allocatable    :: PrimaryVarNames(:)
+   character(len=ESMF_MAXSTR),allocatable    :: VarNames(:)
+   integer                                   :: NumVarNames
+
+!  logical to keep track of primary variables needed by derived fields, that ARE NOT in export state
+   logical, allocatable              :: PrimaryVarNeeded(:)
+   logical, allocatable              :: DerivedVarNeeded(:)
+   logical, allocatable              :: LocalVarNeeded(:)
+
+   type(ESMF_CFIO), pointer          :: cfio
+   integer                           :: counter
+!   real, pointer                     :: ptr2d(:,:) => null()
+!   real, pointer                     :: ptr3d(:,:,:) => null()
+   real(ESMF_KIND_R8), pointer    ::  ptr2d(:,:) => null()
+   real(ESMF_KIND_R8), pointer    ::  ptr3d(:,:,:) => null()
+   integer                           :: k, ios
+   character(len=ESMF_MAXSTR)        :: c_offset, c_scale
+   character(len=ESMF_MAXSTR)        :: EXTDATA_CF
+   type(ESMF_Config) :: CFtemp
+   integer           :: totalPrimaryEntries
+   integer           :: totalDerivedEntries
+   logical           :: caseSensitiveVarNames
+   character(len=ESMF_MAXSTR) :: component1,component2,expression
+   integer           :: idx,nhms,ihr,imn,isc
+   logical           :: isNegative
+   character(len=ESMF_MAXSTR) :: thisLine
+   logical           :: inBlock
+   type(ESMF_VM) :: vm
+   type(MAPL_MetaComp),pointer :: MAPLSTATE
+
+!  Get my name and set-up traceback handle
+!  ---------------------------------------
+   Iam = 'Initialize_'
+   call ESMF_GridCompGet( GC, name=comp_name, config=CF_master, __RC__ )
+   Iam = trim(comp_name) // '::' // trim(Iam)
+
+!  Extract relevant runtime information
+!  ------------------------------------
+   call extract_ ( GC, self, CF_master, __RC__)
+   self%CF = CF_master
+
+!  Start Some Timers
+!  -----------------
+!   call MAPL_GetObjectFromGC ( gc, MAPLSTATE, RC=STATUS)
+!   VERIFY_(STATUS) 
+!   call MAPL_TimerOn(MAPLSTATE,"TOTAL")
+!   call MAPL_TimerOn(MAPLSTATE,"Initialize")
+
+! Get information from export state
+!----------------------------------
+    call ESMF_StateGet(EXPORT, ITEMCOUNT=ItemCount, RC=STATUS)
+    VERIFY_(STATUS)
+
+    ! set ExtData on by default, let user turn it off if they want
+    call ESMF_ConfigGetAttribute(CF_master,self%active, Label='USE_EXTDATA:',default=.true.,rc=status)
+    if (ESMF_LogFoundError(rcToCheck=status, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+    ! set extdata to ignore case on variable names in files
+    call ESMF_ConfigGetAttribute(CF_master,caseSensitiveVarNames, Label='CASE_SENSITIVE_VARIABLE_NAMES:',default=.false.,rc=status)
+    if (ESMF_LogFoundError(rcToCheck=status, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    self%ignoreCase = .not. caseSensitiveVarNames
+
+    ! no need to run ExtData if there are no imports to fill
+    if (ItemCount == 0) then
+       self%active = .false.
+    end if
+
+    if (.not.self%active) then
+       RETURN_(ESMF_SUCCESS)
+    end if
+
+!   Greetings
+!   ---------
+    if (MAPL_am_I_root()) then
+         print *, TRIM(Iam)//': ACTIVE'
+         print *
+    end if
+
+    allocate(ITEMNAMES(ITEMCOUNT), STAT=STATUS)
+    VERIFY_(STATUS)
+    allocate(ITEMTYPES(ITEMCOUNT), STAT=STATUS)
+    VERIFY_(STATUS)
+
+    call ESMF_StateGet(EXPORT, ITEMNAMELIST=ITEMNAMES, &
+                       ITEMTYPELIST=ITEMTYPES, RC=STATUS)
+    VERIFY_(STATUS)
+
+!                               --------
+!  Initialize MAPL Generic
+!  -----------------------
+!   call MAPL_GenericInitialize ( GC, IMPORT, EXPORT, clock,  __RC__ )
+
+
+!                         ---------------------------
+!                         Parse ExtData Resource File
+!                         ---------------------------
+
+!   call ESMF_ConfigGetAttribute(CF_Master,value=EXTDATA_CF,Label="CF_EXTDATA:",rc=status)
+   call ESMF_ConfigGetAttribute(CF_Master,value=EXTDATA_CF,Label="EXTDATA_CF:",rc=status)
+   if (ESMF_LogFoundError(rcToCheck=status, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+   VERIFY_(STATUS)
+  call ESMF_ConfigGetAttribute(CF_Master,value=self%allowExtrap,Label="Ext_AllowExtrap:", default=.true., rc=status)
+   if (ESMF_LogFoundError(rcToCheck=status, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+   VERIFY_(STATUS)
+
+   call ESMF_ConfigGetAttribute(CF_Master,value=Ext_Debug,Label="DEBUG_LEVEL:",default=0, rc=status)
+   if (ESMF_LogFoundError(rcToCheck=status, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+   VERIFY_(STATUS)
+
+   CFtemp = ESMF_ConfigCreate (rc=STATUS )
+   VERIFY_(STATUS)
+   call ESMF_ConfigLoadFile(CFtemp,EXTDATA_CF,rc=status)
+   VERIFY_(STATUS)
+
+   totalPrimaryEntries=0
+   totalDerivedEntries=0
+   call ESMF_ConfigNextLine(CFtemp,__RC__)
+   do while (status == ESMF_SUCCESS) 
+      call ESMF_ConfigNextLine(CFtemp,rc=status)
+      if (status == ESMF_SUCCESS) then 
+         call ESMF_ConfigGetAttribute(CFtemp,thisLine,rc=status)
+         VERIFY_(STATUS)
+         if (trim(thisLine) == "PrimaryExports%%" .or. trim(thisLine) == "DerivedExports%%" ) then
+             call advanceAndCount(CFtemp,nLines,rc=status)
+             VERIFY_(STATUS)
+            select case (trim(thisLine))
+               case ("PrimaryExports%%")
+                   totalPrimaryEntries = totalPrimaryEntries + nLines
+               case ("DerivedExports%%")
+                   totalDerivedEntries = totalDerivedEntries + nLines
+            end select
+         end if
+      end if
+   enddo
+   ! destroy the config and reopen since there is no rewind function
+   call ESMF_ConfigDestroy(CFtemp,rc=status)
+   VERIFY_(STATUS)
+
+   primary%nItems = totalPrimaryEntries
+   if (totalPrimaryEntries > 0) then
+      allocate (PrimaryVarNames(totalPrimaryEntries), stat=STATUS)
+      VERIFY_(STATUS)
+      allocate (PrimaryVarNeeded(totalPrimaryEntries), stat=STATUS)
+      VERIFY_(STATUS)
+      PrimaryVarNeeded = .false.
+      allocate(primary%item(totalPrimaryEntries), stat=STATUS)
+      VERIFY_(STATUS)
+   end if
+   
+   derived%nItems = totalDerivedEntries
+   if (totalDerivedEntries > 0) then 
+      Allocate(DerivedVarNeeded(totalDerivedEntries),stat=status)
+      VERIFY_(STATUS)
+      DerivedVarNeeded = .false.
+      allocate(derived%item(totalDerivedEntries),stat=status)
+      VERIFY_(STATUS) 
+   end if
+
+!  Primary Exports
+!  ---------------
+
+   totalPrimaryEntries = 0
+   totalDerivedEntries = 0
+   ! reload file and parse it
+   CFtemp = ESMF_ConfigCreate (rc=STATUS )
+   VERIFY_(STATUS)
+   call ESMF_ConfigLoadFile(CFtemp,EXTDATA_CF,rc=status)
+   VERIFY_(STATUS)
+   call ESMF_ConfigNextLine(CFtemp,__RC__)
+   do while(status == ESMF_SUCCESS) 
+
+      call ESMF_ConfigNextLine(CFtemp,rc=status)
+      if (status == ESMF_SUCCESS) then
+         call ESMF_ConfigGetAttribute(CFtemp,thisLine,rc=status)
+         if (trim(thisLine) == "PrimaryExports%%" .or. trim(thisLine) == "DerivedExports%%" ) then
+            select case (trim(thisLine))
+               case ("PrimaryExports%%")
+                  inBlock = .true.
+                  do while(inBLock)
+                     call ESMF_ConfigNextLine(CFtemp, __RC__)
+                     call ESMF_ConfigGetAttribute(CFtemp,thisLine,__RC__)
+                     if (trim(thisLine) == "%%") then
+                        inBlock = .false.
+                     else
+
+                        totalPrimaryEntries = totalPrimaryEntries + 1
+                        ! name entry
+                        primary%item(totalPrimaryEntries)%name = trim(thisLine)
+                        !call ESMF_ConfigGetAttribute(CFtemp, primary%item(totalPrimaryEntries)%name,  __RC__)
+                        PrimaryVarNames(totalPrimaryEntries) = primary%item(totalPrimaryEntries)%name
+                        ! check if this represents a vector by looking for semicolon
+                        primary%item(totalPrimaryEntries)%isVector = ( index(primary%item(totalPrimaryEntries)%name,';').ne.0 )
+                        primary%item(totalPrimaryEntries)%vartype = MAPL_ExtDataVectorItem
+                        primary%item(totalPrimaryEntries)%foundComp2 = .false.
+                        primary%item(totalPrimaryEntries)%foundComp1 = .false.
+
+                        ! units entry
+                        call ESMF_ConfigGetAttribute(CFtemp, primary%item(totalPrimaryEntries)%units, __RC__)
+
+                        ! climatology entry
+                        call ESMF_ConfigGetAttribute(CFtemp, buffer, __RC__)
+                        buffer = ESMF_UtilStringLowerCase(buffer, __RC__)
+                        primary%item(totalPrimaryEntries)%cyclic=buffer
+
+                        ! regridding keyword, controls what type of regridding is performed
+                        ! options are
+                        ! N - conventional bilinear regridding
+                        ! Y - conservative tile based regridding
+                        ! V - voting, tile based
+                        ! F;val - fractional, returns the fraction of the input cells with value, val
+                        !         that overlap the target cell
+                        call ESMF_ConfigGetAttribute(CFtemp, buffer, __RC__)
+                        buffer = ESMF_UtilStringLowerCase(buffer, __RC__)
+                        buffer = trim(buffer)
+                        if (trim(buffer) == 'y') then
+!!$                           primary%item(totalPrimaryEntries)%Trans = MAPL_HorzTransOrderBinning
+                           primary%item(totalPrimaryEntries)%trans = REGRID_METHOD_CONSERVE
+                        else if (trim(buffer) == 'n') then
+!!$                           primary%item(totalPrimaryEntries)%Trans = MAPL_HorzTransOrderBilinear
+                           primary%item(totalPrimaryEntries)%trans = REGRID_METHOD_BILINEAR
+                        else if (trim(buffer) == 'v') then
+!!$                           primary%item(totalPrimaryEntries)%Trans = MAPL_HorzTransOrderSample
+                           primary%item(totalPrimaryEntries)%trans = REGRID_METHOD_VOTE
+                        else if (index(trim(buffer),'f') ==1 ) then
+!!$                           primary%item(totalPrimaryEntries)%Trans = MAPL_HorzTransOrderFraction
+                           primary%item(totalPrimaryEntries)%trans = REGRID_METHOD_FRACTION
+                           k = index(buffer,';')
+                           ASSERT_(k > 0)
+                           read(buffer(k+1:),*,iostat=ios) primary%item(totalPrimaryEntries)%FracVal
+                        else
+                           __raise__(MAPL_RC_ERROR, "the regridding keyword for extdata primary export must be N, Y, V, or F")
+                        end if
+
+                        ! refresh template entry
+                        call ESMF_ConfigGetAttribute(CFtemp, buffer, __RC__)
+                        ! check if first entry is an F for no interpolation
+                        buffer = trim(buffer)
+                        if (buffer(1:1) == 'F') then
+                           primary%item(totalPrimaryEntries)%refresh_template = buffer(2:)
+                           primary%item(totalPrimaryEntries)%doInterpolate = .false.
+                        else
+                           primary%item(totalPrimaryEntries)%refresh_template = buffer
+                           primary%item(totalPrimaryEntries)%doInterpolate = .true.
+                        end if
+                        ! offset entry
+                        call ESMF_ConfigGetAttribute(CFtemp, c_offset, __RC__)
+                        if (trim(c_offset) == "none") then
+                           primary%item(totalPrimaryEntries)%do_offset = .false.
+                        else
+                           primary%item(totalPrimaryEntries)%do_offset = .true.
+                           read(c_offset,*,iostat=ios) primary%item(totalPrimaryEntries)%offset
+                        end if
+                        ! scaling entry
+                        call ESMF_ConfigGetAttribute(CFtemp, c_scale, __RC__)
+                        if (trim(c_scale) == "none") then
+                           primary%item(totalPrimaryEntries)%do_scale = .false.
+                        else
+                           primary%item(totalPrimaryEntries)%do_scale = .true.
+                           read(c_scale,*,iostat=ios) primary%item(totalPrimaryEntries)%scale
+                        end if
+                     
+                        ! variable name on file entry
+                        call ESMF_ConfigGetAttribute(CFtemp, primary%item(totalPrimaryEntries)%var,    __RC__)
+                        ! file template entry
+                        call ESMF_ConfigGetAttribute(CFtemp, primary%item(totalPrimaryEntries)%file,   __RC__)
+
+                        ! the next  three are optional entries to describe the time information about the file template
+                        ! these are what is the first valid time you can apply to the file template to get a file that exists
+                        ! then you can specify the frequnecy of the file and the units of the frequency
+                        call ESMF_ConfigGetAttribute(CFtemp, primary%item(totalPrimaryEntries)%fileReffTime, rc=status)
+                        if (status /= ESMF_SUCCESS) then
+                           primary%item(totalPrimaryEntries)%FileReffTime = ""
+                           primary%item(totalPrimaryEntries)%hasFileReffTime = .false.
+                        else
+                           primary%item(totalPrimaryEntries)%hasFileReffTime = .true.
+                        end if            
+ 
+              !         assume we will allocate
+                        primary%item(totalPrimaryEntries)%ExtDataAlloc = .true.
+              !         check if this is going to be a constant
+                        primary%item(totalPrimaryEntries)%isConst = .false.
+                        if (primary%item(totalPrimaryEntries)%file(1:9) == '/dev/null') then
+                           primary%item(totalPrimaryEntries)%isConst = .true.
+                           ios = -1
+                           k = index(primary%item(totalPrimaryEntries)%file,':')
+                           if ( k > 9 ) then
+                                read(primary%item(totalPrimaryEntries)%file(k+1:),*,iostat=ios) &
+                                     & primary%item(totalPrimaryEntries)%const
+                           end if
+                           if ( ios /= 0 ) primary%item(totalPrimaryEntries)%const = 0.0
+                           ! finally override whatever the cyclic arguement is
+                           primary%item(totalPrimaryEntries)%cyclic='n'
+                        end if
+
+
+                        if ( primary%item(totalPrimaryEntries)%isConst .eqv. .false. )  then
+                           call CreateTimeInterval(primary%item(totalPrimaryEntries),clock,__RC__)
+                        end if
+                     end if
+                  enddo
+               !  Derived Exports
+               !  ---------------
+               case ("DerivedExports%%")
+                  inBlock = .true.
+                  do while(inBlock)
+                     call ESMF_ConfigNextLine(CFtemp, __RC__)
+                     call ESMF_ConfigGetAttribute(CFtemp,thisLine,__RC__)
+                     if (trim(thisLine) == "%%") then
+                        inBlock = .false.
+                     else
+                        totalDerivedEntries = totalDerivedEntries + 1
+                        derived%item(totalDerivedEntries)%name = trim(thisLine)
+                        call ESMF_ConfigGetAttribute(CFtemp,derived%item(totalDerivedEntries)%expression,__RC__)
+                        call ESMF_ConfigGetAttribute(CFtemp,derived%item(totalDerivedEntries)%refresh_template, __RC__)
+                        derived%item(totalDerivedEntries)%ExtDataAlloc = .true.
+                     end if
+                  enddo
+            end select
+         end if
+      end if
+   end do
+   !Done parsing resource file    
+
+   PrimaryItemCount = 0
+   DerivedItemCount = 0
+   itemCounter = 0
+
+!   find items in primary and derived to fullfill Export state
+!   once we find primary or derived put in namespace
+    self%ExtDataState = ESMF_StateCreate(Name="ExtDataNameSpace",__RC__)
+    do I = 1, ItemCount
+
+       found = .false.
+       do J = 1, primary%nItems
+          ! special handling if it is a vector
+          if (primary%item(J)%isVector) then
+             idx = index(primary%item(J)%name,";")
+             component1 = primary%item(J)%name(1:idx-1)
+             component2 = primary%item(J)%name(idx+1:)
+             if ( trim(ItemNames(I)) == trim(component1) ) then
+                primary%item(j)%vcomp1 = component1
+                idx = index(primary%item(j)%var,";")
+                primary%item(j)%fcomp1 = primary%item(j)%var(1:idx-1)
+                itemCounter = itemCounter + 1
+                found = .true.
+                primary%item(j)%foundComp1 = .true.
+                PrimaryVarNeeded(j) = .true.
+                primary%item(j)%ExtDataAlloc = .false.
+                if ( primary%item(j)%foundComp1 .and. primary%item(j)%foundComp2 ) PrimaryItemCount = PrimaryItemCount + 1
+                call ESMF_StateGet(Export,component1,field,__RC__)
+                call MAPL_StateAdd(self%ExtDataState,field,__RC__)
+                ! put protection in, if you are filling vector pair, they must be fields, no bundles
+                ASSERT_( ITEMTYPES(I) == ESMF_StateItem_Field )
+                exit
+             else if ( trim(ItemNames(I)) == trim(component2) ) then
+                primary%item(j)%vcomp2 = component2
+                idx = index(primary%item(j)%var,";")
+                primary%item(j)%fcomp2 = primary%item(j)%var(idx+1:)
+                itemCounter = itemCounter + 1
+                found = .true.
+                primary%item(j)%foundComp2 = .true.
+                PrimaryVarNeeded(j) = .true.
+                primary%item(j)%ExtDataAlloc = .false.
+                if ( primary%item(j)%foundComp1 .and. primary%item(j)%foundComp2 ) PrimaryItemCount = PrimaryItemCount + 1
+                call ESMF_StateGet(Export,component2,field,__RC__)
+                call MAPL_StateAdd(self%ExtDataState,field,__RC__)
+                ! put protection in, if you are filling vector pair, they must be fields, no bundles
+                ASSERT_( ITEMTYPES(I) == ESMF_StateItem_Field )
+                exit
+             end if
+          else
+             if (ItemNames(I) == primary%item(J)%name) then
+                itemCounter = itemCounter + 1
+                found = .true.
+                if (primary%item(j)%isConst .and. ITEMTYPES(I) == ESMF_StateItem_FieldBundle) then
+                   if (mapl_am_I_root()) write(*,*)'Can not have constant bundle in ExtData.rc file'
+                   ASSERT_(.false.)
+                end if
+                PrimaryItemCount = PrimaryItemCount + 1
+                PrimaryVarNeeded(j) = .true.
+                primary%item(j)%ExtDataAlloc = .false.
+                VarName=trim(primary%item(J)%name)
+    
+                if (ITEMTYPES(I) == ESMF_StateItem_Field) then
+                   primary%item(J)%vartype = MAPL_FieldItem
+                   call ESMF_StateGet(Export,VarName,field,__RC__)
+                   call MAPL_StateAdd(self%ExtDataState,field,__RC__)
+                else if (ITEMTYPES(I) == ESMF_StateItem_FieldBundle) then
+                   primary%item(J)%vartype = MAPL_BundleItem
+                   call ESMF_StateGet(Export,VarName,bundle,__RC__)
+                   call MAPL_StateAdd(self%ExtDataState,bundle,__RC__)
+                end if
+                exit
+
+             end if
+          end if
+       end do
+       if ( (.not.found) .and. (derived%nItems > 0) ) then
+          do J = 1, derived%nItems
+             if (ItemNames(I) == derived%item(J)%name) then
+
+                if (ITEMTYPES(I) == ESMF_StateItem_FieldBundle) then
+                   ASSERT_(.false.)
+                end if
+                found = .true.
+                DerivedVarNeeded(j) = .true.
+                itemCounter = itemCounter + 1
+                DerivedItemCount = DerivedItemCount + 1
+                derived%item(j)%ExtDataAlloc = .false.
+                VarName=derived%item(j)%name
+                call ESMF_StateGet(Export,VarName,field,__RC__)
+                call MAPL_StateAdd(self%ExtDataState,field,__RC__)
+                exit
+
+             end if
+          end do
+       end if
+       if (.not.found) then
+          if (mapl_am_I_root()) then
+             write(*,*)'ExtData could not satisfy import ',trim(ItemNames(I))
+          end if
+       end if
+    end do
+
+    call ESMF_VMGetCurrent(VM) 
+    call ESMF_VMBarrier(VM)
+!   we have better found all the items in the export in either a primary or derived item
+    if ( itemCounter /= ItemCount ) then
+       if (mapl_am_I_root()) then
+          write(*,'(A6,I3,A31)')'Found ',ItemCount-itemCounter,' unfullfilled imports in extdata'
+       end if
+        ASSERT_(.false.)
+    end if
+
+    NumVarNames=primary%nItems
+    allocate(VarNames(NumVarNames))
+    allocate(LocalVarNeeded(NumVarNames))
+    do i=1,primary%nItems
+       VarNames(i)=PrimaryVarNames(i)
+    end do
+
+    IF (MAPL_am_I_root()) THEN
+       PRINT*, '************************************************'
+       PRINT*, '** Variables to be provided by the ExtData Component **'
+       PRINT*, '************************************************'
+       do I = 1, ItemCount
+          PRINT*, '---- ', I, ': ', TRIM(ItemNames(I))
+       END DO
+       PRINT*, '************************************************'
+       PRINT*
+    END IF
+
+!   search for other primary variables we may need to fill derived types that were not in the export state
+!   if we find them allocate them based on grid of variable we are trying to fill
+    do i=1, derived%nItems
+       if (DerivedVarNeeded(i)) then
+          LocalVarNeeded=.false.
+
+          ! first check if it is a non-arithmetic function
+          expression = derived%item(i)%expression
+          expression = ESMF_UtilStringLowerCase(expression, __RC__)
+          if ( index(expression,"mask") /=0  ) then
+             derived%item(i)%masking = .true.
+          else
+             derived%item(i)%masking = .false.
+          end if
+          if (derived%item(i)%masking) then
+             call GetMaskName(derived%item(i)%expression,VarNames,LocalVarNeeded,__RC__)
+          else
+             call CheckSyntax(derived%item(i)%expression,VarNames,LocalVarNeeded,__RC__)
+          end if
+
+          do j=1, primary%nItems
+             if (LocalVarNeeded(j)) then
+                VarName = trim(primary%item(j)%name)
+                call ESMF_StateGet(self%ExtDataState,VarName,field,rc=status)
+                if (status /= ESMF_SUCCESS) then
+                   VarName = trim(derived%item(i)%name)
+                   call ESMF_StateGet(self%ExtDataState,VarName,field,__RC__)
+                   VarName=trim(primary%item(j)%name)
+                   fieldnew = MAPL_FieldCreate(field,varname,doCopy=.true.,__RC__) 
+                   call MAPL_StateAdd(self%ExtDataState,fieldnew,__RC__)
+                   PrimaryVarNeeded(j) = .true.
+                   primary%item(j)%ExtDataAlloc = .true.
+                   primary%item(j)%vartype = MAPL_FieldItem
+                   PrimaryItemCount = PrimaryItemCount + 1
+                end if
+             end if
+          end do
+       end if
+    end do
+
+    self%primary%nItems = count(PrimaryVarNeeded)
+    if (DerivedItemCount > 0) self%derived%nItems = count(DerivedVarNeeded)
+
+    allocate(self%primary%item(PrimaryItemCount),__STAT__)
+    if (DerivedItemCount > 0) allocate(self%derived%item(DerivedItemCount),__STAT__)
+
+    counter = 0
+    do i=1,primary%nItems
+       if (PrimaryVarNeeded(i)) then
+          counter = counter + 1
+          self%primary%item(counter) = primary%item(i)
+          ! put in a special check if it is a vector item
+          ! both components must have bubbled up
+          if (self%primary%item(counter)%isVector) then
+             ASSERT_( self%primary%item(counter)%foundComp1 .and. self%primary%item(counter)%foundComp2 )
+          end if
+       end if
+    end do
+    ASSERT_(counter==PrimaryItemCount)
+
+    if (DerivedItemCount > 0) then
+       counter = 0
+       do i=1,derived%nItems
+          if (derivedVarNeeded(i)) then
+             counter = counter + 1
+             self%derived%item(counter) = derived%item(i)
+          end if
+       end do
+       ASSERT_(counter==DerivedItemCount)
+    end if
+
+   call ESMF_ClockGet(CLOCK, currTIME=time, __RC__)
+   PrimaryLoop: do i = 1, self%primary%nItems
+
+      item => self%primary%item(i)
+
+      ! parse refresh template to see if we have a time shift during constant updating
+      k = index(item%refresh_template,';')
+      call ESMF_TimeIntervalSet(item%tshift,__RC__)
+      if (k.ne.0) then
+         ASSERT_(trim(item%refresh_template(:k-1))=="0")
+         if (item%refresh_template(k+1:k+1) == '-' ) then
+            isNegative = .true.
+            read(item%refresh_template(k+2:),*,iostat=ios)nhms
+         else
+            isNegative = .false.
+            read(item%refresh_template(k+1:),*,iostat=ios)nhms
+         end if
+         call MAPL_UnpackTime(nhms,ihr,imn,isc)
+         if (isNegative) then
+            ihr = -ihr
+            imn = -imn
+            isc = -isc
+         end if
+         call ESMF_TimeIntervalSet(item%tshift,h=ihr,m=imn,s=isc,__RC__)
+         item%refresh_template = "0"
+      end if
+      call SetRefreshAlarms(clock,primaryItem=item,__RC__)
+
+      if (item%vartype == MAPL_BundleItem) then
+
+         call ESMF_StateGet(self%ExtDataState, trim(item%name), bundle,__RC__)
+         ! let us check that bundle is empty
+         call ESMF_FieldBundleGet(bundle, fieldcount = fieldcount , __RC__)
+         ASSERT_(fieldcount == 0)
+         call MAPL_CFIORead(item%file,time,bundle,noread=.true.,ignorecase=self%ignorecase, only_vars=item%var,__RC__)
+
+      end if
+
+!  Read the single step files (read interval equal to zero)
+!  --------------------------------------------------------
+
+      if (item%isConst) then
+
+         if (item%vartype == MAPL_FieldItem) then
+            call ESMF_StateGet(self%ExtDataState,trim(item%name),field,__RC__)
+            call ESMF_FieldGet(field,dimCount=fieldRank,__RC__)
+            if (fieldRank == 2) then
+                  call MAPL_GetPointer(self%ExtDataState, ptr2d, trim(item%name),__RC__)
+                  ptr2d = item%const
+            else if (fieldRank == 3) then
+                  call MAPL_GetPointer(self%ExtDataState, ptr3d, trim(item%name), __RC__)
+                  ptr3d = item%const
+            endif
+         else if (item%vartype == MAPL_BundleItem) then
+            ASSERT_(.false.)
+         else if (item%vartype == MAPL_ExtDataVectorItem) then
+            ! add this capability later
+            ASSERT_(.false.)
+         end if
+         cycle
+      end if
+ 
+      ! check if this is a single piece of data if user put - for refresh template
+      ! by that it is an untemplated file with one time that could not possibly be time interpolated
+      if (PrimaryExportIsConstant_(item)) then
+         if (index(item%file,'%') == 0) then
+            call MAPL_CFIORegistryGet(item%file,cfio,__RC__)
+            if (cfio%tsteps == 1) then
+               item%cyclic = 'single'
+            end if
+         end if
+      end if
+
+      ! get clim year if this is cyclic
+      call GetClimYear(item,__RC__)
+      ! get levels, other information
+      call GetLevs(item,time,self%allowExtrap,__RC__)
+
+      ! create interpolating fields, check if the vertical levels match the file
+      if (item%vartype == MAPL_FieldItem) then
+
+         call ESMF_StateGet(self%ExtDataState, trim(item%name), field,__RC__)
+         call ESMF_FieldGet(field,grid=grid,rank=fieldRank,__RC__)
+
+         lm=0
+         if (fieldRank==3) then
+            call ESMF_FieldGet(field,0,farrayPtr=ptr3d, rc=status)
+           if (ESMF_LogFoundError(rcToCheck=status, msg=ESMF_LOGERR_PASSTHRU, &
+              line=__LINE__, &
+              file=__FILE__)) &
+              return  ! bail out
+
+            lm = size(ptr3d,3)
+         end if   
+         print *, 'EXTDATA: lm:', item%lm, lm
+         if (item%lm /= lm .and. lm /= 0 .and. item%havePressure) then
+            item%do_VertInterp = .true.
+         else if (item%lm /= lm .and. lm /= 0) then
+            item%do_Fill = .true.
+         end if
+         item%finterp1 = MAPL_FieldCreate(field,item%var,doCopy=.true.,__RC__)
+         item%finterp2 = MAPL_FieldCreate(field,item%var,doCopy=.true.,__RC__)
+
+      else if (item%vartype == MAPL_BundleItem) then
+
+         call ESMF_StateGet(self%ExtDataState, trim(item%name), bundle,__RC__)
+         call ESMF_FieldBundleGet(bundle,grid=grid,__RC__)
+         call ESMF_ClockGet(CLOCK, currTIME=time, __RC__)
+         item%binterp1 = ESMF_FieldBundleCreate( __RC__)
+         call ESMF_FieldBundleSet(item%binterp1, GRID=GRID, __RC__)
+         item%binterp2 = ESMF_FieldBundleCreate( __RC__)
+         call ESMF_FieldBundleSet(item%binterp2, GRID=GRID, __RC__)
+         call MAPL_CFIORead(item%file,time,item%binterp1,noread=.true.,ignorecase=self%ignorecase,only_vars=item%var,__RC__)
+         call MAPL_CFIORead(item%file,time,item%binterp2,noread=.true.,ignorecase=self%ignorecase,only_vars=item%var,__RC__)
+ 
+      else if (item%vartype == MAPL_ExtDataVectorItem) then
+     
+         ! check that we are not asking for conservative regridding
+!!$         if (item%Trans /= MAPL_HorzTransOrderBilinear) then
+         if (item%Trans /= REGRID_METHOD_BILINEAR) then
+            if (mapl_am_i_root()) write(*,*)"No conservative regridding with vectors"
+            ASSERT_(.false.)
+         end if 
+
+         call ESMF_StateGet(self%ExtDataState, trim(item%vcomp1), field,__RC__)
+         call ESMF_FieldGet(field,grid=grid,rank=fieldRank,__RC__)
+
+         lm = 0 
+         if (fieldRank==3) then
+            call ESMF_FieldGet(field,0,farrayPtr=ptr3d,rc=status)
+            if (ESMF_LogFoundError(rcToCheck=status, msg=ESMF_LOGERR_PASSTHRU, &
+              line=__LINE__, &
+              file=__FILE__)) &
+              return  ! bail out
+            lm = size(ptr3d,3)
+         end if
+         print *, 'EXTDATA: lm:', item%lm, lm
+         if (item%lm /= lm .and. item%havePressure) then
+            item%do_VertInterp = .true.
+         else if (item%lm /= lm) then
+            item%do_Fill = .true.
+         end if
+         item%v1_finterp1 = MAPL_FieldCreate(field, item%vcomp1,doCopy=.true.,__RC__)
+         item%v1_finterp2 = MAPL_FieldCreate(field, item%vcomp1,doCopy=.true.,__RC__)
+         call ESMF_StateGet(self%ExtDataState, trim(item%vcomp2), field,__RC__)
+         item%v2_finterp1 = MAPL_FieldCreate(field, item%vcomp2,doCopy=.true.,__RC__)
+         item%v2_finterp2 = MAPL_FieldCreate(field, item%vcomp2,doCopy=.true.,__RC__)
+      end if
+
+      allocate(item%refresh_time,__STAT__)
+
+      call ESMF_TimeSet(item%refresh_time, yy=0, __RC__)
+   end do PrimaryLoop
+
+   DerivedLoop: do i =1, self%derived%nItems
+      allocate(self%derived%item(i)%refresh_time,__STAT__)
+
+      derivedItem => self%derived%item(i)
+
+      ! parse refresh template to see if we have a time shift during constant updating
+      k = index(derivedItem%refresh_template,';')
+      call ESMF_TimeIntervalSet(derivedItem%tshift,__RC__)
+      if (k.ne.0) then
+         ASSERT_(trim(derivedItem%refresh_template(:k-1))=="0")
+         if (derivedItem%refresh_template(k+1:k+1) == '-' ) then
+            isNegative = .true.
+            read(derivedItem%refresh_template(k+2:),*,iostat=ios)nhms
+         else
+            isNegative = .false.
+            read(derivedItem%refresh_template(k+1:),*,iostat=ios)nhms
+         end if
+         call MAPL_UnpackTime(nhms,ihr,imn,isc)
+         if (isNegative) then
+            ihr = -ihr
+            imn = -imn
+            isc = -isc
+         end if
+         call ESMF_TimeIntervalSet(derivedItem%tshift,h=ihr,m=imn,s=isc,__RC__)
+         derivedItem%refresh_template = "0"
+      end if
+
+      call SetRefreshAlarms(clock,derivedItem=derivedItem,__RC__)
+
+      call ESMF_TimeSet(self%derived%item(i)%refresh_time, yy=0, __RC__)
+   end do DerivedLoop
+
+#ifdef DEBUG
+   if (MAPL_AM_I_ROOT()) then
+      print *, trim(Iam)//': IMPORT   State during Initialize():'
+      call ESMF_StatePrint ( IMPORT )
+      print *
+      print *, trim(Iam)//': EXPORT   State during Initialize():' 
+      call ESMF_StatePrint ( EXPORT )
+   end if
+#endif
+
+! Check if we have any files that would need to be vertically interpolated
+! if so ensure that PS is done first
+   allocate(self%primaryOrder(size(self%primary%item)),__STAT__)
+   do i=1,size(self%primary%item)
+      self%primaryOrder(i)=i
+   enddo
+!  check for PS
+   idx = -1
+   if (any(self%primary%item%do_VertInterp .eqv. .true.)) then
+      do i=1,size(self%primary%item)
+         if (self%primary%item(i)%name=='PS') then
+            idx =i
+         end if
+         if (self%primary%item(i)%vartype==MAPL_BundleItem) then
+            ASSERT_(.false.)
+         end if
+      enddo
+      ASSERT_(idx/=-1)
+      self%primaryOrder(1)=idx
+      self%primaryOrder(idx)=1
+      self%primary%item(idx)%units = ESMF_UtilStringUppercase(self%primary%item(idx)%units,rc=status)
+      ASSERT_(trim(self%primary%item(idx)%units)=="PA")
+   end if
+!  check for PHIS
+   idx = -1
+   if (any(self%primary%item%do_VertInterp .eqv. .true.)) then
+      do i=1,size(self%primary%item)
+         if (self%primary%item(i)%name=='PHIS') then
+            idx =i
+         end if
+         if (self%primary%item(i)%vartype==MAPL_BundleItem) then
+            ASSERT_(.false.)
+         end if
+      enddo
+      if (idx/=-1) then
+         self%primaryOrder(2)=idx
+         self%primaryOrder(idx)=2
+         self%primary%have_phis=.true.
+      end if
+   end if
+
+! Clean up
+! --------
+   if (associated(primary%item)) deallocate(primary%item)
+   if (associated(derived%item)) deallocate(derived%item)
+   deallocate(ItemTypes)
+   deallocate(ItemNames)
+   if (allocated(PrimaryVarNames)) deallocate(PrimaryVarNames)
+   if (allocated(PrimaryVarNeeded)) deallocate(PrimaryVarNeeded)
+   if (allocated(VarNames)) deallocate(VarNames)
+   if (allocated(DerivedVarNeeded)) deallocate(DerivedVarNeeded)
+   if (allocated(LocalVarNeeded)) deallocate(LocalVarNeeded)
+
+   !Done parsing resource file    
+
+!  Set has run to false to we know when we first go to run method it is first call
+   hasRun = .false.
+
+!   call MAPL_TimerOff(MAPLSTATE,"Initialize")
+!   call MAPL_TimerOff(MAPLSTATE,"TOTAL")
+!  All done
+!  --------
+   RETURN_(ESMF_SUCCESS)
+
+   END SUBROUTINE Initialize_
+
+#if 0
 !-------------------------------------------------------------------------
 !     NASA/GSFC, Global Modeling and Assimilation Office, Code 610.1     !
 !-------------------------------------------------------------------------
@@ -1540,14 +2449,18 @@ contains
    RETURN_(ESMF_SUCCESS)
 
    END SUBROUTINE Initialize_
-    
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#endif
+
+!-------------------------------------------------------------------------
+!     NASA/GSFC, Global Modeling and Assimilation Office, Code 610.1     !
+!-------------------------------------------------------------------------
 !BOP
 !
-! !IROUTINE: RUN
+! !IROUTINE:  Run_ --- Runs MAPL_ExtData
 !
 ! !INTERFACE:
 !
+
     subroutine ModelAdvance( GC, RC )
 !
 ! !INPUT/OUTPUT PARAMETERS:
@@ -1555,37 +2468,34 @@ contains
 !
 ! !OUTPUT PARAMETERS:
       integer, intent(  out) :: RC     ! Error code
+
+! !DESCRIPTION: This is a simple ESMF wrapper.
 !
-! !DESCRIPTION: Does nothing for now.
-! 
+! !REVISION HISTORY:
 !
-!EOP 
-!=============================================================================
-!BOC
+!  12Dec2009  da Silva  Design and first implementation.
 !
-! ErrLog Variables
-      character(len=ESMF_MAXSTR)        :: IAm = "ModelAdvance"
-      integer                           :: STATUS
-      character(len=ESMF_MAXSTR)        :: COMP_NAME
-! Local derived types
+!EOP
+!-------------------------------------------------------------------------
 
     ! local variables
-    type(ESMF_Clock)              :: clock
-    type(ESMF_State)              :: import, export
-    type(ESMF_TimeInterval)       :: timestep
+   type(ESMF_Clock)                  :: clock
+   type(ESMF_State)                  :: import, export
 
-#if 1
    type(MAPL_ExtData_state), pointer :: self        ! Legacy state
    type(ESMF_Field)                  :: field       ! Field
    type(ESMF_FieldBundle)            :: bundle
    type(ESMF_Config)                 :: CF          ! Universal Config 
 
+   character(len=ESMF_MAXSTR)        :: comp_name
+   character(len=ESMF_MAXSTR)        :: Iam
+   integer                           :: status
+
    type(PrimaryExport), pointer      :: item
    type(DerivedExport), pointer      :: derivedItem
    integer                           :: i, j
 
-   type(ESMF_Time)                   :: time, refresh_time, time0
-   logical                           :: time_interp, time_is_cyclic
+   type(ESMF_Time)                   :: time, time0
    type(MAPL_MetaComp), pointer      :: MAPLSTATE
 
    real, pointer, dimension(:,:)     :: var2d_prev, var2d_next
@@ -1601,16 +2511,23 @@ contains
    logical, allocatable              :: doUpdate(:)
    type(ESMF_Time), allocatable      :: useTime(:)
 
+!  Declare pointers to IMPORT/EXPORT/INTERNAL states 
+!  -------------------------------------------------
+!  #include "MAPL_ExtData_DeclarePointer___.h"
+  
 !  Get my name and set-up traceback handle
 !  ---------------------------------------
-      
-   RC = ESMF_SUCCESS
-
    Iam = 'ModelAdvance'
    call ESMF_GridCompGet( GC, name=comp_name, __RC__ )
+   Iam = trim(comp_name) // '::' // trim(Iam)
    call NUOPC_ModelGet(GC, modelClock=clock, importState=IMPORT, &
         exportState=EXPORT, rc=rc)
-   Iam = trim(comp_name) // '::' // trim(Iam)
+
+
+!  Call Run for every Child
+!  -------------------------
+!   call MAPL_GenericRun ( GC, IMPORT, EXPORT, CLOCK,  __RC__)
+
 
 !  Extract relevant runtime information
 !  ------------------------------------
@@ -1619,6 +2536,11 @@ contains
    if (.not. self%active) then
       RETURN_(ESMF_SUCCESS)
    end if
+
+!   call MAPL_GetObjectFromGC ( gc, MAPLSTATE, RC=STATUS)
+!   VERIFY_(STATUS) 
+!   call MAPL_TimerOn(MAPLSTATE,"TOTAL")
+!   call MAPL_TimerOn(MAPLSTATE,"Run")
 
    call ESMF_ClockGet(CLOCK, currTIME=time0, __RC__)
 
@@ -1632,31 +2554,43 @@ contains
    allocate(useTime(self%primary%nitems),stat=status)
    VERIFY_(STATUS)
 
+!   call MAPL_TimerOn(MAPLSTATE,"-Read_Loop")
+ 
    READ_LOOP: do i = 1, self%primary%nItems
 
-      item => self%primary%item(i)
+      item => self%primary%item(self%primaryOrder(i))
 
       if (item%isConst) cycle
+      ! Debug level 1
+      If (Ext_Debug > 0) Then
+         If (MAPL_AM_I_ROOT()) Then
+            Write(*,'(a,3(x,a))') '>> Reading ', trim(item%var), 'from', trim(item%file)
+         End If
+      End If
 
       NotSingle = .true.
       if (trim(item%cyclic) == 'single') NotSingle = .false.
 
+ !     call MAPL_TimerOn(MAPLSTATE,"--CheckUpd")
+
       call CheckUpdate(doUpdate_,time,time0,hasRun,primaryItem=item,__RC__)
       doUpdate(i) = doUpdate_
+!      call MAPL_TimerOff(MAPLSTATE,"--CheckUpd")
 
       DO_UPDATE: if (doUpdate_) then
 
          HAS_RUN: if ( hasRun .eqv. .false.) then
 
+!            call MAPL_TimerOn(MAPLSTATE,"--Bracket")
             if (NotSingle) then
                ! update left time
-               call UpdateBracketTime(item%file,time,item%reff_time,item%frequency,"L",item%cyclic,item%climYear,item%interp_time1, & 
-                    item%time1,file_processed1,rc=status)
+               call UpdateBracketTime(item,time,"L",item%interp_time1, & 
+                    item%time1,file_processed1,item%isAssigned1,item%cfio1,item%tSeries1,self%allowExtrap,rc=status)
                VERIFY_(status)
 
                ! update right time
-               call UpdateBracketTime(item%file,time,item%reff_time,item%frequency,"R",item%cyclic,item%climYear,item%interp_time2, &
-                    item%time2,file_processed2,rc=status)
+               call UpdateBracketTime(item,time,"R",item%interp_time2, &
+                    item%time2,file_processed2,item%isAssigned2,item%cfio2,item%tSeries2,self%allowExtrap,rc=status)
                VERIFY_(STATUS)
             else
                ! just get time on the file
@@ -1664,43 +2598,32 @@ contains
                item%interp_time1 = item%time1
                file_processed1 = item%file
             end if
-            ! call MAPL_TimerOff(MAPLSTATE,"--Bracket")
+!            call MAPL_TimerOff(MAPLSTATE,"--Bracket")
 
             ! read bracketing data
 
-            !call MAPL_TimerOn(MAPLSTATE,"--Read")
-            if (item%vartype == MAPL_FieldItem) then
+!            call MAPL_TimerOn(MAPLSTATE,"--Read")
+            if (item%vartype /= MAPL_ExtDataVectorItem) then
 
-               call MAPL_ExtDataGridCompRead(file_processed1,item%time1,item%trans, &
-                    item%FracVal,self%ignorecase,field=item%finterp1,name=trim(item%var),__RC__)
+               call MAPL_ExtDataGridCompRead(item,file_processed1, self,MAPL_ExtDataLeft,__RC__)
 
                if (NotSingle) then
-                  call MAPL_ExtDataGridCompRead(file_processed2,item%time2,item%trans, &
-                       item%FracVal,self%ignorecase,field=item%finterp2,name=trim(item%var),__RC__)
+                  call MAPL_ExtDataGridCompRead(item,file_processed2, self,MAPL_ExtDataRight,__RC__)
+
                end if
 
-            else if (item%vartype == MAPL_BundleItem) then
-
-               call MAPL_ExtDataGridCompRead(file_processed1,item%time1,item%trans, &
-                    item%FracVal,self%ignorecase,bundle=item%binterp1,__RC__)
-               if (NotSingle) then
-               call MAPL_ExtDataGridCompRead(file_processed2,item%time2,item%trans, &
-                    item%FracVal,self%ignorecase,bundle=item%binterp2,__RC__)
-               end if
-          
-            else if (item%vartype == MAPL_ExtDataVectorItem) then
+            else
 
                call ESMF_ConfigGetAttribute(cf, value = NX, Label="NX:", __RC__)
                call ESMF_ConfigGetAttribute(cf, value = NY, Label="NY:", __RC__)
-               call MAPL_ExtDataReadVector(file_processed1,item%fcomp1,item%fcomp2, &
-                                           item%time1,item%v1_finterp1,item%v2_finterp1,NX,NY,self%ignoreCase,__RC__)
+               call MAPL_ExtDataReadVector(item,file_processed1,self,MAPL_ExtDataLeft,__RC__)
+
                if (NotSingle) then
-                  call MAPL_ExtDataReadVector(file_processed2,item%fcomp1,item%fcomp2, &
-                                              item%time2,item%v1_finterp2,item%v2_finterp2,NX,NY,self%ignoreCase,__RC__)
+                  call MAPL_ExtDataReadVector(item,file_processed2,self,MAPL_ExtDataRight,__RC__)
                end if
 
             end if
-            !call MAPL_TimerOff(MAPLSTATE,"--Read")
+!            call MAPL_TimerOff(MAPLSTATE,"--Read")
 
          endif HAS_RUN
  
@@ -1724,7 +2647,7 @@ contains
                swap    = .false.
             end if
 
-            !call MAPL_TimerOn(MAPLSTATE,'--Swap')
+!            call MAPL_TimerOn(MAPLSTATE,'--Swap')
             DO_SWAP: if (swap) then
 
                item%interp_time1 = item%interp_time2
@@ -1766,7 +2689,7 @@ contains
 
                else if (item%vartype == MAPL_ExtDataVectorItem) then
 
-                  call ESMF_FieldGet(item%v1_finterp1, dimCount=fieldRank, __RC__) 
+                  call ESMF_FieldGet(item%v1_finterp1, dimCount=fieldRank, __RC__)
                   if (fieldRank == 2) then
                      call ESMF_FieldGet(item%v1_finterp1, localDE=0, farrayPtr=var2d_prev, __RC__)
                      call ESMF_FieldGet(item%v1_finterp2, localDE=0, farrayPtr=var2d_next, __RC__)
@@ -1787,67 +2710,59 @@ contains
 
             end if DO_SWAP
 
-            !call MAPL_TimerOff(MAPLSTATE,'--Swap')
+!            call MAPL_TimerOff(MAPLSTATE,'--Swap')
 
             if (updateR) then
 
-            !call MAPL_TimerOn(MAPLSTATE,'--Bracket')
-            call UpdateBracketTime(item%file,time,item%reff_time,item%frequency,"R",item%cyclic,item%climYear,item%interp_time2, &
-                    item%time2, file_processed, __RC__)
-            !call MAPL_TimerOff(MAPLSTATE,'--Bracket')
+!               call MAPL_TimerOn(MAPLSTATE,'--Bracket')
 
-               !call MAPL_TimerOn(MAPLSTATE,"--Read")
-               if (item%vartype == MAPL_FieldItem) then
+               call UpdateBracketTime(item,time,"R",item%interp_time2, &
+                    item%time2,file_processed,item%isAssigned2,item%cfio2,item%tSeries2,self%allowExtrap,rc=status)
+               VERIFY_(STATUS)
 
-                  call MAPL_ExtDataGridCompRead(file_processed,item%time2,item%trans, &
-                       item%FracVal,self%ignorecase,field=item%finterp2,name=trim(item%var),__RC__)
+!               call MAPL_TimerOff(MAPLSTATE,'--Bracket')
 
-               else if (item%vartype == MAPL_BundleItem) then
+!               call MAPL_TimerOn(MAPLSTATE,"--Read")
+    
+               if (item%vartype /= MAPL_ExtDataVectorItem) then
 
-                  call MAPL_ExtDataGridCompRead(file_processed,item%time2,item%trans, &
-                       item%FracVal,self%ignorecase,bundle=item%binterp2,__RC__)
+                  call MAPL_ExtDataGridCompRead(item,file_processed,self,MAPL_ExtDataRight,__RC__)
 
                else if (item%vartype == MAPL_ExtDataVectorItem) then
 
                   call ESMF_ConfigGetAttribute(cf, value = NX, Label="NX:", __RC__)
                   call ESMF_ConfigGetAttribute(cf, value = NY, Label="NY:", __RC__)
-                  call MAPL_ExtDataReadVector(file_processed,item%fcomp1,item%fcomp2, & 
-                                              item%time2,item%v1_finterp2,item%v2_finterp2,&
-                                              NX,NY,self%ignoreCase,__RC__)
+                  call MAPL_ExtDataReadVector(item,file_processed,self,MAPL_ExtDataRight,__RC__)
 
                end if
-               !call MAPL_TimerOff(MAPLSTATE,"--Read")
+!               call MAPL_TimerOff(MAPLSTATE,"--Read")
 
             end if
 
             if (updateL) then
+!               call MAPL_TimerOn(MAPLSTATE,'--Bracket')
 
-            !call MAPL_TimerOn(MAPLSTATE,'--Bracket')
-               call UpdateBracketTime(item%file,time,item%reff_time,item%frequency,"L",item%cyclic,item%climYear,item%interp_time1, &
-                    item%time1, file_processed, __RC__)
-            !call MAPL_TimerOff(MAPLSTATE,'--Bracket')
+               call UpdateBracketTime(item,time,"L",item%interp_time1, &
+                    item%time1,file_processed,item%isAssigned1,item%cfio1,item%tSeries1,self%allowExtrap,rc=status)
+               VERIFY_(STATUS)
 
-               !call MAPL_TimerOn(MAPLSTATE,"--Read")
-               if (item%vartype == MAPL_FieldItem) then
+!               call MAPL_TimerOff(MAPLSTATE,'--Bracket')
 
-                  call MAPL_ExtDataGridCompRead(file_processed,item%time1,item%trans, &
-                       item%FracVal,self%ignorecase,field=item%finterp1,name=trim(item%var),__RC__)
+!               call MAPL_TimerOn(MAPLSTATE,"--Read")
 
-               else if (item%vartype == MAPL_BundleItem) then
+               if (item%vartype /= MAPL_ExtDataVectorItem) then
 
-                  call MAPL_ExtDataGridCompRead(file_processed,item%time1,item%trans, &
-                       item%FracVal,self%ignorecase,bundle=item%binterp1,__RC__)
+                  call MAPL_ExtDataGridCompRead(item,file_processed,self,MAPL_ExtDataLeft,__RC__)
 
                else if (item%vartype == MAPL_ExtDataVectorItem) then
 
                   call ESMF_ConfigGetAttribute(cf, value = NX, Label="NX:", __RC__)
                   call ESMF_ConfigGetAttribute(cf, value = NY, Label="NY:", __RC__)
-                  call MAPL_ExtDataReadVector(file_processed,item%fcomp1,item%fcomp1, & 
-                                              item%time1,item%v1_finterp1,item%v2_finterp1,&
-                                              NX,NY,self%ignoreCase,__RC__)
+                  call MAPL_ExtDataReadVector(item,file_processed,self,MAPL_ExtDataLeft,__RC__)
 
                end if
-               !call MAPL_TimerOff(MAPLSTATE,"--Read")
+
+!               call MAPL_TimerOff(MAPLSTATE,"--Read")
 
             end if
 
@@ -1864,13 +2779,13 @@ contains
 
    end do READ_LOOP
 
-   !call MAPL_TimerOff(MAPLSTATE,"-Read_Loop")
+!   call MAPL_TimerOff(MAPLSTATE,"-Read_Loop")
 
-   !call MAPL_TimerOn(MAPLSTATE,"-Interpolate")
+!   call MAPL_TimerOn(MAPLSTATE,"-Interpolate")
  
    INTERP_LOOP: do i = 1, self%primary%nItems
 
-      item => self%primary%item(i)
+      item => self%primary%item(self%primaryOrder(i))
 
       if (doUpdate(i)) then
         
@@ -1879,7 +2794,7 @@ contains
          if (item%vartype == MAPL_FieldItem) then
 
                call ESMF_StateGet(self%ExtDataState, item%name, field, __RC__)
-               call MAPL_ExtDataInterpField(item,useTime(i),field,__RC__)
+               call MAPL_ExtDataInterpField(item,useTime(i),field,__RC__) 
 
          else if (item%vartype == MAPL_BundleItem) then
 
@@ -1908,7 +2823,7 @@ contains
 
    end do INTERP_LOOP
 
-   !call MAPL_TimerOff(MAPLSTATE,"-Interpolate")
+!   call MAPL_TimerOff(MAPLSTATE,"-Interpolate")
 
    ! now take care of derived fields
    do i=1,self%derived%nItems
@@ -1937,352 +2852,126 @@ contains
    deallocate(useTime)
 
    if (hasRun .eqv. .false.) hasRun = .true.
-   !call MAPL_TimerOff(MAPLSTATE,"Run")
-   !call MAPL_TimerOff(MAPLSTATE,"TOTAL")
+!   call MAPL_TimerOff(MAPLSTATE,"Run")
+!   call MAPL_TimerOff(MAPLSTATE,"TOTAL")
 
-#endif
    RETURN_(ESMF_SUCCESS)
 
-    end subroutine modelAdvance
-!EOC
+   END SUBROUTINE ModelAdvance
+
+!-------------------------------------------------------------------------
+!     NASA/GSFC, Global Modeling and Assimilation Office, Code 610.1     !
 !-------------------------------------------------------------------------
 !BOP
 !
-! !IROUTINE:  Finalize_ 
+! !IROUTINE:  Finalize_ --- Finalize MAPL_ExtData
 !
 ! !INTERFACE:
 !
-   subroutine Finalize_ ( GC, IMPORT, EXPORT, CLOCK, RC )
-!
-! !INPUT/OUTPUT PARAMETERS:
-      type(ESMF_GridComp), intent(inout) :: GC     ! Gridded component 
-      type(ESMF_State),    intent(inout) :: IMPORT ! Import state
-      type(ESMF_State),    intent(inout) :: EXPORT ! Export state
-      type(ESMF_Clock),    intent(inout) :: CLOCK  ! The clock
-!
+
+   SUBROUTINE Finalize_ ( GC, IMPORT, EXPORT, CLOCK, rc )
+
+! !USES:
+
+  implicit NONE
+
+! !INPUT PARAMETERS:
+
+   type(ESMF_Clock),  intent(inout) :: CLOCK      ! The clock
+
 ! !OUTPUT PARAMETERS:
-      integer, optional,   intent(  out) :: RC     ! Error code
-!
-! !DESCRIPTION: 
+
+   type(ESMF_GridComp), intent(inout)  :: GC     ! Grid Component
+   type(ESMF_State), intent(inout) :: IMPORT     ! Import State
+   type(ESMF_State), intent(inout) :: EXPORT     ! Export State
+   integer, intent(out) ::  rc                   ! Error return code:
+                                                 !  0 - all is well
+                                                 !  1 - 
+
+! !DESCRIPTION: This is a simple ESMF wrapper.
 !
 ! !REVISION HISTORY:
 !
+!  12Dec2009  da Silva  Design and first implementation.
+!
 !EOP
 !-------------------------------------------------------------------------
-!BOC
-      RC = ESMF_SUCCESS
-    end subroutine Finalize_
-!EOC
-!---------------------------------------------------------------------------
 
-! ............................................................................
+   type(MAPL_ExtData_state), pointer :: self        ! Legacy state
+   type(ESMF_Config)                 :: CF          ! Universal Config 
 
-   logical function PrimaryExportIsConstant_(item)
-   
-      type(PrimaryExport), intent(in) :: item
+   character(len=ESMF_MAXSTR)        :: comp_name
+   character(len=ESMF_MAXSTR)        :: Iam
+   integer                           :: status
 
-      __Iam__('PrimaryExportIsConstant_')
+   integer                           :: i
 
 
-      if ( trim(item%refresh_template) == '-' .or. &
-           trim(item%file) == '/dev/null' ) then
-          PrimaryExportIsConstant_ = .true. 
-      else
-          PrimaryExportIsConstant_ = .false.
-      end if
+!  Get my name and set-up traceback handle
+!  ---------------------------------------
+   Iam = 'Finalize_'
+   call ESMF_GridCompGet( GC, name=comp_name, __RC__ )
+   Iam = trim(comp_name) // trim(Iam)
 
-   end function PrimaryExportIsConstant_
+!  Finalize MAPL Generic
+!  ---------------------
+   call MAPL_GenericFinalize ( GC, IMPORT, EXPORT, CLOCK,  __RC__ )
 
-! ............................................................................
+!  Extract relevant runtime information
+!  ------------------------------------
+   call extract_ ( GC, self, CF, __RC__)
 
-   logical function DerivedExportIsConstant_(item)
-   
-      type(DerivedExport), intent(in) :: item
+!  Free the memory used for the bracketing arrays
+!  -----------------------------------------------------------
+   if (self%active) then
+      do i = 1, self%primary%nItems
 
-      __Iam__('DerivedExportIsConstant_')
+         if (self%primary%item(i)%isConst) cycle
 
-
-      if ( trim(item%refresh_template) == '-') then
-          DerivedExportIsConstant_ = .true. 
-      else
-          DerivedExportIsConstant_ = .false.
-      end if
-
-   end function DerivedExportIsConstant_
-
-  subroutine AdvanceAndCount(CF,nLines,rc)
-
-     type(ESMF_Config), intent(inout) :: cf
-     integer, intent(out)             :: nLines
-     integer, optional, intent(out)   :: rc
-
-     integer :: iCnt
-     logical :: inBlock
-     character(len=ESMF_MAXSTR) :: thisLine
-     integer :: status
-     character(len=ESMF_MAXSTR) :: Iam
-     Iam = "AdvanceAndCount"
-
-     inBlock = .true.
-     iCnt = 0
-     do while(inBlock)
-         call ESMF_ConfigNextLine(CF,rc=status)
-         VERIFY_(STATUS)
-         call ESMF_ConfigGetAttribute(CF,thisLine,rc=status)
-         VERIFY_(STATUS)
-         if (trim(thisLine) == "%%") then
-            inBlock = .false.
-         else
-            iCnt = iCnt + 1
+         if (trim(self%primary%item(i)%refresh_template) == "0") then
+            if (self%primary%item(i)%vartype == MAPL_FieldItem) then
+               call ESMF_FieldDestroy(self%primary%item(i)%finterp1,__RC__)
+               call ESMF_FieldDestroy(self%primary%item(i)%finterp2,__RC__)
+            end if
          end if
-     end do
-     nLines = iCnt
 
-     RETURN_(ESMF_SUCCESS)
+         if (associated(self%primary%item(i)%refresh_time)) then
+            deallocate(self%primary%item(i)%refresh_time)
+         end if
 
-  end subroutine advanceAndCount
-    
-  subroutine GetMaskName(FuncStr,Var,Needed,rc)
-     character(len=*),               intent(in)    :: FuncStr
-     character(len=*),               intent(in)    :: Var(:)
-     logical,                        intent(inout) :: needed(:)
-     integer, optional,              intent(out)   :: rc
+!  Destroy CFIO associated with each item
+         !if (self%primary%item(i)%isAssigned1) then
+            !call ESMF_CFIODestroy(self%primary%item(i)%cfio1,__RC__)
+            !if (allocated(self%primary%item(i)%tSeries1)) then
+               !deallocate(self%primary%item(i)%tSeries1)
+            !end if
+            !self%primary%item(i)%isAssigned1 = .False.
+         !end if
+         !if (self%primary%item(i)%isAssigned2) then
+            !call ESMF_CFIODestroy(self%primary%item(i)%cfio2,__RC__)
+            !if (allocated(self%primary%item(i)%tSeries2)) then
+               !deallocate(self%primary%item(i)%tSeries2)
+            !end if
+            !self%primary%item(i)%isAssigned2 = .False.
+         !end if
+      end do
 
-     character(len=ESMF_MAXSTR)      :: Iam = "GetMaskName"
-     integer                         :: status
-     integer                         :: i1,i2,i,ivar
-     logical                         :: found,twovar
-     character(len=ESMF_MAXSTR)      :: tmpstring,tmpstring1,tmpstring2,functionname
 
-     i1 = index(Funcstr,"(")
-     ASSERT_(i1 > 0)
-     functionname = adjustl(Funcstr(:i1-1))
-     functionname=ESMF_UtilStringLowerCase(functionname,rc=status)
-     if (trim(functionname) == "regionmask") twovar = .true.
-     if (trim(functionname) == "zonemask") twovar = .false.
-     if (trim(functionname) == "boxmask") twovar = .false.
-     tmpstring = adjustl(Funcstr(i1+1:))
-     i1 = index(tmpstring,",")
-     ASSERT_(i1 > 0)
-     i2 = index(tmpstring,";")
-     if (twovar) then
-        tmpstring1 = adjustl(tmpstring(1:i1-1))
-        tmpstring2 = adjustl(tmpstring(i1+1:i2-1))
-     else
-        tmpstring1 = adjustl(tmpstring(1:i1-1))
-     end if
+!  Free the memory used to hold the primary export items
+!  -----------------------------------------------------
+      if (associated(self%primary%item)) then
+         deallocate(self%primary%item)
+      end if
+   end if
 
-     found = .false.
-     do i=1,size(var)
-        if ( trim(tmpstring1) == trim(var(i)) ) then
-           ivar = i
-           found = .true.
-           exit
-        end if
-     end do
-     ASSERT_(found)
-     needed(ivar) = .true.
 
-     if (twovar) then
-        found = .false.
-        do i=1,size(var)
-           if ( trim(tmpstring2) == trim(var(i)) ) then
-              ivar = i
-              found = .true.
-              exit
-           end if
-        end do
-        ASSERT_(found)
-        needed(ivar) = .true.
-     end if
-     RETURN_(ESMF_SUCCESS)
-  end subroutine GetMaskName
+!  All done
+!  --------
+   RETURN_(ESMF_SUCCESS)
 
-  subroutine SetRefreshAlarms(clock,primaryItem,derivedItem,rc) 
-     type(ESMF_Clock),              intent(inout) :: Clock
-     type(PrimaryExport), optional, intent(inout) :: primaryItem
-     type(DerivedExport), optional, intent(inout) :: derivedItem
-     integer,             optional, intent(out  ) :: rc
+ end SUBROUTINE Finalize_
 
-     integer                    :: pindex,cindex,iyy,imm,idd,ihh,imn,isc
-     character(len=ESMF_MAXSTR) :: refresh_template,ctInt
-     character(len=ESMF_MAXSTR) :: Iam
-     type(ESMF_TimeInterval)    :: tInterval
-     integer                    :: status
-     Iam = "SetRefreshAlarms"
-
-     if (present(primaryItem)) then
-        refresh_template = primaryItem%refresh_template
-     else if (present(derivedItem)) then
-        refresh_template = derivedItem%refresh_template
-     end if
-     pindex = index(refresh_template,'P')
-     if (pindex > 0) then
-        ! now get time interval. Put 0000-00-00 in front if not there so parsetimeunits doesn't complain
-        ctInt = refresh_template(pindex+1:)
-        cindex = index(ctInt,'T')
-        if (cindex == 0) ctInt = '0000-00-00T'//trim(ctInt)
-        call MAPL_NCIOParseTimeUnits(ctInt,iyy,imm,idd,ihh,imn,isc,status)
-        VERIFY_(STATUS)
-        call ESMF_TimeIntervalSet(tInterval,yy=iyy,mm=imm,d=idd,h=ihh,m=imn,s=isc,rc=status)
-        VERIFY_(STATUS) 
-        if (present(primaryItem)) then 
-           primaryItem%update_alarm = ESMF_AlarmCreate(clock=clock,ringInterval=tInterval,sticky=.false.,rc=status)
-           VERIFY_(STATUS)
-           primaryItem%alarmIsEnabled = .true.
-        else if (present(derivedItem)) then
-           DerivedItem%update_alarm = ESMF_AlarmCreate(clock=clock,ringInterval=tInterval,sticky=.false.,rc=status)
-           VERIFY_(STATUS)
-           derivedItem%alarmIsEnabled = .true.
-        end if
-     end if
-
-     RETURN_(ESMF_SUCCESS)
-  end subroutine SetRefreshAlarms
-
-  subroutine CreateTimeInterval(item,clock,rc)
-     type(PrimaryExport)      , intent(inout) :: item
-     type(ESMF_Clock)          , intent(in   ) :: clock
-     integer, optional         , intent(out  ) :: rc
-
-     __Iam__('CreateTimeInterval')
-     
-     integer                    :: iyy,imm,idd,ihh,imn,isc
-     integer                    :: lasttoken
-     character(len=2)           :: token
-     type(ESMF_Time)            :: time
-     integer                    :: spos(2),cindex,pindex
-     character(len=ESMF_MAXSTR) :: creffTime, ctInt
-     
-     creffTime = ''
-     ctInt     = ''
-     call ESMF_ClockGet (CLOCK, currTIME=time, __RC__)
-     if (.not.item%hasFileReffTime) then
-        ! if int_frequency is less than zero than try to guess it from the file template
-        ! if that fails then it must be a single file or a climatology 
-
-        call ESMF_TimeGet(time, yy=iyy, mm=imm, dd=idd,h=ihh, m=imn, s=isc  ,__RC__)
-        lasttoken = index(item%file,'%',back=.true.)
-        if (lasttoken.gt.0) then
-           token = item%file(lasttoken+1:lasttoken+2)
-           select case(token)
-           case("y4") 
-              call ESMF_TimeSet(item%reff_time,yy=iyy,mm=1,dd=1,h=0,m=0,s=0,__RC__)
-              call ESMF_TimeIntervalSet(item%frequency,yy=1,__RC__)
-           case("m2") 
-              call ESMF_TimeSet(item%reff_time,yy=iyy,mm=imm,dd=1,h=0,m=0,s=0,__RC__)
-              call ESMF_TimeIntervalSet(item%frequency,mm=1,__RC__)
-           case("d2") 
-              call ESMF_TimeSet(item%reff_time,yy=iyy,mm=imm,dd=idd,h=0,m=0,s=0,__RC__)
-              call ESMF_TimeIntervalSet(item%frequency,d=1,__RC__)
-           case("h2") 
-              call ESMF_TimeSet(item%reff_time,yy=iyy,mm=imm,dd=idd,h=ihh,m=0,s=0,__RC__)
-              call ESMF_TimeIntervalSet(item%frequency,h=1,__RC__)
-           case("n2") 
-              call ESMF_TimeSet(item%reff_time,yy=iyy,mm=imm,dd=idd,h=ihh,m=imn,s=0,__RC__)
-              call ESMF_TimeIntervalSet(item%frequency,m=1,__RC__)
-           end select
-        else
-           ! couldn't find any tokens so all the data must be on one file
-           call ESMF_TimeIntervalSet(item%frequency,__RC__)
-        end if
-     else
-        ! Get refference time, if not provided use current model date
-        pindex=index(item%FileReffTime,'P')
-        if (pindex==0) then 
-           ASSERT_(.false.)
-        end if
-        cReffTime = item%FileReffTime(1:pindex-1) 
-        if (trim(cReffTime) == '') then
-           item%reff_time = Time
-        else
-           call MAPL_NCIOParseTimeUnits(cReffTime,iyy,imm,idd,ihh,imn,isc,status)
-           VERIFY_(STATUS)
-           call ESMF_TimeSet(item%reff_time,yy=iyy,mm=imm,dd=idd,h=ihh,m=imn,s=isc,rc=status)
-           VERIFY_(STATUS)
-        end if
-        ! now get time interval. Put 0000-00-00 in front if not there so parsetimeunits doesn't complain
-        ctInt = item%FileReffTime(pindex+1:)
-        cindex = index(ctInt,'T')
-        if (cindex == 0) ctInt = '0000-00-00T'//trim(ctInt)
-        call MAPL_NCIOParseTimeUnits(ctInt,iyy,imm,idd,ihh,imn,isc,status)
-        VERIFY_(STATUS)
-        call ESMF_TimeIntervalSet(item%frequency,yy=iyy,mm=imm,d=idd,h=ihh,m=imn,s=isc,rc=status)
-        VERIFY_(STATUS) 
-     end if
-
-     RETURN_(ESMF_SUCCESS) 
-
-  end subroutine CreateTimeInterval
-
-  subroutine GetClimYear(item, rc)
-
-     type(PrimaryExport)      , intent(inout) :: item
-     integer, optional        , intent(out  ) :: rc
-
-     __Iam__('GetClimYear')
-
-     type(ESMF_CFIO)            :: cfio
-     integer(ESMF_KIND_I4)      :: iyr,imm,idd
-     integer                    :: begDate
-     type(ESMF_TimeInterval)    :: zero
-     integer                    :: lasttoken
-     character(len=ESMF_MAXPATHLEN) :: file
-     character(len=2)           :: token
-     integer                    :: nymd, nhms, climYear
-     character(len=ESMF_MAXSTR) :: buffer
-     logical                    :: inRange
-
-     buffer = trim(item%cyclic)
-
-     if (trim(buffer) == 'n') then
-
-        item%cyclic = "n"
-        RETURN_(ESMF_SUCCESS)
-
-     else if (trim(buffer) == 'single') then
-   
-        RETURN_(ESMF_SUCCESS)
-
-     else if (trim(buffer) == 'y') then
-
-        item%cyclic = "y"
-
-        call ESMF_TimeIntervalSet(zero,__RC__)
-        cfio =  ESMF_CFIOCreate (cfioObjName='cfio_obj',__RC__)
-
-        if (item%frequency == zero) then
-           file = item%file
-        else
-           lasttoken = index(item%file,'%',back=.true.)
-           token = item%file(lasttoken+1:lasttoken+2)
-           ASSERT_(token == "m2")
-           ! just put a time in so we can evaluate the template to open a file
-           nymd = 20000101
-           nhms = 0
-           call ESMF_CFIOStrTemplate(file,item%file,'GRADS',nymd=nymd,nhms=nhms,__STAT__)
-        end if
-        call ESMF_CFIOSet(CFIO, fName=trim(file),__RC__)
-        call ESMF_CFIOFileOpen  (CFIO, FMODE=1,__RC__)
-        begDate = cfio%date
-        call MAPL_UnpackTime(begDate,iyr,imm,idd)
-        item%climyear = iyr
-        call ESMF_CFIODestroy(CFIO,__RC__)
-        RETURN_(ESMF_SUCCESS)
-     else
-        read(buffer,'(I4)') climYear
-        inRange = 0 <= climYear .and. climYear <= 3000
-        if (inRange) then
-           item%cyclic = "y"
-           item%climYear = climYear
-           RETURN_(ESMF_SUCCESS)
-        else
-           WRITE(*,*)'cyclic keyword was not y, n, or a year'
-           ASSERT_(.false.)
-        end if
-     end if
-
-  end subroutine GetClimYear
+!.......................................................................
 
  subroutine extract_ ( GC, self, CF, rc)
 
@@ -2323,275 +3012,1393 @@ contains
     RETURN_(ESMF_SUCCESS)
 
   end subroutine extract_
+   
+! ............................................................................
 
-  subroutine UpdateBracketTime(file_tmpl,cTime,reffTime,frequency,bSide,cyclic,climYear,interpTime,fileTime,file_processed,rc)
-     character(len=*          ),          intent(in   ) :: file_tmpl
+   logical function PrimaryExportIsConstant_(item)
+   
+      type(PrimaryExport), intent(in) :: item
+
+      if ( trim(item%refresh_template) == '-' .or. &
+           trim(item%file) == '/dev/null' ) then
+          PrimaryExportIsConstant_ = .true. 
+      else
+          PrimaryExportIsConstant_ = .false.
+      end if
+
+   end function PrimaryExportIsConstant_
+
+! ............................................................................
+
+   logical function DerivedExportIsConstant_(item)
+   
+      type(DerivedExport), intent(in) :: item
+
+      if ( trim(item%refresh_template) == '-') then
+          DerivedExportIsConstant_ = .true. 
+      else
+          DerivedExportIsConstant_ = .false.
+      end if
+
+   end function DerivedExportIsConstant_
+
+! ............................................................................
+
+  subroutine scale_field_(offset, scale_factor, field, rc)
+     real, intent(in)                  :: scale_factor
+     real, intent(in)                  :: offset
+     type (ESMF_Field), intent(inout)  :: field
+     integer, optional, intent (inout) :: rc
+
+     __Iam__('scale_field_')
+
+     integer       :: fieldRank
+     real, pointer :: xy(:,:)    => null()
+     real, pointer :: xyz(:,:,:) => null()
+
+
+     call ESMF_FieldGet(field, dimCount=fieldRank, __RC__)
+
+     ASSERT_(fieldRank == 2 .or. fieldRank == 3)
+
+     if (fieldRank == 2) then
+        call ESMF_FieldGet(field, farrayPtr=xy, __RC__)
+
+        if (associated(xy)) then
+           xy = offset + scale_factor*xy
+        end if
+     else if (fieldRank == 3) then
+        call ESMF_FieldGet(field, farrayPtr=xyz, __RC__)
+
+        if (associated(xyz)) then
+           xyz = offset + scale_factor*xyz
+        end if
+     end if
+
+     return 
+  end subroutine scale_field_
+
+! ............................................................................
+
+  type (ESMF_Time) function timestamp_(time, template, rc)
+     type(ESMF_Time), intent(inout)         :: time
+     character(len=ESMF_MAXSTR), intent(in) :: template
+     integer, optional, intent(inout)       :: rc 
+
+      __Iam__('timestamp_')
+
+     ! locals
+     integer, parameter :: DATETIME_MAXSTR_ = 32
+     integer :: yy, mm, dd, hs, ms, ss
+     character(len=DATETIME_MAXSTR_) :: buff, buff_date, buff_time
+     character(len=DATETIME_MAXSTR_) :: str_yy, str_mm, str_dd
+     character(len=DATETIME_MAXSTR_) :: str_hs, str_ms, str_ss
+
+     integer :: i, il, ir
+    
+     ! test the length of the timestamp template
+     ASSERT_(len_trim(template) < DATETIME_MAXSTR_)
+
+     buff = trim(template)
+     buff = ESMF_UtilStringLowerCase(buff, __RC__)
+      
+     ! test if the template is empty and return the current time as result
+     if (buff == '-'  .or. buff == '--'   .or. buff == '---' .or. &
+         buff == 'na' .or. buff == 'none' .or. buff == 'n/a') then
+
+        timestamp_ = time
+     else   
+        ! split the time stamp template into a date and time strings
+        i = scan(buff, 't')
+        If (.not.(i > 3)) Then
+           Write(*,'(a,a,a)') 'ERROR: Time stamp ', Trim(template), &
+           ' uses the fixed format, and must therefore contain a T'
+           ASSERT_(.False.)
+        End If
+
+        buff_date = buff(1:i-1)
+        buff_time = buff(i+1:)
+
+        ! parse the date string
+        il = scan(buff_date, '-', back=.false.)
+        ir = scan(buff_date, '-', back=.true. )
+        str_yy = trim(buff_date(1:il-1))
+        str_mm = trim(buff_date(il+1:ir-1))
+        str_dd = trim(buff_date(ir+1:))
+
+        ! parse the time string
+        il = scan(buff_time, ':', back=.false.)
+        ir = scan(buff_time, ':', back=.true. )
+        str_hs = trim(buff_time(1:il-1))
+        str_ms = trim(buff_time(il+1:ir-1))
+        str_ss = trim(buff_time(ir+1:))
+     
+        ! remove the trailing 'Z' from the seconds string
+        i = scan(str_ss, 'z')
+        if (i > 0) then
+           str_ss = trim(str_ss(1:i-1))
+        end if
+
+        ! apply the timestamp template
+        call ESMF_TimeGet(time, yy=yy, mm=mm, dd=dd, h=hs, m=ms, s=ss, __RC__)
+
+        i = scan(str_yy, '%'); if (i == 0) read (str_yy, '(I4)'), yy
+        i = scan(str_mm, '%'); if (i == 0) read (str_mm, '(I2)'), mm
+        i = scan(str_dd, '%'); if (i == 0) read (str_dd, '(I2)'), dd
+        i = scan(str_hs, '%'); if (i == 0) read (str_hs, '(I2)'), hs
+        i = scan(str_ms, '%'); if (i == 0) read (str_ms, '(I2)'), ms
+        i = scan(str_ss, '%'); if (i == 0) read (str_ss, '(I2)'), ss
+
+        call ESMF_TimeSet(timestamp_, yy=yy, mm=mm, dd=dd, h=hs, m=ms, s=ss, __RC__)
+     end if
+
+     RETURN_(ESMF_SUCCESS)
+
+  end function timestamp_
+ 
+  subroutine CreateTimeInterval(item,clock,rc)
+     type(PrimaryExport)      , intent(inout) :: item
+     type(ESMF_Clock)          , intent(in   ) :: clock
+     integer, optional         , intent(out  ) :: rc
+
+     __Iam__('CreateTimeInterval')
+     
+     integer                    :: iyy,imm,idd,ihh,imn,isc
+     integer                    :: lasttoken
+     character(len=2)           :: token
+     type(ESMF_Time)            :: time
+     integer                    :: cindex,pindex
+     character(len=ESMF_MAXSTR) :: creffTime, ctInt
+     
+     creffTime = ''
+     ctInt     = ''
+     call ESMF_ClockGet (CLOCK, currTIME=time, __RC__)
+     if (.not.item%hasFileReffTime) then
+        ! if int_frequency is less than zero than try to guess it from the file template
+        ! if that fails then it must be a single file or a climatology 
+
+        call ESMF_TimeGet(time, yy=iyy, mm=imm, dd=idd,h=ihh, m=imn, s=isc  ,__RC__)
+        !=======================================================================
+        ! Using "now" as a reference time makes it difficult to find a file if
+        ! we need to extrapolate, and doesn't make an awful lot of sense anyway.
+        ! Instead, use the start of (current year - 20) or 1985, whichever is
+        ! earlier (SDE 2016-12-30)
+        iyy = Min(iyy-20,1985)
+        imm = 1
+        idd = 1
+        ihh = 0
+        imn = 0
+        isc = 0
+        !=======================================================================
+        lasttoken = index(item%file,'%',back=.true.)
+        if (lasttoken.gt.0) then
+           token = item%file(lasttoken+1:lasttoken+2)
+           select case(token)
+           case("y4") 
+              call ESMF_TimeSet(item%reff_time,yy=iyy,mm=1,dd=1,h=0,m=0,s=0,__RC__)
+              call ESMF_TimeIntervalSet(item%frequency,yy=1,__RC__)
+           case("m2") 
+              call ESMF_TimeSet(item%reff_time,yy=iyy,mm=imm,dd=1,h=0,m=0,s=0,__RC__)
+              call ESMF_TimeIntervalSet(item%frequency,mm=1,__RC__)
+           case("d2") 
+              call ESMF_TimeSet(item%reff_time,yy=iyy,mm=imm,dd=idd,h=0,m=0,s=0,__RC__)
+              call ESMF_TimeIntervalSet(item%frequency,d=1,__RC__)
+           case("h2") 
+              call ESMF_TimeSet(item%reff_time,yy=iyy,mm=imm,dd=idd,h=ihh,m=0,s=0,__RC__)
+              call ESMF_TimeIntervalSet(item%frequency,h=1,__RC__)
+           case("n2") 
+              call ESMF_TimeSet(item%reff_time,yy=iyy,mm=imm,dd=idd,h=ihh,m=imn,s=0,__RC__)
+              call ESMF_TimeIntervalSet(item%frequency,m=1,__RC__)
+           end select
+        else
+           ! couldn't find any tokens so all the data must be on one file
+           call ESMF_TimeIntervalSet(item%frequency,__RC__)
+        end if
+     else
+        ! Reference time should look like:
+        ! YYYY-MM-DDThh:mm:ssPYYYY-MM-DDThh:mm:ss
+        ! The date before the P is the reference time, from which future times
+        ! will be taken. The date after the P is the frequency with which the
+        ! file changes. For example, if the data is referenced to 1985 and
+        ! there is 1 file per year, the reference time should be
+        ! 1985-01-01T00:00:00P0001-00-00T00:00:00
+        ! Get refference time, if not provided use current model date
+        pindex=index(item%FileReffTime,'P')
+        if (pindex==0) then 
+           Write(*,'(a,a,a)') 'ERROR: File template ', item%file, ' has invalid reference date format'
+           ASSERT_(.false.)
+        end if
+        cReffTime = item%FileReffTime(1:pindex-1) 
+        if (trim(cReffTime) == '') then
+           item%reff_time = Time
+        else
+           call MAPL_NCIOParseTimeUnits(cReffTime,iyy,imm,idd,ihh,imn,isc,status)
+           VERIFY_(STATUS)
+           call ESMF_TimeSet(item%reff_time,yy=iyy,mm=imm,dd=idd,h=ihh,m=imn,s=isc,rc=status)
+           VERIFY_(STATUS)
+        end if
+        ! now get time interval. Put 0000-00-00 in front if not there so parsetimeunits doesn't complain
+        ctInt = item%FileReffTime(pindex+1:)
+        cindex = index(ctInt,'T')
+        if (cindex == 0) ctInt = '0000-00-00T'//trim(ctInt)
+        call MAPL_NCIOParseTimeUnits(ctInt,iyy,imm,idd,ihh,imn,isc,status)
+        VERIFY_(STATUS)
+        call ESMF_TimeIntervalSet(item%frequency,yy=iyy,mm=imm,d=idd,h=ihh,m=imn,s=isc,rc=status)
+        VERIFY_(STATUS) 
+     end if
+
+     If (Mapl_Am_I_Root().and.(Ext_Debug > 19)) Then
+        Write(*,'(5(a))') ' >> REFFTIME for ',trim(item%file),': ',trim(item%FileReffTime)
+        call ESMF_TimeGet(item%reff_time,yy=iyy,mm=imm,dd=idd,h=ihh,m=imn,s=isc,rc=status)
+        Write(*,'(a,I0.4,5(a,I0.2))') ' >> Reference time: ',iYy,'-',iMm,'-',iDd,' ',iHh,':',iMn,':',iSc
+        call ESMF_TimeIntervalGet(item%frequency,yy=iyy,mm=imm,d=idd,h=ihh,m=imn,s=isc,rc=status)
+        Write(*,'(a,I0.4,5(a,I0.2))') ' >> Frequency     : ',iYy,'-',iMm,'-',iDd,' ',iHh,':',iMn,':',iSc
+     End If
+     RETURN_(ESMF_SUCCESS) 
+
+  end subroutine CreateTimeInterval
+
+  subroutine GetClimYear(item, rc)
+
+     type(PrimaryExport)      , intent(inout) :: item
+     integer, optional        , intent(out  ) :: rc
+
+     __Iam__('GetClimYear')
+
+     type(ESMF_CFIO), pointer   :: cfio
+     integer(ESMF_KIND_I4)      :: iyr,imm,idd
+     integer                    :: begDate
+     type(ESMF_TimeInterval)    :: zero
+     integer                    :: lasttoken
+     character(len=ESMF_MAXPATHLEN) :: file
+     character(len=2)           :: token
+     integer                    :: nymd, nhms, climYear
+     character(len=ESMF_MAXSTR) :: buffer
+     logical                    :: inRange
+
+     buffer = trim(item%cyclic)
+
+     if (trim(buffer) == 'n') then
+
+        item%cyclic = "n"
+        RETURN_(ESMF_SUCCESS)
+
+     else if (trim(buffer) == 'single') then
+
+        RETURN_(ESMF_SUCCESS)
+     else if (trim(buffer) == 'y') then
+
+        item%cyclic = "y"
+
+        call ESMF_TimeIntervalSet(zero,__RC__)
+
+        if (item%frequency == zero) then
+           file = item%file
+        else
+           lasttoken = index(item%file,'%',back=.true.)
+           token = item%file(lasttoken+1:lasttoken+2)
+           ASSERT_(token == "m2")
+           ! just put a time in so we can evaluate the template to open a file
+           nymd = 20000101
+           nhms = 0
+           call gx_(file,item%file,'GRADS',nymd=nymd,nhms=nhms,__STAT__)
+        end if
+        call MAPL_CFIORegistryGet(trim(file),cfio,__RC__)
+        begDate = cfio%date
+        call MAPL_UnpackTime(begDate,iyr,imm,idd)
+        item%climyear = iyr
+        nullify(CFIO) 
+        RETURN_(ESMF_SUCCESS)
+     else
+        read(buffer,'(I4)') climYear
+        inRange = 0 <= climYear .and. climYear <= 3000
+        if (inRange) then
+           item%cyclic = "y"
+           item%climYear = climYear
+           RETURN_(ESMF_SUCCESS)
+        else
+           WRITE(*,*)'cyclic keyword was not y, n, or a year'
+           ASSERT_(.false.)
+        end if
+     end if
+
+  end subroutine GetClimYear
+
+  subroutine GetLevs(item, time, allowExtrap, rc)
+
+     type(PrimaryExport)      , intent(inout) :: item
+     type(ESMF_Time)          , intent(inout) :: time
+     logical                  , intent(in   ) :: allowExtrap
+     integer, optional        , intent(out  ) :: rc
+
+     __Iam__('GetLevs')
+
+     type(ESMF_CFIO), pointer    :: cfio
+     type(ESMF_CFIOGRID),pointer :: cfiogrid
+     integer(ESMF_KIND_I4)      :: iyr,imm,idd,ihr,imn,iss,i,n,refYear
+     character(len=ESMF_MAXPATHLEN) :: file
+     integer                    :: nymd, nhms
+     type(ESMF_Time)            :: fTime
+     real, pointer              :: levFile(:) => null()
+     integer                    :: nVars
+     type(ESMF_CFIOVarInfo), pointer :: vars(:)
+     character(len=ESMF_MAXSTR) :: cfiovarname,units
+     logical                    :: found,lFound,intOK
+     integer                    :: maxOffset
+
+     type(ESMF_TimeInterval)    :: zero
+
+     call ESMF_TimeIntervalSet(zero,__RC__)
+
+     if (item%frequency == zero) then
+
+        file = item%file
+        Inquire(file=trim(file),EXIST=found)
+
+     else
+        if (index(item%refresh_template,'T')/=0) then
+           ftime = timestamp_(time,item%refresh_template,__RC__)
+        else
+           ftime = time
+        end if
+
+        call ESMF_TimeGet(fTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=iss,__RC__)
+        if (item%cyclic == 'y') then
+           iyr = item%climyear
+        end if
+        call MAPL_PackTime(nymd,iyr,imm,idd)
+        call MAPL_PackTime(nhms,ihr,imn,iss)
+        call gx_(file,item%file,'GRADS',nymd=nymd,nhms=nhms,__STAT__)
+        Inquire(file=trim(file),EXIST=found)
+
+     end if
+
+     if (found) then
+        call MakeCFIO(file, cfio, found, __RC__)
+     else
+        if (allowExtrap .and. (item%cyclic == 'n') ) then
+
+           ftime = item%reff_time
+           n = 0
+           maxOffSet = 100
+           call ESMF_TimeGet(item%reff_time,yy=refYear)
+           lfound = .false.
+           do while (intOK .and. (.not.lfound))
+              call ESMF_TimeGet(fTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=iss,__RC__)
+              call MAPL_PackTime(nymd,iyr,imm,idd)
+              call MAPL_PackTime(nhms,ihr,imn,iss)
+              call gx_(file,item%file,nymd=nymd,nhms=nhms,__STAT__)
+              call MakeCFIO(file,cfio,lfound)
+              intOK = (abs(iYr-refYear)<maxOffset)
+              if (.not.lfound) then
+                 n = n + 1
+                 ftime = ftime + item%frequency
+              end if
+           enddo
+
+           if (.not.lfound) then
+              if (mapl_am_i_root()) write(*,*)'From ',trim(item%file),'coud not find file with extrapolation'
+              ASSERT_(.false.)
+           end if
+        else
+           if (mapl_am_i_root()) write(*,*)'From ',trim(item%file),' could not find time no extrapolation',item%climYear
+           ASSERT_(.false.)
+        end if
+     end if
+     call ESMF_CFIOGet       (CFIO,     grid=CFIOGRID,__RC__)
+     call ESMF_CFIOGridGet   (CFIOGRID,KM=item%LM,__RC__)
+     if (item%LM /= 0) then
+        call ESMF_CFIOGridGet   (CFIOGRID,lev=levfile,levUnit=item%levUnit,__RC__)
+        allocate(item%levs(size(levFile)),__STAT__)
+
+        if (levFile(1)>levFile(size(levFile))) then
+           do i=1,size(levFile)
+              item%levs(i)=levFile(size(levFile)-i+1)
+           enddo
+        else
+           item%levs=levFile
+        end if
+        if (trim(item%levUnit)=='hPa') item%levs=item%levs*100.0
+        ! check if the level unit matches something that is pressure
+        if (trim(item%levUnit) == 'hPa') then
+           item%havePressure = .true.
+        end if
+
+     end if
+
+     call ESMF_CFIOGet (CFIO,varObjs=VARS, nVars=nVars, RC=STATUS)
+     VERIFY_(STATUS)
+     do i=1,nVars
+        call ESMF_CFIOVarInfoGet(Vars(i),vname=CFIOVARNAME, vunits=UNITS,rc=status)
+        VERIFY_(STATUS)
+        cfiovarname = ESMF_UtilStringUpperCase(cfiovarname,rc=status)
+        if (trim(cfiovarname)==trim(item%var)) then
+           item%units=units
+        endif
+     enddo
+     nullify(cfio)
+     RETURN_(ESMF_SUCCESS)
+
+  end subroutine GetLevs
+
+  subroutine UpdateBracketTime(item,cTime,bSide,interpTime,fileTime,file_processed,isAssigned,xCFIO,xTSeries,allowExtrap,rc)
+     type(PrimaryExport),                 intent(inout) :: item
      type(ESMF_Time),                     intent(inout) :: cTime
-     type(ESMF_Time),                     intent(inout) :: reffTime
-     type(ESMF_TimeInterval),             intent(inout) :: frequency
      character(len=1),                    intent(in   ) :: bSide
-     character(len=*),                    intent(in   ) :: cyclic
-     integer,                             intent(in   ) :: climYear
      type(ESMF_TIME),                     intent(inout) :: interpTime
      type(ESMF_TIME),                     intent(inout) :: fileTime
      character(len=*),                    intent(inout) :: file_processed
+     type(ESMF_CFIO), pointer,            intent(inout) :: xCFIO
+     type(ESMF_Time), Allocatable,        intent(inout) :: xTSeries(:)
+     logical,                             intent(inout) :: isAssigned
+     logical,                             intent(in   ) :: allowExtrap
      integer, optional,                   intent(out  ) :: rc
 
      __Iam__('UpdateBracketTime')
 
      type(ESMF_Time)                            :: newTime
      integer                                    :: curDate,curTime,n
-     integer(ESMF_KIND_I4)                      :: iyr, imm, idd, ihr, imn, isc, cYear,cMonth,oldyear
-     type(ESMF_TimeInterval)                    :: tint
+     integer(ESMF_KIND_I4)                      :: iyr, imm, idd, ihr, imn, isc, oldYear
+     integer(ESMF_KIND_I4)                      :: fyr, fmm, fdd, fhr, fmn, fsc
      type(ESMF_TimeInterval)                    :: zero
      type(ESMF_Time)                            :: fTime
      logical                                    :: UniFileClim
-     type(ESMF_Time)                            :: readTime,nTime
-  
+     type(ESMF_Time)                            :: readTime
+
+     ! Allow for extrapolation.. up to a limit
+     integer                                    :: yrOffset,yrOffsetStamp
+     integer(ESMF_KIND_I4)                      :: cYearOff, refYear
+     integer, parameter                         :: maxOffset=10000
+     logical                                    :: found, newFile
+     logical                                    :: LExtrap, RExtrap, LExact, RExact
+     logical                                    :: LSide, RSide, intOK, bracketScan
+   
      call ESMF_TimeIntervalSet(zero,__RC__)
-     if (frequency == zero) then
+
+     ! Default
+     fTime = cTime
+     bracketScan = .False.
+
+     ! Is there only one file for this dataset?
+     if (item%frequency == zero) then
+        if (mapl_am_I_root().and.(Ext_Debug > 19)) Then
+           write(*,'(a,a,a,a)') ' DEBUG: Scanning fixed file ',trim(item%file),' for side ',bSide
+        end if
         UniFileClim = .false.
         ! if the file is constant, i.e. no tokens in in the template
         ! but it was marked as cyclic we must have a year long climatology 
         ! on one file, set UniFileClim to true
-        if (trim(cyclic)/='n') then
-            UniFileClim = .true.
-            call GetBracketTimeOnFile(file_tmpl,cTime,bSide,UniFileClim,interpTime,fileTime,climYear=climYear,rc=status)
-        else
-            call GetBracketTimeOnFile(file_tmpl,cTime,bSide,UniFileClim,interpTime,fileTime,rc=status)
-        end if
-        file_processed = file_tmpl
-        if (status /= ESMF_SUCCESS) then
+        if (trim(item%cyclic)=='y') UniFileClim = .true.
+        file_processed = item%file
+        ! Generate CFIO if needed
+        If (.not.isAssigned) Then
+           call MakeCFIO(file_processed,xCFIO,found,rc=status)
+           ! Retrieve the time series
+           allocate(xTSeries(xCFIO%tSteps))
+           call GetTimesOnFile(xCFIO,xTSeries,rc=status)
+           isAssigned = .True.
+        End If
+        If (status /= ESMF_SUCCESS) then
+           if (mapl_am_I_root()) Then
+              write(*,'(a,a)') ' ERROR: Time vector retrieval failed on fixed file ',trim(item%file)
+           end if
            RETURN_(ESMF_FAILURE)
         end if
-     else
- 
-        UniFileClim = .false.
-
-        readTime = cTime
-        if (trim(cyclic)=='y') then
-           ! if climatology, get current year, substitute climatological year
-           call ESMF_TimeGet(cTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
-           cYear = iyr
-           iyr = climYear
-           if (imm == 2 .and. idd==29) idd = 28
-           call ESMF_TimeSet(readTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+        call GetBracketTimeOnSingleFile(xCFIO,xTSeries,cTime,bSide,UniFileClim,interpTime,fileTime,allowExtrap,item%climYear,rc=status)
+        if (status /= ESMF_SUCCESS) then
+           if (mapl_am_I_root()) Then
+              write(*,'(a,a,a,a)') ' ERROR: Bracket timing request failed on fixed file ',trim(item%file),' for side ',bSide
+           end if
+           RETURN_(ESMF_FAILURE)
         end if
-         
-        call TimeIntervalFloor(reffTime,readTime,frequency,fTime,__RC__)
-        ! untemplate file
-
+     else 
+        if (mapl_am_I_root().and.(Ext_Debug > 19)) Then
+           write(*,'(a,a,a,a)') ' DEBUG: Scanning template ',trim(item%file),' for side ',bSide
+           call ESMF_TimeGet(cTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+           Write(*,'(a,I0.4,5(a,I0.2))') ' >> >> >> Target time   : ',iYr,'-',iMM,'-',iDD,' ',iHr,':',iMn,':',iSc
+           call ESMF_TimeGet(item%reff_time,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+           Write(*,'(a,I0.4,5(a,I0.2))') ' >> >> >> Reference time: ',iYr,'-',iMM,'-',iDD,' ',iHr,':',iMn,':',iSc
+        end if
+        UniFileClim = .false.
+        found = .false.
+        ! Start by assuming the file we want exists
+        if (trim(item%cyclic)=='y') then
+           ! if climatology compute year offset
+           call ESMF_TimeGet(cTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+           yrOffset = item%climYear - iyr
+           call ESMF_TimeSet(fTime,yy=item%climYear,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+        else
+           yrOffset = 0
+           if (item%reff_time > cTime) then
+              Write(*,'(a,a,a)') 'ERROR: Reference time for file ', Trim(item%file),' is too late'
+              ASSERT_(.False.)
+           end if
+           ! This approach causes a problem if cTime and item%reff_time are too far
+           ! apart - do it the hard way instead... 
+           ftime = item%reff_time
+           n = 0
+           ! SDE DEBUG: This caused problems in the past but the
+           ! alternative is far too slow... need to keep an eye 
+           ! on this but the Max(0,...) should help.
+           n = max(0,floor((cTime-item%reff_time)/item%frequency))
+           if (n>0) fTime = fTime + (n*item%frequency)
+           do while (.not.found)
+              ! SDE: This needs to be ">"
+              found = ((ftime + item%frequency) > ctime)
+              if (.not.found) then
+                 n = n + 1
+                 ftime = fTime+item%frequency
+              end if
+           end do
+           if (mapl_am_I_root().and.(Ext_Debug > 19)) Then
+              write(*,'(a,a,a,a)') ' DEBUG: Untemplating ',trim(item%file)
+              call ESMF_TimeGet(cTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+              Write(*,'(a,I0.4,5(a,I0.2))') ' >> >> >> Target time   : ',iYr,'-',iMM,'-',iDD,' ',iHr,':',iMn,':',iSc
+              call ESMF_TimeGet(fTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+              Write(*,'(a,I0.4,5(a,I0.2))') ' >> >> >> File time     : ',iYr,'-',iMM,'-',iDD,' ',iHr,':',iMn,':',iSc
+              call ESMF_TimeIntervalGet(item%frequency,yy=iyr,mm=imm,d=idd,h=ihr,m=imn,s=isc,__RC__)
+              Write(*,'(a,I0.4,5(a,I0.2))') ' >> >> >> item%frequency     : ',iYr,'-',iMM,'-',iDD,' ',iHr,':',iMn,':',iSc
+              Write(*,'(a,I5)')             ' >> >> >> N             : ',n
+           end if
+        end if
+        readTime = cTime
         call ESMF_TimeGet(fTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
-
         call MAPL_PackTime(curDate,iyr,imm,idd)
         call MAPL_PackTime(curTime,ihr,imn,isc)
-        call gx_(file_processed,file_tmpl,nymd=curDate,nhms=curTime,__STAT__)
+        call gx_(file_processed,item%file,nymd=curDate,nhms=curTime,__STAT__)
+        Inquire(FILE=trim(file_processed),EXIST=found)
+        If (found) Then
+           if (mapl_am_I_root().and.(Ext_Debug > 19)) Then 
+              write(*,'(a,a,a,a)') ' DEBUG: Target file for ',trim(item%file),' found and is ',trim(file_processed)
+           end if
+           !yrOffset = 0
+        Else if (allowExtrap) then 
+           if (mapl_am_I_root().and.(Ext_Debug > 19)) Then
+              write(*,'(a,a,a)') ' DEBUG: Propagating forwards on ',trim(item%file),' from reference time'
+              call ESMF_TimeGet(item%reff_time,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+              Write(*,'(a,I0.4,5(a,I0.2))') ' >> >> >> Reference time: ',iYr,'-',iMM,'-',iDD,' ',iHr,':',iMn,':',iSc
+           end if
+           ! Go back to the reference time, and propagate forwards until we find
+           ! the first valid file
+           ftime = item%reff_time
+           call ESMF_TimeGet(item%reff_time,yy=refYear,__RC__)
+           If (refYear.lt.1850) Then
+              if (mapl_am_I_root()) Then
+                 write(*,'(a,I0.4,a,a)') 'Reference year too early (', refYear, '). Aborting search for data from ',trim(item%file)
+              end if
+              RETURN_(ESMF_FAILURE)
+           End If
+           intOK = .True.
+           found = .false.
+           ! yrOffset currently tracking how far we are from the reference year
+           n = 0
+           yrOffset = 0
+           ftime = item%reff_time
+           Do While (intOK.and.(.not.found))
+              call ESMF_TimeGet(fTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+              call MAPL_PackTime(curDate,iyr,imm,idd)
+              call MAPL_PackTime(curTime,ihr,imn,isc)
+              call gx_(file_processed,item%file,nymd=curDate,nhms=curTime,__STAT__)
+              Inquire(FILE=trim(file_processed),EXIST=found)
+              yrOffset = iYr-refYear
+              intOK = (abs(yrOffset)<maxOffset)
+              if (.not.found) then
+                 n = n + 1
+                 ftime = ftime + item%frequency
+              end if
+           End Do
+           If (.not.found) Then
+              if (mapl_am_I_root()) Then
+                 write(*,'(a,a)') 'Could not find data within maximum offset range from ',trim(item%file)
+                 write(*,'(a,2(x,I0.5))') 'Test year and reference year: ', iYr, refYear
+                 call ESMF_TimeGet(item%reff_time,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+                 Write(*,'(a,I0.4,5(a,I0.2))') ' >> >> >> Reference time: ',iYr,'-',iMM,'-',iDD,' ',iHr,':',iMn,':',iSc
+                 call ESMF_TimeGet(fTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+                 Write(*,'(a,I0.4,5(a,I0.2))') ' >> >> >> Last check    : ',iYr,'-',iMM,'-',iDD,' ',iHr,':',iMn,':',iSc
+              end if
+              RETURN_(ESMF_FAILURE)
+           End If
+           If (isAssigned) Then
+              ! Do we still have the right file?
+              If (Trim(xCFIO%fNAME) .ne. Trim(file_processed)) Then
+                 isAssigned = .False.
+                 If (allocated(xTSeries)) Deallocate(xTSeries)
+                 nullify(xCFIO)
+              End If
+           End If
+           If (.not.isAssigned) Then
+              ! Generate CFIO
+              call MakeCFIO(file_processed,xCFIO,found,rc=status)
+              ! Retrieve the time series
+              allocate(xTSeries(xCFIO%tSteps))
+              call GetTimesOnFile(xCFIO,xTSeries,rc=rc)
+              isAssigned = .True.
+           End If
+           ! Is this before or after our target time?
+           LSide   = (bSide == "L")
+           RSide   = (.not.LSide)
+           LExact  = (cTime == xTSeries(1))
+           LExtrap = (cTime <  xTSeries(1))
+           RExact  = (cTime == xTSeries(xCFIO%tSteps))
+           RExtrap = (cTime >  xTSeries(xCFIO%tSteps))
+           found = .false.
+           If (LExtrap.or.(LExact.and.RSide)) Then
+              if (mapl_am_I_root().and.(Ext_Debug>2)) Then
+                 write(*,'(a,a,a,a)') ' Extrapolating BACKWARD for bracket ', bSide, ' for file ',trim(item%file)
+              end if
+              ! We have data from future years
+              ! Advance the target time until we can have what we want
+              call ESMF_TimeGet(cTime,yy=cYearOff,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+              iYr = refYear + yrOffset
+              ! Convert year offset to the future value
+              yrOffset = iYr - cYearOff
+              ! Determine the template time
+              call ESMF_TimeSet(newTime,yy=iYr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+              ftime = item%reff_time
+              n = 0
+              do while (.not.found)
+                 found = ((ftime + item%frequency) > newtime)
+                 if (.not.found) then
+                    n = n + 1
+                    ftime = fTime+item%frequency
+                 end if
+              end do
+              ! untemplate file
+              call ESMF_TimeGet(fTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+              ! Build file name
+              call MAPL_PackTime(curDate,iyr,imm,idd)
+              call MAPL_PackTime(curTime,ihr,imn,isc)
+              call gx_(file_processed,item%file,nymd=curDate,nhms=curTime,__STAT__)
+              Inquire(FILE=trim(file_processed),EXIST=found)
+              If (.not.found) Then
+                 if (mapl_am_I_root()) Then
+                    write(*,'(a,a,a,a)') ' ERROR: Failed to project data from ',trim(item%file),' for side ',bSide
+                 end if
+                 RETURN_(ESMF_FAILURE)
+              End If
+           ElseIf (RExtrap.or.(RExact.and.RSide)) Then
+              if (mapl_am_I_root().and.(Ext_Debug>2)) Then
+                 write(*,'(a,a,a,a)') ' Extrapolating FORWARD for bracket ', bSide, ' for file ',trim(item%file)
+              end if
+              ! We have data from past years
+              ! Rewind the target time until we can have what we want
+              call ESMF_TimeGet(cTime,yy=refYear,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+              yrOffset = 0
+              fTime = cTime
+              ! yrOffset: Number of years added from current time to get file time
+              Do While ((.not.found).and.(abs(yrOffset).lt.maxOffset))
+                 yrOffset = yrOffset - 1
+                 iYr = refYear + yrOffset
+                 call ESMF_TimeSet(newTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+                 ! Error check - if the new time is before the first file time,
+                 ! all is lost
+                 If (newTime.lt.xTSeries(1)) exit
+                 do while (ftime > newTime)
+                    fTime = fTime - item%frequency
+                    n = n - 1
+                 end do 
+                 ! untemplate file
+                 call ESMF_TimeGet(fTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+                 call MAPL_PackTime(curDate,iyr,imm,idd)
+                 call MAPL_PackTime(curTime,ihr,imn,isc)
+                 call gx_(file_processed,item%file,nymd=curDate,nhms=curTime,__STAT__)
+                 Inquire(FILE=trim(file_processed),EXIST=found)
+              End Do
+              If (.not.found) Then
+                 if (mapl_am_I_root()) Then
+                    write(*,'(a,a,a,a)') ' ERROR: Could not determine upper bounds on ',trim(item%file),' for side ',bSide
+                 end if
+                 RETURN_(ESMF_FAILURE)
+              End If
+           Else
+              if (mapl_am_I_root()) Then
+                 write(*,'(a,a,a,a)') ' ERROR: Unkown error while scanning ',trim(item%file),' for side ',bSide
+              end if
+              RETURN_(ESMF_FAILURE)
+           End If
+        End If
+
+        ! Should now have the "correct" time
+        ! Generate CFIO for the "current" file
+        If (MAPL_Am_I_Root().and.(Ext_Debug > 19)) Write(*,'(a,a)') ' DEBUG: Generating CFIO for ', trim(file_processed)
+        If (isAssigned) Then
+           ! Do we still have the right file?
+           If (Trim(xCFIO%fNAME) .ne. Trim(file_processed)) Then
+              isAssigned = .False.
+              If (allocated(xTSeries)) Deallocate(xTSeries)
+              nullify(xCFIO)
+           End If
+        End If
+        If (.not.isAssigned) Then
+           ! Generate CFIO
+           call MakeCFIO(file_processed,xCFIO,found,rc=status)
+           ! Retrieve the time series
+           allocate(xTSeries(xCFIO%tSteps))
+           call GetTimesOnFile(xCFIO,xTSeries,rc=rc)
+           isAssigned = .True.
+        End If
+
+        ! We now have a time which, when passed to the FILE TEMPLATE, returns a valid file
+        ! However, if the file template does not include a year token, then the file in
+        ! question could actually be for a different year. We therefore feed the file time
+        ! into the refresh template and see if the result has the same year. If it doesn't,
+        ! then we can assume that the year is actually fixed, and the times in the file will
+        ! correspond to the year in the refresh template. In this case, an additional year 
+        ! offset must be applied.
+        yrOffsetStamp = 0
+        If (item%refresh_template /= "0") Then
+           newTime = timestamp_(fTime,item%refresh_template,__RC__)
+           if (newTime .ne. fTime) Then
+              call ESMF_TimeGet(fTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+              call ESMF_TimeGet(newTime,yy=fyr,mm=fmm,dd=fdd,h=fhr,m=fmn,s=fsc,__RC__)
+              yrOffsetStamp = fYr - iYr
+           End If
+        End If
+
         ! try to get bracketing time on file using current time
-        call GetBracketTimeOnFile(file_processed,readTime,bSide,UniFileClim,interpTime,fileTime,rc=status)
-        
+        call GetBracketTimeOnFile(xCFIO,xTSeries,readTime,bSide,UniFileClim,interpTime,fileTime,yrOffsetInt=yrOffset+yrOffsetStamp,rc=status)
+        found = (status==ESMF_SUCCESS)
+
+        If (MAPL_Am_I_Root().and.(Ext_Debug > 19)) Write(*,'(a,a,a,L1)') ' DEBUG: Status of ', trim(file_processed),': ', found
+
         ! if we didn't find the bracketing time look forwards or backwards depending on
         ! whether it is the right or left time   
-        if (status /= ESMF_SUCCESS) then
-
+        if (.not.found) then
+           If (MAPL_Am_I_Root().and.(Ext_Debug > 19)) Write(*,'(a,a,a,a,a,L1)') ' DEBUG: Scanning for bracket ', bSide, ' of ', trim(file_processed), '. RSide: ', (bSide=="R")
+           bracketScan = .True.
+           newTime = fTime
            if (bSide == "R") then
-
-              ! check next time
-              call ESMF_TimeGet(fTime,yy=oldyear)
-              newTime = fTime + frequency
-              if (trim(cyclic)=='y') then
-                 call ESMF_TimeGet(newTime,yy=iyr,__RC__)
-                 if (oldyear/=iyr) then 
-                    iyr = climYear-1
-                    cYear=cYear+1
-                    call ESMF_TimeGet(readTime,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
-                    call ESMF_TimeSet(readTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+              found=.false.
+              newFile=allowExtrap
+              status = ESMF_SUCCESS
+              If (MAPL_Am_I_Root().and.(Ext_Debug > 19)) Write(*,'(a,a,a,I5,x,2L1)') ' DEBUG: Sanity check on file ', trim(file_processed), ' with flags: ', status, status==ESMF_SUCCESS,found
+              do while ((status==ESMF_SUCCESS).and.(.not.found))
+                 ! check next time
+                 newTime = fTime + item%frequency
+                 if (trim(item%cyclic)=='y') then
+                    call ESMF_TimeGet(fTime,yy=OldYear)
                     call ESMF_TimeGet(newTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
-                    call ESMF_TimeSet(newTime,yy=climYear,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+                    if (oldyear/=iyr) then
+                       call ESMF_TimeSet(newTime,yy=oldyear,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+                       yrOffset = yrOffset - 1
+                       If (MAPL_Am_I_Root()) Write(*,'(a,I0.4,5(a,I0.2))') ' DEBUG: IN clim after ',Oldyear,'-',iMm,'-',iDd,' ',iHr,':',iMn,':',iSc
+                    end if
                  end if
-              end if
+                 ! untemplate file
+                 call ESMF_TimeGet(newTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
 
-              call ESMF_TimeGet(newTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
-              call MAPL_PackTime(curDate,iyr,imm,idd)
-              call MAPL_PackTime(curTime,ihr,imn,isc)
-              call gx_(file_processed,file_tmpl,nymd=curDate,nhms=curTime,__STAT__)
-              ! try to get bracketing time on file using new time
-              call GetBracketTimeOnFile(file_processed,readTime,bSide,UniFileClim,interpTime,fileTime,rc=status)
-
+                 call MAPL_PackTime(curDate,iyr,imm,idd)
+                 call MAPL_PackTime(curTime,ihr,imn,isc)
+                 call gx_(file_processed,item%file,nymd=curDate,nhms=curTime,__STAT__)
+                 If (MAPL_Am_I_Root().and.(Ext_Debug > 19)) Write(*,'(a,a,a,I0.4,5(a,I0.2))') ' DEBUG: Testing for file ', trim(file_processed), ' for target time ',iYr,'-',iMm,'-',iDd,' ',iHr,':',iMn,':',iSc
+                 Inquire(FILE=trim(file_processed),EXIST=found)
+                 If (found) Then
+                    fTime = newTime
+                 Else If (newFile) Then
+                    ! We went RIGHT - cycle round by SUBTRACTING a year
+                    yrOffset = yrOffset - 1
+                    newFile = .False. ! Only one attempt
+                    call OffsetTimeYear(fTime,-1,newTime,rc)
+                    fTime = newTime
+                 Else
+                    status = ESMF_FAILURE
+                 End If
+              End Do
               if (status /= ESMF_SUCCESS) then
-                 if (mapl_am_I_root()) write(*,*)'ExtData could not find bracketing data from file template ',trim(file_tmpl),' for side ',bSide
+                 if (mapl_am_I_root()) write(*,*)'ExtData could not find appropriate file from file template ',trim(item%file),' for side ',bSide
                  RETURN_(ESMF_FAILURE)
-
               end if
-
            else if (bSide == "L") then
-
-              ! check next time
-              call ESMF_TimeGet(fTime,yy=oldyear)
-              newTime = fTime - frequency
-              if (trim(cyclic)=='y') then
-                 call ESMF_TimeGet(newTime,yy=iyr,__RC__)
-                 if (oldyear/=iyr) then
-                    iyr = climYear+1
-                    cYear=cYear-1
-                    call ESMF_TimeGet(readTime,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
-                    call ESMF_TimeSet(readTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+              found=.false.
+              newFile=allowExtrap
+              status = ESMF_SUCCESS
+              do while ((status==ESMF_SUCCESS).and.(.not.found))
+                 ! check next time
+                 newTime = fTime - item%frequency
+                 if (trim(item%cyclic)=='y') then
+                    call ESMF_TimeGet(fTime,yy=OldYear)
                     call ESMF_TimeGet(newTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
-                    call ESMF_TimeSet(newTime,yy=climYear,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+                    if (oldyear/=iyr) then
+                       call ESMF_TimeSet(newTime,yy=oldyear,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+                       yrOffset = yrOffset + 1
+                       If (MAPL_Am_I_Root()) Write(*,'(a,I0.4,5(a,I0.2))') ' DEBUG: IN clim after ',Oldyear,'-',iMm,'-',iDd,' ',iHr,':',iMn,':',iSc
+                    end if
                  end if
-              end if
+                 ! untemplate file
+                 call ESMF_TimeGet(newTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
 
-              call ESMF_TimeGet(NewTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
-              call MAPL_PackTime(curDate,iyr,imm,idd)
-              call MAPL_PackTime(curTime,ihr,imn,isc)
-              call gx_(file_processed,file_tmpl,nymd=curDate,nhms=curTime,__STAT__)
-              ! try to get bracketing time on file using new time
-              call GetBracketTimeOnFile(file_processed,readTime,bSide,UniFileClim,interpTime,fileTime,rc=status)
-
+                 call MAPL_PackTime(curDate,iyr,imm,idd)
+                 call MAPL_PackTime(curTime,ihr,imn,isc)
+                 call gx_(file_processed,item%file,nymd=curDate,nhms=curTime,__STAT__)
+                 Inquire(FILE=trim(file_processed),EXIST=found)
+                 If (found) Then
+                    fTime = newTime
+                 Else If (newFile) Then
+                    ! We went LEFT - cycle round by ADDING a year
+                    yrOffset = yrOffset + 1
+                    newFile = .False. ! Only one attempt
+                    call OffsetTimeYear(fTime,+1,newTime,rc)
+                    fTime = newTime
+                 Else
+                    status = ESMF_FAILURE
+                 End If
+              End Do
               if (status /= ESMF_SUCCESS) then
-                 if (mapl_am_I_root()) write(*,*)'ExtData could not find bracketing data from file template ',trim(file_tmpl),' for side ',bSide
+                 if (mapl_am_I_root()) write(*,*)'ExtData could not find appropriate file from file template ',trim(item%file),' for side ',bSide
                  RETURN_(ESMF_FAILURE)
-
               end if
+           end if
+
+           ! fTime is now ALWAYS the time which was applied to the file template to get the current file
+           If (isAssigned) Then
+              ! Do we still have the right file?
+              If (Trim(xCFIO%fNAME) .ne. Trim(file_processed)) Then
+                 isAssigned = .False.
+                 If (allocated(xTSeries)) Deallocate(xTSeries)
+                 nullify(xCFIO)
+              End If
+           End If
+           If (.not.isAssigned) Then
+              ! Generate CFIO
+              call MakeCFIO(file_processed,xCFIO,found,rc=status)
+              ! Retrieve the time series
+              allocate(xTSeries(xCFIO%tSteps))
+              call GetTimesOnFile(xCFIO,xTSeries,rc=rc)
+              isAssigned = .True.
+           End If
+
+           !If (Mapl_Am_I_Root()) Write (*,'(a,a,x,a)') ' SUPERDEBUG: File/template: ',Trim(file_processed),Trim(item%refresh_template)
+           ! The file template may be "hiding" a year offset from us
+           yrOffsetStamp = 0
+           If (item%refresh_template /= "0") Then
+              newTime = timestamp_(fTime,item%refresh_template,__RC__)
+              If (Mapl_Am_I_Root().and.Ext_Debug > 24) Then
+                 call ESMF_TimeGet(fTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+                 call ESMF_TimeGet(newTime,yy=fyr,mm=fmm,dd=fdd,h=fhr,m=fmn,s=fsc,__RC__)
+                 Write(*,'(3a,I0.4,5(a,I0.2),a,I0.4,5(a,I0.2),2a)') ' DEBUG: Template ',Trim(item%refresh_template),' applied: ',&
+                    iyr,'-',imm,'-',idd,' ',ihr,':',imn,':',isc,' -> ',&
+                    fyr,'-',fmm,'-',fdd,' ',fhr,':',fmn,':',fsc,&
+                    ' on file ',Trim(file_processed)
+              End If
+              if (newTime .ne. fTime) Then
+                 call ESMF_TimeGet(fTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+                 call ESMF_TimeGet(newTime,yy=fyr,mm=fmm,dd=fdd,h=fhr,m=fmn,s=fsc,__RC__)
+                 yrOffsetStamp = fYr - iYr
+                 If (Mapl_Am_I_Root().and.Ext_Debug > 19) Then
+                    Write(*,'(2(a,I4),2a)') ' DEBUG: Year offset modified from ',yrOffset,' to ',yrOffset+yrOffsetStamp,' to satisfy refresh template for ', Trim(file_processed)
+                 End If
+              End If
+           End If
+
+           ! try to get bracketing time on file using new time
+           call GetBracketTimeOnFile(xCFIO,xTSeries,readTime,bSide,UniFileClim,interpTime,fileTime,yrOffsetInt=yrOffset+yrOffsetStamp,rc=status)
+           found = (status == ESMF_SUCCESS)
+           if (.not.found) then
+              if (mapl_am_I_root()) write(*,*)'ExtData could not find bracketing data from file template ',trim(item%file),' for side ',bSide
+              RETURN_(ESMF_FAILURE)
 
            end if
 
         end if
 
-        if (trim(cyclic)=='y') then
-           call ESMF_TimeGet(fileTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
-           call ESMF_TimeSet(interpTime,yy=cYear,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
-        end if
-        RETURN_(ESMF_SUCCESS)
-
      end if
+
+     ! Debug
+     If (Mapl_Am_I_Root().and.Ext_Debug > 10) Then 
+        Write(*,'(a,a,a,a)') '  >> >> Updated bracket ', bSide, ' for ', Trim(file_processed)
+        call ESMF_TimeGet(cTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+        Write(*,'(a,I0.4,5(a,I0.2))') ' >> >> >> Time requested: ',iYr,'-',iMM,'-',iDD,' ',iHr,':',iMn,':',iSc
+        call ESMF_TimeGet(fileTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+        Write(*,'(a,I0.4,5(a,I0.2))') ' >> >> >> Record time   : ',iYr,'-',iMM,'-',iDD,' ',iHr,':',iMn,':',iSc
+        call ESMF_TimeGet(interpTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+        Write(*,'(a,I0.4,5(a,I0.2))') ' >> >> >> Effective time: ',iYr,'-',iMM,'-',iDD,' ',iHr,':',iMn,':',iSc
+     End If
+     ! If we made it this far, then I guess we are OK?
+     RETURN_(ESMF_SUCCESS)
     
   end subroutine UpdateBracketTime
 
-  subroutine GetBracketTimeOnFile(file,cTime,bSide,UniFileClim,interpTime,fileTime,climYear,rc)
-     character(len=*),                    intent(in   ) :: file
+  subroutine MakeCFIO(file,cfio,found,rc)
+     character(len=ESMF_MAXSTR), intent(in   ) :: file
+     type(ESMF_CFIO), pointer                  :: cfio
+     logical                                   :: found
+     integer, optional,          intent(out  ) :: rc
+
+     __Iam__('MakeCFIO')
+
+     Inquire(FILE=trim(file),EXIST=found)
+     If (.not.found) Then
+        Write(6,'(a,a)') 'WARNING: File not found while getting times: ', Trim(file)
+        RC = ESMF_FAILURE
+        return
+     Else If (Mapl_Am_I_Root().and.(Ext_Debug > 9)) Then
+        Write(6,'(a,a)') ' DEBUG: Opening file: ', Trim(file)
+     End If
+     call MAPL_CFIORegistryGet(file,cfio,rc=status)
+     rc = ESMF_SUCCESS
+     return
+  end subroutine
+
+  subroutine GetTimesOnFile(cfio,tSeries,rc)
+     type(ESMF_CFIO)                           :: cfio
+     type(ESMF_Time)                           :: tSeries(:)
+     integer, optional,          intent(out  ) :: rc
+
+     __Iam__('GetTimesOnFile')
+
+     integer(ESMF_KIND_I4)              :: iyr,imm,idd,ihr,imn,isc
+     integer                            :: i
+     integer(ESMF_KIND_I8)              :: iCurrInterval
+     integer                            :: nhmsB, nymdB
+     integer                            :: begDate, begTime
+     integer(ESMF_KIND_I8),allocatable  :: tSeriesInt(:)
+
+     allocate(tSeriesInt(cfio%tSteps))
+     call getDateTimeVec(cfio%fid,begDate,begTime,tSeriesInt,__RC__)
+     
+     ! Assume success
+     rc=ESMF_SUCCESS
+
+     ! Debug level 3
+     If (Mapl_Am_I_Root().and.(Ext_Debug > 2)) Then
+        Write(*,'(a,a)') '  >> >> Reading times from ', Trim(cfio%fName)
+        Write(*,'(a,2(x,I0.10),x,I0.4)') '  >> >> File timing info:', begDate, begTime, cfio%tSteps
+     End If
+
+     do i=1,cfio%tSteps
+        iCurrInterval = tSeriesInt(i)
+        call GetDate ( begDate, begTime, iCurrInterval, nymdB, nhmsB, status )
+        call MAPL_UnpackTime(nymdB,iyr,imm,idd)
+        call MAPL_UnpackTime(nhmsB,ihr,imn,isc)
+        ! Debug level 4
+        If (Mapl_Am_I_Root()) Then
+           If ((Ext_Debug > 4).or.((Ext_Debug > 3).and.((i.eq.1).or.(i.eq.cfio%tSteps)))) Then
+              Write(*,'(a,I0.6,a,I0.4,5(a,I0.2))') ' >> >> STD Sample ',i,':  ',iYr,'-',iMM,'-',iDD,' ',iHr,':',iMn,':',iSc
+           End If
+        End If
+        call ESMF_TimeSet(tSeries(i), yy=iyr, mm=imm, dd=idd,  h=ihr,  m=imn, s=isc,__RC__)
+     enddo
+
+     deallocate(tSeriesInt)
+     return
+
+  end subroutine GetTimesOnFile
+
+  subroutine OffsetTimeYear(inTime,yrOffset,outTime,rc)
+     type(ESMF_Time),            intent(in   ) :: inTime
+     integer                                   :: yrOffset
+     type(ESMF_Time),            intent(out  ) :: outTime
+     integer, optional,          intent(out  ) :: rc
+
+     __Iam__('OffsetTimeYear')
+
+     integer(ESMF_KIND_I4)              :: iyr,imm,idd,ihr,imn,isc
+     logical                            :: srcLeap, targLeap
+
+     call ESMF_TimeGet(inTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+     ! If the source year is a leap year but the new one isn't, modify to day 28
+     iYr = iYr + yrOffset
+     targLeap = ((imm.eq.2).and.(idd.eq.29))
+     if (targLeap) then
+        if (iyr.lt.1582) then
+           srcLeap = .False.
+        else if (modulo(iYr,4).ne.0) then
+           srcLeap = .False.
+        else if (modulo(iYr,100).ne.0) then
+           srcLeap = .True.
+        else if (modulo(iYr,400).ne.0) then
+           srcLeap = .False.
+        else
+           srcLeap = .True.
+        end if
+     else
+        srcLeap = .True.
+     end if
+     if (targLeap.and.(.not.srcLeap)) idd=28
+     call ESMF_TimeSet(outTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+
+     rc=ESMF_SUCCESS
+     return
+
+  end subroutine OffsetTimeYear
+
+  subroutine GetBracketTimeOnSingleFile(cfio,tSeries,cTime,bSide,UniFileClim,interpTime,fileTime,allowExtrap,climyear,rc)
+     type(ESMF_CFIO),                     intent(in   ) :: cfio
+     type(ESMF_Time),                     intent(in   ) :: tSeries(:)
      type(ESMF_Time),                     intent(inout) :: cTime
      character(len=1),                    intent(in   ) :: bSide
      logical,                             intent(in   ) :: UniFileClim
      type(ESMF_TIME),                     intent(inout) :: interpTime
      type(ESMF_TIME),                     intent(inout) :: fileTime
-     integer, optional,                   intent(in   ) :: climYear
+     logical,                             intent(in   ) :: allowExtrap
+     integer,                             intent(in   ) :: climYear
      integer, optional,                   intent(out  ) :: rc
 
-     __Iam__('GetBracketTimeOnFile')
+     __Iam__('GetBracketTimeOnSingleFile')
 
-     type(ESMF_CFIO)                    :: cfio
-     integer(ESMF_KIND_I4)              :: iyr,imm,idd,ihr,imn,isc,curYear
-     integer                            :: iCurrInterval,i
-     integer                            :: nhmsB, nymdB, incSecs
-     integer                            :: begDate, begTime
-     type(ESMF_Time), pointer           :: tSeries(:)
+     integer(ESMF_KIND_I4)              :: iyr,imm,idd,ihr,imn,isc
+     integer                            :: i
      type(ESMF_Time)                    :: climTime
-     logical                            :: found,foundYear
-     integer                            :: fSize,tSteps,iStart
+     logical                            :: found
+     logical                            :: LExtrap,RExtrap,LExact,RExact
+     logical                            :: LSide, RSide
+     integer                            :: yrOffset, yrOffsetNeg, targYear
+     integer                            :: iEntry
+     type(ESMF_Time), pointer           :: tSeriesC(:)
+     logical                            :: foundYear
+     integer                            :: tSteps, curYear
 
-     cfio =  ESMF_CFIOCreate (cfioObjName='cfio_obj',__RC__)
-     call ESMF_CFIOSet(CFIO, fName=trim(file),__RC__)
-     call ESMF_CFIOFileOpen  (CFIO, FMODE=1, __RC__)
-     call GetBegDateTime(cfio%fid,begDate,begTime,incSecs,__RC__)
-     fSize = cfio%tSteps
-     climTime = cTime
+     ! Store the target time which was actually requested
+     call ESMF_TimeGet(cTime,yy=targYear,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
 
-     if (UniFileClim) then
-        call MAPL_UnpackTime(begDate,iyr,imm,idd)
+     ! Debug output
+     If (Mapl_Am_I_Root().and.(Ext_Debug > 15)) Then
+        Write(6,'(a,a)') ' DEBUG: GetBracketTimeOnSingleFile called for ', trim(cfio%fName)
+     End If
+
+     ! Debug level 3
+     If (Mapl_Am_I_Root().and.(Ext_Debug > 2) ) Then
+        Write(*,'(a,L1,a,a)') '  >> >> Reading times from fixed (',UniFileClim,') file ', Trim(cfio%fName)
+        call ESMF_TimeGet(tSeries(1),yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+        Write(*,'(a,I0.4,5(a,I0.2))') ' >> >> >> File start    : ',iYr,'-',iMM,'-',iDD,' ',iHr,':',iMn,':',iSc
+        call ESMF_TimeGet(tSeries(cfio%tSteps),yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+        Write(*,'(a,I0.4,5(a,I0.2))') ' >> >> >> File end      : ',iYr,'-',iMM,'-',iDD,' ',iHr,':',iMn,':',iSc
         call ESMF_TimeGet(cTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
-        ASSERT_(present(climYear))
+        Write(*,'(a,I0.4,5(a,I0.2))') ' >> >> >> Time requested: ',iYr,'-',iMM,'-',iDD,' ',iHr,':',iMn,':',iSc
+     End If
+
+     if (uniFileClim) then
+
+        call ESMF_TimeGet(cTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
         iyr = climYear
         if (idd == 29 .and. imm == 2) idd = 28
         call ESMF_TimeSet(climTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
 
-        ! pick out times from the file that are in the climatological year
+        tsteps=0
         foundYear = .false.
-        tSteps = 0
-        do i=1,fSize
-           iCurrInterval = (i-1)*incSecs
-           call GetDate ( begDate, begTime, iCurrInterval, nymdB, nhmsB, status )
-           call MAPL_UnpackTime(nymdB,iyr,imm,idd)
+        do i=1,cfio%tSteps
+
+           call ESMF_TimeGet(tseries(i),yy=iyr,__RC__)
            if (iyr==climYear) then
-              if (foundYear .eqv. .false.) then 
-                 istart = i
+              if (foundYear .eqv. .false.) then
+                 iEntry = i
                  foundYear = .true.
               end if
-              tSteps=tSteps+1
+              tsteps=tsteps+1
            end if
+
+        end do
+    
+        allocate(tSeriesC(tsteps),__STAT__)
+        do i=1,tsteps
+           tSeriesC(i)=tSeries(iEntry+i-1)
         enddo
-        iCurrInterval = (iStart-1)*incSecs
-        call GetDate ( begDate, begTime, iCurrInterval, nymdB, nhmsB, status )
-        begDate=nymdB
-        begTime=nhmsB
-        fSize = tSteps
+
+        found = .false.
+        if (bSide == "L") then
+           if ( (climTime < tSeriesC(1)) ) then
+              fileTime = tSeriesC(tSteps)
+              call ESMF_TimeGet(tSeriesC(tSteps),yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+              call ESMF_TimeGet(cTime,yy=curYear,__RC__)
+              iyr = curYear - 1
+              call ESMF_TimeSet(interpTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+              found = .true.
+           else
+              do i=tSteps,1,-1
+                 if (climTime >= tSeriesC(i)) then
+                    fileTime = tSeriesC(i)
+                    if (UniFileClim) then
+                       call ESMF_TimeGet(cTime,yy=curYear,__RC__)
+                       call ESMF_TimeGet(fileTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+                       call ESMF_TimeSet(interpTime,yy=curYear,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+                    else
+                       interpTime = tSeriesC(i)
+                    end if
+                    found = .true.
+                    exit
+                 end if
+              end do
+           end if
+        else if (bSide == "R") then
+           if ( (climTime >= tSeriesC(tSteps)) ) then
+              fileTime = tSeriesC(1)
+              call ESMF_TimeGet(tSeriesC(1),yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+              call ESMF_TimeGet(cTime,yy=curYear,__RC__)
+              iyr = curYear + 1
+              call ESMF_TimeSet(interpTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+              found = .true.
+           else
+              do i=1,tSteps
+                 if (climTime < tSeriesC(i)) then
+                    fileTime = tSeriesC(i)
+                    if (UniFileClim) then
+                       call ESMF_TimeGet(cTime,yy=curYear,__RC__)
+                       call ESMF_TimeGet(fileTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+                       call ESMF_TimeSet(interpTime,yy=curYear,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+                    else
+                       interpTime = tSeriesC(i)
+                    end if
+                    found = .true.
+                    exit
+                 end if
+              end do
+           end if
+        end if 
+
+     else
+
+        yrOffset = 0
+        climTime = cTime
+
+        ! Is the requested time within the range of values offered?
+        LSide = (bSide == "L")
+        RSide = (.not.LSide)
+        LExact  = (cLimTime == tSeries(1))
+        RExact  = (cLimTime == tSeries(cfio%tSteps))
+        LExtrap = (cLimTime <  tSeries(1)) 
+        RExtrap = (cLimTime >  tSeries(cfio%tSteps))
+        found = .false.
+        If (Mapl_Am_I_Root().and.(Ext_Debug > 19)) Then
+           Write(*,'(a,4(L1,x),a,a)') ' DEBUG: Extrapolation flags (0) are ',LExact,RExact,LExtrap,RExtrap,'for file ', trim(cfio%fName)
+        End If
+
+        if (allowExtrap) then
+           If (LExtrap) Then
+              If (Mapl_Am_I_Root().and.(Ext_Debug > 19)) Then
+                 Write(6,'(a,a)') ' DEBUG: Requested time is before first available sample in file ', trim(cfio%fName)
+              End If
+              ! Increase the target time until it is within range
+              Do While (LExtrap)
+                 yrOffset = yrOffset + 1
+                 iYr = targYear + yrOffset
+                 call OffsetTimeYear(cTime,yrOffset,cLimTime,rc)
+                 If (LSide) Then
+                    LExtrap = (cLimTime <  tSeries(1))
+                 Else
+                    LExtrap = (cLimTime <= tSeries(1))
+                    ! When scanning for the right side, if we find that we
+                    ! have an exact match to the first entry, then as long
+                    ! as there is a second entry, we have the correct offset
+                    If (LExtrap.and.(cfio%tSteps > 1)) Then
+                       LExact  = (cLimTime == tSeries(1))
+                       LExtrap = (LExtrap.and.(.not.LExact))
+                    End If
+                 End If
+              End Do
+           Else If (RExtrap.or.(RExact.and.RSide)) Then
+              If (Mapl_Am_I_Root().and.(Ext_Debug > 19)) Then
+                 Write(6,'(a,a)') ' DEBUG: Requested time is after or on last available sample in file ', trim(cfio%fName)
+              End If
+              Do While (RExtrap.or.(RExact.and.RSide))
+                 yrOffset = yrOffset - 1
+                 iYr = targYear + yrOffset
+                 call OffsetTimeYear(cTime,yrOffset,cLimTime,rc)
+                 If (LSide) Then
+                    RExtrap = (cLimTime >  tSeries(cfio%tSteps))
+                 Else
+                    RExtrap = (cLimTime >= tSeries(cfio%tSteps))
+                    RExact  = (cLimTime == tSeries(cfio%tSteps))
+                 End If
+              End Do
+           End If
+
+           ! Retest for an exact match - note this is only useful if we want bracket L
+           LExact  =  (cLimTime == tSeries(1))
+           RExact  =  (cLimTime == tSeries(cfio%tSteps))
+           If (Mapl_Am_I_Root().and.(Ext_Debug > 19)) Then
+              Write(*,'(a,4(L1,x),a,a)') ' DEBUG: Extrapolation flags (2) are ',LExact,RExact,LExtrap,RExtrap,'for file ', trim(cfio%fName)
+           End If
+
+        End IF
+
+        If (LSide.and.LExact) Then
+           found = .true.
+           iEntry = 1
+        Else If (LSide.and.RExact) Then
+           found = .true.
+           iEntry = cfio%tSteps
+        Else
+           if (bSide == "L") then
+              do i=cfio%tSteps,1,-1
+                 if (climTime >= tSeries(i)) then
+                    iEntry = i
+                    found = .true.
+                    exit
+                 end if
+              end do
+           else if (bSide == "R") then
+              do i=1,cfio%tSteps
+                 if (climTime < tSeries(i)) then
+                    iEntry = i
+                    found = .true.
+                    exit
+                 end if
+              end do
+           end if
+        end if
+
+        if (found) then
+           fileTime = tSeries(iEntry)
+           if (yrOffset == 0) Then
+              interpTime = fileTime
+           Else
+              yrOffsetNeg = -1*yrOffset
+              call OffsetTimeYear(fileTime,yrOffsetNeg,interpTime,rc)
+           End If
+        end if
+
      end if
 
-     allocate(tSeries(fsize))
-     do i=1,fsize
-        iCurrInterval = (i-1)*incSecs
-        call GetDate ( begDate, begTime, iCurrInterval, nymdB, nhmsB, status )
-        call MAPL_UnpackTime(nymdB,iyr,imm,idd)
-        call MAPL_UnpackTime(nhmsB,ihr,imn,isc)
-        call ESMF_TimeSet(tSeries(i), yy=iyr, mm=imm, dd=idd,  h=ihr,  m=imn, s=isc,__RC__)
-     enddo
+     if (found) then
+        If (Mapl_Am_I_Root().and.(Ext_Debug > 15)) Then
+           call ESMF_TimeGet(fileTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+           Write(*,'(a,I0.4,a,I0.2,a,I0.2,a,I0.2,a,I0.2,a,a,a,a)') &
+              ' DEBUG: Data from time ', iYr, '-', iMm, '-', iDd, &
+              ' ', iHr, ':', iMn, ' set for bracket ', bSide,&
+              ' of file ', Trim(cfio%fName)
+           Write(*,'(a,I5)') ' DEBUG: ==>> Year offset: ', yrOffset
+           If (yrOffset .ne. 0) Then
+              call ESMF_TimeGet(interpTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+              Write(*,'(a,I0.4,a,I0.2,a,I0.2,a,I0.2,a,I0.2)') &
+                 ' DEBUG: ==> Mapped to: ', iYr, '-', iMm, '-', iDd, &
+                 ' ', iHr, ':', iMn
+              call ESMF_TimeGet(interpTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+              Write(*,'(a,I0.4,a,I0.2,a,I0.2,a,I0.2,a,I0.2)') &
+                 ' DEBUG: ==> Target to: ', iYr, '-', iMm, '-', iDd, &
+                 ' ', iHr, ':', iMn
+           End If
+        End If
+        rc=ESMF_SUCCESS
+        return
+     else
+        Write(6,'(a,a)') 'WARNING: Requested sample not found in file ', trim(cfio%fName)
+        rc=ESMF_FAILURE
+        return
+     endif
+
+  end subroutine GetBracketTimeOnSingleFile
+
+  subroutine GetBracketTimeOnFile(cfio,tSeries,cTime,bSide,UniFileClim,interpTime,fileTime,yrOffsetInt,rc)
+     type(ESMF_CFIO),                     intent(in   ) :: cfio
+     type(ESMF_Time),                     intent(in   ) :: tSeries(:)
+     type(ESMF_Time),                     intent(inout) :: cTime
+     character(len=1),                    intent(in   ) :: bSide
+     logical,                             intent(in   ) :: UniFileClim
+     type(ESMF_TIME),                     intent(inout) :: interpTime
+     type(ESMF_TIME),                     intent(inout) :: fileTime
+     integer, optional,                   intent(in   ) :: yrOffsetInt
+     integer, optional,                   intent(out  ) :: rc
+
+     __Iam__('GetBracketTimeOnFile')
+
+     integer(ESMF_KIND_I4)              :: iyr,imm,idd,ihr,imn,isc
+     integer                            :: i
+     type(ESMF_Time)                    :: climTime
+     logical                            :: found, outOfBounds
+     integer                            :: yrOffset, yrOffsetNeg
+     integer                            :: climSize
+
+     ! Assume that the requested time is within range
+     If (Present(yrOffsetInt)) Then
+        yrOffset = yrOffsetInt
+     Else
+        yrOffset = 0
+     End If
+
+     if (UniFileClim) then
+        If (MAPL_Am_I_Root()) Write(*,'(a)') 'GetBracketTimeOnFile called with UniFileClim'
+        RC = ESMF_FAILURE
+        Return
+     end if
+
+     ! Debug output
+     If (Mapl_Am_I_Root().and.(Ext_Debug > 15)) Then
+        Write(6,'(4a)') ' DEBUG: GetBracketTimeOnFile (',Trim(bSide),') called for ', trim(cfio%fName)
+     End If
+
+     if (yrOffset.ne.0) then
+        ! If the source year is a leap year but this isn't, modify to day 28
+        call OffsetTimeYear(cTime,yrOffset,cLimTime,rc)
+     else
+        climTime = cTime
+     end if   
+     climSize = 1
+
+     ! Debug output
+     If (Mapl_Am_I_Root().and.(Ext_Debug > 19)) Then
+        call ESMF_TimeGet(cLimTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+        Write(6,'(a,I2,3a,I0.4,5(a,I0.2))') ' DEBUG: Year offset of ',yrOffset,&
+           ' applied while scanning ', trim(cfio%fName),&
+           ' to give target time ',iYr,'-',iMm,'-',iDd,' ',iHr,':',iMn,':',iSc
+     End If
+
      found = .false.
      ! we will have to specially handle a climatology in one file
      ! might be better way but can not think of one
      if (bSide == "L") then
-        if ( UniFileClim .and. (climTime < tSeries(1)) ) then
-           fileTime = tSeries(fsize)
-           call ESMF_TimeGet(tSeries(fsize),yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
-           call ESMF_TimeGet(cTime,yy=curYear,__RC__)
-           iyr = curYear - 1 
-           call ESMF_TimeSet(interpTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
-           found = .true.
-        else
-           do i=fsize,1,-1
-              if (climTime >= tSeries(i)) then
-                 fileTime = tSeries(i)
-                 if (UniFileClim) then
-                    call ESMF_TimeGet(cTime,yy=curYear,__RC__)
-                    call ESMF_TimeGet(fileTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
-                    call ESMF_TimeSet(interpTime,yy=curYear,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
-                 else
-                    interpTime = tSeries(i)
-                 end if
-                 found = .true.
-                 exit
+        OutOfBounds = (cLimTime < tSeries(1))
+        If (OutOfBounds) Then
+           ! This can be an acceptable outcome - no printout
+           RC = ESMF_FAILURE
+           Return
+        End If
+        do i=cfio%tSteps,1,-1
+           if (climTime >= tSeries(i)) then
+              fileTime = tSeries(i)
+              if (yrOffset .ne. 0) Then
+                 yrOffsetNeg = -1*yrOffset
+                 Call OffsetTimeYear(fileTime,yrOffsetNeg,interpTime,rc)
+              else
+                 interpTime = fileTime
               end if
-           end do
-        end if
+              found = .true.
+              exit
+           end if
+        end do
      else if (bSide == "R") then
-        if (UniFileClim .and. (climTime >= tSeries(fsize)) ) then
-           fileTime = tSeries(1)
-           call ESMF_TimeGet(tSeries(1),yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
-           call ESMF_TimeGet(cTime,yy=curYear,__RC__)
-           iyr = curYear + 1 
-           call ESMF_TimeSet(interpTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
-           found = .true.
-        else
-           do i=1,fsize
-              if (climTime < tSeries(i)) then
-                 fileTime = tSeries(i)
-                 if (UniFileClim) then
-                    call ESMF_TimeGet(cTime,yy=curYear,__RC__)
-                    call ESMF_TimeGet(fileTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
-                    call ESMF_TimeSet(interpTime,yy=curYear,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
-                 else
-                    interpTime = tSeries(i)
-                 end if
-                 found = .true.
-                 exit
+        ! Is the requested time within the range of values offered?
+        OutOfBounds = (cLimTime >= tSeries(cfio%tSteps))
+        If (OutOfBounds) Then
+           ! This can be an acceptable outcome - no printout
+           RC = ESMF_FAILURE
+           Return
+        End If
+        do i=1,cfio%tSteps
+           if (climTime < tSeries(i)) then
+              fileTime = tSeries(i)
+              if (yrOffset .ne. 0) Then
+                 yrOffsetNeg = -1*yrOffset
+                 Call OffsetTimeYear(fileTime,yrOffsetNeg,interpTime,rc)
+              else
+                 interpTime = fileTime
               end if
-           end do
-        end if
-     end if              
-     call ESMF_CFIODestroy(CFIO,__RC__)
-     deallocate(tSeries)
+              found = .true.
+              exit
+           end if
+        end do
+     end if
+
      if (found) then
+        If (Mapl_Am_I_Root().and.(Ext_Debug > 15)) Then 
+           call ESMF_TimeGet(fileTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+           Write(*,'(a,I0.4,a,I0.2,a,I0.2,a,I0.2,a,I0.2,a,a,a,a)') &
+              ' DEBUG: Data from time ', iYr, '-', iMm, '-', iDd, &
+              ' ', iHr, ':', iMn, ' set for bracket ', bSide,&
+              ' of file ', Trim(cfio%fName)
+           If (yrOffset .ne. 0) Then
+              call ESMF_TimeGet(interpTime,yy=iyr,mm=imm,dd=idd,h=ihr,m=imn,s=isc,__RC__)
+              !Write(*,'(a,I0.4,a,I0.2,a,I0.2,a,I0.2,a,I0.2)') &
+                 !' DEBUG: ==> Mapped to: ', iYr, '-', iMm, '-', iDd, &
+                 !' ', iHr, ':', iMn
+              Write(*,'(a,I0.4,a,I0.2,a,I0.2,a,I0.2,a,I0.2,a,I0.2)') &
+                 ' DEBUG: ==> Mapped to: ', iYr, '-', iMm, '-', iDd, &
+                 ' ', iHr, ':', iMn, ' Offset:', yrOffset
+           End If
+        End If
         rc=ESMF_SUCCESS
         return
      else
+        Write(6,'(a,a)') 'WARNING: Requested sample not found in file ', trim(cfio%fName)
         rc=ESMF_FAILURE
         return
      endif
@@ -2599,55 +4406,6 @@ contains
 
   end subroutine GetBracketTimeOnFile
 
-  subroutine TimeIntervalFloor(rTime,cTime,freq,fTime,rc)
-     type(ESMF_Time), intent(inout) :: rTime
-     type(ESMF_Time), intent(inout) :: cTime
-     type(ESMF_TimeInterval), intent(inout) :: freq
-     type(ESMF_Time), intent(inout) :: fTime
-     integer, optional, intent(out) :: rc
-
-     integer :: status
-     character(len=ESMF_MAXSTR) :: Iam
-     type(ESMF_Time) :: nTime, tLast,tNext
-     logical         :: found
-
-     ! for a given rTime and freq, find the floor of the two times
-     ! that bracket cTime without doing division on esmf time intervals
-     found = .false.
-     nTime = rTime+freq
-     if (nTime > cTime .and. cTime >= rTime) then
-        fTime = rTime
-        found = .true.
-     else if (ctime < rTime) then
-        tLast = rTime
-        do while(.not.found)
-           tNext = tLast - freq
-           if (tLast > cTime .and. cTime >= tNext) then
-              found = .true.
-              fTime = tNext
-           end if
-           tlast = tNext
-        enddo
-     else if (ctime >= nTime) then
-        tLast = nTime
-        do while(.not.found)
-           tNext = tLast + freq
-           if (tNext > cTime .and. cTime >= tLast) then
-              found = .true.
-              fTime = tLast
-           end if
-           tlast = tNext
-        enddo
-     end if
-        
- 
-     Iam = "TimeIntervalFloor"
-
-     RETURN_(ESMF_SUCCESS)
-
-  end subroutine TimeIntervalFloor
-
-#if 1
  subroutine CalcDerivedField(state,primaries,exportName,exportExpr,masking,rc)
      type(ESMF_State),        intent(inout) :: state
      type(PrimaryExports),    intent(inout) :: primaries
@@ -2660,6 +4418,8 @@ contains
 
      type(ESMF_Field)                   :: field
 
+!     _UNUSED_DUMMY(primaries)
+     
      if (masking) then
         call MAPL_ExtDataEvaluateMask(state,exportName,exportExpr,__RC__)
      else
@@ -2690,107 +4450,152 @@ contains
      integer                    :: fieldRank,i,j,k
      character(len=ESMF_MAXSTR) :: name
 
+     integer :: yr,mm,dd,hr,mn,sc,nhms1,nymd1,nhms2,nymd2
 
      Iam = "MAPL_ExtDataInterpField"
      tinv1 = time - item%interp_time1
      tinv2 = item%interp_time2 - item%interp_time1
      alpha = tinv1/tinv2
      call ESMF_FieldGet(FIELD, dimCount=fieldRank,name=name,__RC__)
+     If (Mapl_Am_I_Root()) Then
+        If (Ext_Debug > 9) Then
+           call ESMF_TimeGet(item%interp_time1,yy=yr,mm=mm,dd=dd,h=hr,m=mn,s=sc,__RC__)
+           call MAPL_PackTime(nhms1,hr,mn,sc)
+           call MAPL_PackTime(nymd1,yr,mm,dd)
+           If (item%doInterpolate) Then
+              If (alpha .gt. 0.0) Then
+                 call ESMF_TimeGet(item%interp_time2,yy=yr,mm=mm,dd=dd,h=hr,m=mn,s=sc,__RC__)
+                 call MAPL_PackTime(nhms2,hr,mn,sc)
+                 call MAPL_PackTime(nymd2,yr,mm,dd)
+              Else
+                 nhms2=0
+                 nymd2=0
+              End If
+           Else
+              nhms2=0
+              nymd2=0
+           End If
+
+           If (.not.(item%doInterpolate)) Then
+              Write(*,'(a,a,a,a,I0.8,x,I0.6)') ' >> >> >> ', &
+                'Uninterpolated field ', Trim(item%name), &
+                ' set to sample L: ', nymd1, nhms1
+           Else If (time == item%interp_time1) Then
+              Write(*,'(a,a,a,a,I0.8,x,I0.6)') ' >> >> >> ', &
+                '  Interpolated field ', Trim(item%name), &
+                ' set to sample L: ', nymd1, nhms1
+           Else If (time == item%interp_time2) Then
+              Write(*,'(a,a,a,a,I0.8,x,I0.6)') ' >> >> >> ', &
+                '  Interpolated field ', Trim(item%name), &
+                ' set to sample R: ', nymd2, nhms2
+           Else
+              Write(*,'(a,a,a,a,2(I0.8,x,I0.6,a),F10.6,a)') ' >> >> >> ', &
+                '  Interpolated field ', Trim(item%name), &
+                ' between ', nymd1,nhms1,' and ',nymd2,nhms2,' (', &
+                alpha,' fraction)'
+           End If
+        End If
+     End If
+     call ESMF_FieldGet(FIELD, dimCount=fieldRank,name=name, __RC__)
      if (fieldRank == 2) then
-           if (item%vartype == MAPL_FieldItem) then
-              call ESMF_FieldGet(item%finterp1, localDE=0, farrayPtr=var2d_prev, __RC__)
-              call ESMF_FieldGet(item%finterp2, localDE=0, farrayPtr=var2d_next, __RC__)
-           else if (item%vartype == MAPL_BundleItem) then
-              call ESMFL_BundleGetPointerToData(item%binterp1,name,var2d_prev,__RC__)
-              call ESMFL_BundleGetPointerToData(item%binterp2,name,var2d_next,__RC__)
-           else if (item%vartype == MAPL_ExtDataVectorItem) then
-              ASSERT_(present(vector_comp))
-              if (vector_comp == 1) then
-                 call ESMF_FieldGet(item%v1_finterp1, localDE=0, farrayPtr=var2d_prev, __RC__)
-                 call ESMF_FieldGet(item%v1_finterp2, localDE=0, farrayPtr=var2d_next, __RC__)
-              else if (vector_comp == 2) then
-                 call ESMF_FieldGet(item%v2_finterp1, localDE=0, farrayPtr=var2d_prev, __RC__)
-                 call ESMF_FieldGet(item%v2_finterp2, localDE=0, farrayPtr=var2d_next, __RC__)
-              end if
-           end if
-           call ESMF_FieldGet(field, localDE=0, farrayPtr=var2d, __RC__)
-           ! only interpolate if we have to
-           if (time == item%interp_time1 .or. item%doInterpolate .eqv. .false.) then
-              var2d = var2d_prev
-           else if (time == item%interp_time2) then
-              var2d = var2d_next
-           else
-              do j=1,size(var2d,2)
-                 do i=1,size(var2d,1)
-                    if (var2d_next(i,j) /= MAPL_UNDEF .and. var2d_prev(i,j) /= MAPL_UNDEF) then
-                        var2d(i,j) = var2d_prev(i,j) + alpha*(var2d_next(i,j)-var2d_prev(i,j))
-                    else
-                        var2d(i,j) = MAPL_UNDEF
-                    end if
-                 enddo
-              enddo
-           end if
+
+        if (item%vartype == MAPL_FieldItem) then
+           call ESMF_FieldGet(item%finterp1, localDE=0, farrayPtr=var2d_prev, __RC__)
+           call ESMF_FieldGet(item%finterp2, localDE=0, farrayPtr=var2d_next, __RC__)
+        else if (item%vartype == MAPL_BundleItem) then
+           call ESMFL_BundleGetPointerToData(item%binterp1,name,var2d_prev,__RC__)
+           call ESMFL_BundleGetPointerToData(item%binterp2,name,var2d_next,__RC__)
+        else if (item%vartype == MAPL_ExtDataVectorItem) then
+           ASSERT_(present(vector_comp))
+           if (vector_comp == 1) then
+              call ESMF_FieldGet(item%v1_finterp1, localDE=0, farrayPtr=var2d_prev, __RC__)
+              call ESMF_FieldGet(item%v1_finterp2, localDE=0, farrayPtr=var2d_next, __RC__)
+           else if (vector_comp == 2) then
+              call ESMF_FieldGet(item%v2_finterp1, localDE=0, farrayPtr=var2d_prev, __RC__)
+              call ESMF_FieldGet(item%v2_finterp2, localDE=0, farrayPtr=var2d_next, __RC__)
+          end if
+        end if
+        call ESMF_FieldGet(field, localDE=0, farrayPtr=var2d, __RC__)
+        ! only interpolate if we have to
+        if (time == item%interp_time1 .or. item%doInterpolate .eqv. .false.) then
+           var2d = var2d_prev
+        else if (time == item%interp_time2) then
+           var2d = var2d_next
+        else
            do j=1,size(var2d,2)
               do i=1,size(var2d,1)
-                 if (var2d(i,j) /= MAPL_UNDEF) then
-                    if (item%do_scale .and. (.not.item%do_offset)) var2d(i,j) = item%scale*var2d(i,j)
-                    if ((.not.item%do_scale) .and. item%do_offset) var2d(i,j) = var2d(i,j)+item%offset
-                    if (item%do_scale .and. item%do_offset) var2d(i,j) = item%offset + (item%scale * var2d(i,j))
+                 if (var2d_next(i,j) /= MAPL_UNDEF .and. var2d_prev(i,j) /= MAPL_UNDEF) then
+                     var2d(i,j) = var2d_prev(i,j) + alpha*(var2d_next(i,j)-var2d_prev(i,j))
                  else
                      var2d(i,j) = MAPL_UNDEF
                  end if
               enddo
            enddo
-      else if (fieldRank == 3) then
-           if (item%vartype == MAPL_FieldItem) then
-              call ESMF_FieldGet(item%finterp1, localDE=0, farrayPtr=var3d_prev, __RC__)
-              call ESMF_FieldGet(item%finterp2, localDE=0, farrayPtr=var3d_next, __RC__)
-           else if (item%vartype == MAPL_BundleItem) then
-              call ESMFL_BundleGetPointerToData(item%binterp1,name,var3d_prev,__RC__)
-              call ESMFL_BundleGetPointerToData(item%binterp2,name,var3d_next,__RC__)
-           else if (item%vartype == MAPL_ExtDataVectorItem) then
-              ASSERT_(present(vector_comp))
-              if (vector_comp == 1) then
-                 call ESMF_FieldGet(item%v1_finterp1, localDE=0, farrayPtr=var3d_prev, __RC__)
-                 call ESMF_FieldGet(item%v1_finterp2, localDE=0, farrayPtr=var3d_next, __RC__)
-              else if (vector_comp == 2) then
-                 call ESMF_FieldGet(item%v2_finterp1, localDE=0, farrayPtr=var3d_prev, __RC__)
-                 call ESMF_FieldGet(item%v2_finterp2, localDE=0, farrayPtr=var3d_next, __RC__)
+        end if
+        do j=1,size(var2d,2)
+           do i=1,size(var2d,1)
+              if (var2d(i,j) /= MAPL_UNDEF) then
+                 if (item%do_scale .and. (.not.item%do_offset)) var2d(i,j) = item%scale*var2d(i,j)
+                 if ((.not.item%do_scale) .and. item%do_offset) var2d(i,j) = var2d(i,j)+item%offset
+                 if (item%do_scale .and. item%do_offset) var2d(i,j) = item%offset + (item%scale * var2d(i,j))
+              else
+                  var2d(i,j) = MAPL_UNDEF
               end if
+           enddo
+        enddo
+
+      else if (fieldRank == 3) then
+
+        if (item%vartype == MAPL_FieldItem) then
+           call ESMF_FieldGet(item%finterp1, localDE=0, farrayPtr=var3d_prev, __RC__)
+           call ESMF_FieldGet(item%finterp2, localDE=0, farrayPtr=var3d_next, __RC__)
+        else if (item%vartype == MAPL_BundleItem) then
+           call ESMFL_BundleGetPointerToData(item%binterp1,name,var3d_prev,__RC__)
+           call ESMFL_BundleGetPointerToData(item%binterp2,name,var3d_next,__RC__)
+        else if (item%vartype == MAPL_ExtDataVectorItem) then
+           ASSERT_(present(vector_comp))
+           if (vector_comp == 1) then
+              call ESMF_FieldGet(item%v1_finterp1, localDE=0, farrayPtr=var3d_prev, __RC__)
+              call ESMF_FieldGet(item%v1_finterp2, localDE=0, farrayPtr=var3d_next, __RC__)
+           else if (vector_comp == 2) then
+              call ESMF_FieldGet(item%v2_finterp1, localDE=0, farrayPtr=var3d_prev, __RC__)
+              call ESMF_FieldGet(item%v2_finterp2, localDE=0, farrayPtr=var3d_next, __RC__)
            end if
-           call ESMF_FieldGet(field, localDE=0, farrayPtr=var3d, __RC__)
-           ! only interpolate if we have to
-           if (time == item%interp_time1 .or. item%doInterpolate .eqv. .false.) then
-              var3d = var3d_prev
-           else if (time == item%interp_time2) then
-              var3d = var3d_next
-           else
-              do k=lbound(var3d,3),ubound(var3d,3)
-                 do j=1,size(var3d,2)
-                    do i=1,size(var3d,1)
-                       if (var3d_next(i,j,k) /= MAPL_UNDEF .and. var3d_prev(i,j,k) /= MAPL_UNDEF) then
-                           var3d(i,j,k) = var3d_prev(i,j,k) + alpha*(var3d_next(i,j,k)-var3d_prev(i,j,k))
-                       else
-                           var3d(i,j,k) = MAPL_UNDEF
-                       end if
-                    enddo
-                 enddo
-               enddo
-           end if
+        end if
+        call ESMF_FieldGet(field, localDE=0, farrayPtr=var3d, __RC__)
+        ! only interpolate if we have to
+        if (time == item%interp_time1 .or. item%doInterpolate .eqv. .false.) then
+           var3d = var3d_prev
+        else if (time == item%interp_time2) then
+           var3d = var3d_next
+        else
            do k=lbound(var3d,3),ubound(var3d,3)
               do j=1,size(var3d,2)
                  do i=1,size(var3d,1)
-                    if (var3d(i,j,k) /= MAPL_UNDEF) then
-                       if (item%do_scale .and. (.not.item%do_offset)) var3d(i,j,k) = item%scale*var3d(i,j,k)
-                       if ((.not.item%do_scale) .and. item%do_offset) var3d(i,j,k) = var3d(i,j,k)+item%offset
-                       if (item%do_scale .and. item%do_offset) var3d(i,j,k) = item%offset + (item%scale * var3d(i,j,k))
+                    if (var3d_next(i,j,k) /= MAPL_UNDEF .and. var3d_prev(i,j,k) /= MAPL_UNDEF) then
+                        var3d(i,j,k) = var3d_prev(i,j,k) + alpha*(var3d_next(i,j,k)-var3d_prev(i,j,k))
+
+
                     else
                         var3d(i,j,k) = MAPL_UNDEF
                     end if
                  enddo
               enddo
+            enddo
+        end if
+        do k=lbound(var3d,3),ubound(var3d,3)
+           do j=1,size(var3d,2)
+              do i=1,size(var3d,1)
+                 if (var3d(i,j,k) /= MAPL_UNDEF) then
+                    if (item%do_scale .and. (.not.item%do_offset)) var3d(i,j,k) = item%scale*var3d(i,j,k)
+                    if ((.not.item%do_scale) .and. item%do_offset) var3d(i,j,k) = var3d(i,j,k)+item%offset
+                    if (item%do_scale .and. item%do_offset) var3d(i,j,k) = item%offset + (item%scale * var3d(i,j,k))
+                 else
+                     var3d(i,j,k) = MAPL_UNDEF
+                 end if
+              enddo
            enddo
-           
+        enddo 
      endif
 
      RETURN_(ESMF_SUCCESS)
@@ -2801,26 +4606,31 @@ contains
   ! as we will be making a lat-lon grid to call the HorzTransform
   ! we will need to pass the layout, follows what is done in the
   ! mkiau grid comp
-  subroutine  MAPL_ExtDataReadVector(file,fname1,fname2,time,v1out,v2out,NX,NY,ignoreCase,rc)
-     character(len=*),  intent(in   ) :: file
-     character(len=*),  intent(in   ) :: fname1
-     character(len=*),  intent(in   ) :: fname2
-     type(ESMF_Time),   intent(inout) :: time
-     type(ESMF_Field),  intent(inout) :: v1out
-     type(ESMF_Field),  intent(inout) :: v2out
-     integer,           intent(in   ) :: NX
-     integer,           intent(in   ) :: NY
-     logical,           intent(in   ) :: ignoreCase
+  subroutine  MAPL_ExtDataReadVector(item,file,ExtState,side,rc )
+     use MAPL_AbstractRegridderMod
+     use MAPL_RegridderManagerMod
+     use MAPL_LatLonGridFactoryMod
+     use MAPL_GridManagerMod
+     type(PrimaryExport),              intent(INOUT) :: item
+     character(len=*),                 intent(IN   ) :: file
+     type(MAPL_ExtData_State),         intent(INOUT) :: ExtState
+     integer,                          intent(IN   ) :: side
+
      integer, optional, intent(out  ) :: rc
 
      integer                    :: status
      character(len=ESMF_MAXSTR) :: Iam
 
+     integer :: NX, NY
+     type(ESMF_Time)  :: time
+     type(ESMF_Field) :: v1out, v2out
+     character(len=ESMF_MAXSTR) :: fname1, fname2
+     logical :: ignoreCase
      integer :: fid
-     integer :: im_world, jm_world, lmIn, nt, nvars, natts
+     integer :: im_world, jm_world, lmIn, nt, nvars, natts, vdir
      integer :: imIn, jmIn, imOut, jmOut, lmOut
-     type(ESMF_Grid) :: gridIn, gridOut
-     type(MAPL_HorzTransform) :: trans
+     type(ESMF_Grid) :: gridIn, gridOut, newGrid
+     class (AbstractRegridder), pointer :: regridder
 
      real, pointer :: v1out_3d(:,:,:) => null()
      real, pointer :: v2out_3d(:,:,:) => null()
@@ -2831,6 +4641,10 @@ contains
      real, pointer :: v2in_3d(:,:,:) => null()
      real, pointer :: v1in_2d(:,:) => null()
      real, pointer :: v2in_2d(:,:) => null()
+     real, pointer :: ptr1_3d(:,:,:) => null()
+     real, pointer :: ptr2_3d(:,:,:) => null()
+
+     type(ESMF_Field) :: field,newField1,newField2, psF
 
      integer           :: gridStagger1,gridStagger2
      integer           :: gridRotation1,gridRotation2
@@ -2838,21 +4652,59 @@ contains
 
      integer           :: fieldRank 
      integer           :: DIMS(ESMF_MAXGRIDDIM)
+     type (LatLonGridFactory) :: factory
 
      Iam = "MAPL_ExtDataReadVector"
+
+     fname1 = item%fcomp1
+     fname2 = item%fcomp2
+     call ESMF_ConfigGetAttribute(ExtState%cf,value=NX,Label="NX:",__RC__)
+     call ESMF_ConfigGetAttribute(ExtState%cf,value=NY,Label="NY:",__RC__)
+     ignorecase=ExtState%ignoreCase
 
      ! query the file to get the size of the lat-lon grid on the file
      call CFIO_Open(file,1,fid,status)
      VERIFY_(STATUS)
-     call CFIO_DimInquire(fid,im_world,jm_world,lmIn,nt,nvars,natts,status)
+     call CFIO_DimInquire(fid,im_world,jm_world,lmIn,nt,nvars,natts,vdir,status)
      VERIFY_(STATUS)
      call CFIO_Close(fid,status)
      VERIFY_(STATUS)
 
-     call ESMF_AttributeGet(v1out, NAME='STAGGERING', value=gridStagger1, __RC__)
-     call ESMF_AttributeGet(v2out, NAME='STAGGERING', value=gridStagger2, __RC__)
-     call ESMF_AttributeGet(v1out, NAME='ROTATION',value=gridRotation1,__RC__)
-     call ESMF_AttributeGet(v2out, NAME='ROTATION',value=gridRotation2,__RC__)
+     if (item%do_vertInterp .or. item%do_Fill) then
+        call MAPL_ExtDataGetBracket(item,side,field=NewField1,vcomp=1,__RC__)
+        call MAPL_ExtDataGetBracket(item,side,field=NewField2,vcomp=2,__RC__)
+        call ESMF_FieldGet(NewField1,grid=gridOut,__RC__)
+        newGrid = MAPL_ExtDataGridChangeLev(gridOut,ExtState%cf,item%lm,__RC__)
+        call MAPL_GridGet(gridOut, localCellCountPerDim=dims,__RC__)
+        imOut = dims(1)
+        jmOut = dims(2)
+        allocate(ptr1_3d(imOut,jmOut,lmIn),__STAT__)
+        allocate(ptr2_3d(imOut,jmOut,lmIn),__STAT__)
+        v1out = ESMF_FieldCreate(grid=newGrid, &
+                dataCopyFlag = ESMF_DATACOPY_REFERENCE, &
+                farrayPtr = ptr1_3d, __RC__) 
+        v2out = ESMF_FieldCreate(grid=newGrid, &
+                dataCopyFlag = ESMF_DATACOPY_REFERENCE, &
+                farrayPtr = ptr2_3d, __RC__)
+        call MAPL_FieldCopyAttributes(NewField1,v1out,__RC__)
+        call MAPL_FieldCopyAttributes(NewField2,v2out,__RC__)
+     else
+        call MAPL_ExtDataGetBracket(item,side,field=v1out,vcomp=1,__RC__)
+        call MAPL_ExtDataGetBracket(item,side,field=v2out,vcomp=2,__RC__)
+     end if
+
+     if (side == MAPL_ExtDataLeft) then
+        time  = item%time1
+     else if (side == MAPL_ExtDataRight) then
+        time  = item%time2
+     end if
+
+     call MAPL_ExtDataGetBracket(item,side,field=Field,vcomp=1,__RC__)
+     call ESMF_AttributeGet(field, NAME='STAGGERING', value=gridStagger1, __RC__)
+     call ESMF_AttributeGet(field, NAME='ROTATION',value=gridRotation1,__RC__)
+     call MAPL_ExtDataGetBracket(item,side,field=Field,vcomp=2,__RC__)
+     call ESMF_AttributeGet(field, NAME='STAGGERING', value=gridStagger2, __RC__)
+     call ESMF_AttributeGet(field, NAME='ROTATION',value=gridRotation2,__RC__)
 
      ASSERT_(gridStagger1 == gridStagger2)
      ASSERT_(gridRotation1 == gridRotation2)
@@ -2877,14 +4729,9 @@ contains
         end if
      end if
           
-
-     gridIn = MAPL_LatLonGridCreate(name='gridll',       &
-                                    NX = NX,             &
-                                    NY = NY,             &
-                                    IM_World = IM_World, &
-                                    JM_World = JM_World, &
-                                    LM_World = lmIn ,    &
-                                    __RC__)
+     factory = LatLonGridFactory(im_world=IM_WORLD, jm_world=jm_world, &
+          & nx=nx, ny=ny, lm=lmIn, __RC__)
+     gridIn = factory%make_grid(__RC__)
 
      call MAPL_GridGet(gridIn, localCellCountPerDim=dims,__RC__)
      imIn = dims(1)
@@ -2896,7 +4743,8 @@ contains
      jmOut = dims(2)
 
 
-     call MAPL_HorzTransformCreate(trans,gridIn,gridOut,__RC__)
+!!$     call MAPL_HorzTransformCreate(trans,gridIn,gridOut,__RC__)
+     regridder => regridder_manager%make_regridder(gridIn, gridOut, REGRID_METHOD_BILINEAR,__RC__)
 
      if (fieldRank == 2) then
 
@@ -2919,25 +4767,23 @@ contains
          v1out_3d(:,:,1) = v1out_2d
          v2out_3d(:,:,1) = v2out_2d
          
-         call MAPL_HorzTransformRun (trans, v1in_3d, v2in_3d, v2out_3d, v2out_3d, rotate=doRotation, __RC__)
+!!$         call MAPL_HorzTransformRun (trans, v1in_3d, v2in_3d, v2out_3d, v2out_3d, rotate=doRotation, __RC__)
+         call regridder%regrid(v1in_3d, v2in_3d, v1out_3d, v2out_3d)
 
          if (gridStagger1 == MAPL_CGrid) then
-             call A2D2C(v1out_3d,v2out_3d,1,getC=.true.)
+             call A2D2C(gridOut,v1out_3d,v2out_3d,1,getC=.true.)
          else if (gridStagger1 == MAPL_DGrid) then
-             call A2D2C(v1out_3d,v2out_3d,1,getC=.false.)
+             call A2D2C(gridOut,v1out_3d,v2out_3d,1,getC=.false.)
          end if
 
          v1out_2d = v1out_3d(:,:,1)
          v2out_2d = v2out_3d(:,:,1)
 
          deallocate(v1in_3d,v2in_3d,v1in_2d,v2in_2d,v1out_3d,v2out_3d,__STAT__)
-
      else if (fieldRank == 3) then
         
          call ESMF_FieldGet(v1out,localDe=0,farrayPtr=v1out_3d,__RC__)
          call ESMF_FieldGet(v2out,localDe=0,farrayPtr=v2out_3d,__RC__)
-         lmOut = size(v1out_3d,3)
-         ASSERT_(lmOut == lmIn)
          
          allocate(v1in_3d(imIn,jmIn,lmIn),__STAT__)
          allocate(v2in_3d(imIn,jmIn,lmIn),__STAT__)
@@ -2945,12 +4791,35 @@ contains
          call MAPL_CFIORead(fname1, file, time, gridIn, v1in_3d,ignoreCase=ignoreCase,__RC__)
          call MAPL_CFIORead(fname2, file, time, gridIn, v2in_3d,ignoreCase=ignoreCase,__RC__)
          
-         call MAPL_HorzTransformRun (trans, v1in_3d, v2in_3d, v1out_3d, v2out_3d, rotate=doRotation, __RC__)
+!!$         call MAPL_HorzTransformRun (trans, v1in_3d, v2in_3d, v2out_3d, v2out_3d, rotate=doRotation, __RC__)
+         call regridder%regrid(v1in_3d, v2in_3d, v1out_3d, v2out_3d)
 
+         if (item%do_vertInterp) then
+            call MAPL_ExtDataGetBracket(item,side,field=newField1,vcomp=1,__RC__)
+            call MAPL_ExtDataGetBracket(item,side,field=newField2,vcomp=2,__RC__)
+            nt = ExtState%PrimaryOrder(1)
+            call MAPL_ExtDataGetBracket(ExtState%primary%item(nt),side,field=psF,__RC__)
+           
+            call vertInterpolation_pressKappa(newfield1,v1out,psF,item%levs,MAPL_UNDEF,__RC__)
+            call vertInterpolation_pressKappa(newfield2,v2out,psF,item%levs,MAPL_UNDEF,__RC__)
+            call ESMF_FieldGet(newField1,localDe=0,farrayPtr=v1out_3d,__RC__)
+            call ESMF_FieldGet(newField2,localDe=0,farrayPtr=v2out_3d,__RC__)
+            deallocate(ptr1_3d,ptr2_3d)
+         else if (item%do_Fill) then
+            call MAPL_ExtDataGetBracket(item,side,field=newField1,vcomp=1,__RC__)
+            call MAPL_ExtDataGetBracket(item,side,field=newField2,vcomp=2,__RC__)
+            call MAPL_ExtDataFillField(newfield1,v1out,__RC__)
+            call MAPL_ExtDataFillField(newfield2,v2out,__RC__)
+            call ESMF_FieldGet(newField1,localDe=0,farrayPtr=v1out_3d,__RC__)
+            call ESMF_FieldGet(newField2,localDe=0,farrayPtr=v2out_3d,__RC__)
+            deallocate(ptr1_3d,ptr2_3d)
+         end if
+
+         lmout = size(v1out_3d,3)
          if (gridStagger1 == MAPL_CGrid) then
-            call A2D2C(v1out_3d,v2out_3d,lmOut,getC=.true.)
+            call A2D2C(gridOut,v1out_3d,v2out_3d,lmOut,getC=.true.)
          else if (gridStagger1 == MAPL_DGrid) then
-            call A2D2C(v1out_3d,v2out_3d,lmOut,getC=.false.)
+            call A2D2C(gridOut,v1out_3d,v2out_3d,lmOut,getC=.false.)
          end if
 
          deallocate(v1in_3d,v2in_3d,__STAT__)
@@ -2960,6 +4829,63 @@ contains
      RETURN_(ESMF_SUCCESS)
 
   end subroutine MAPL_ExtDataReadVector
+
+
+  subroutine GetMaskName(FuncStr,Var,Needed,rc)
+     character(len=*),               intent(in)    :: FuncStr
+     character(len=*),               intent(in)    :: Var(:)
+     logical,                        intent(inout) :: needed(:)
+     integer, optional,              intent(out)   :: rc
+
+     character(len=ESMF_MAXSTR)      :: Iam = "GetMaskName"
+     integer                         :: status
+     integer                         :: i1,i2,i,ivar
+     logical                         :: found,twovar
+     character(len=ESMF_MAXSTR)      :: tmpstring,tmpstring1,tmpstring2,functionname
+
+     i1 = index(Funcstr,"(")
+     ASSERT_(i1 > 0)
+     functionname = adjustl(Funcstr(:i1-1))
+     functionname = ESMF_UtilStringLowerCase(functionname, __RC__)
+     if (trim(functionname) == "regionmask") twovar = .true.
+     if (trim(functionname) == "zonemask") twovar = .false.
+     if (trim(functionname) == "boxmask") twovar = .false.
+     tmpstring = adjustl(Funcstr(i1+1:))
+     i1 = index(tmpstring,",")
+     ASSERT_(i1 > 0)
+     i2 = index(tmpstring,";")
+     if (twovar) then
+        tmpstring1 = adjustl(tmpstring(1:i1-1))
+        tmpstring2 = adjustl(tmpstring(i1+1:i2-1))
+     else
+        tmpstring1 = adjustl(tmpstring(1:i1-1))
+     end if
+
+     found = .false.
+     do i=1,size(var)
+        if ( trim(tmpstring1) == trim(var(i)) ) then
+           ivar = i
+           found = .true.
+           exit
+        end if
+     end do
+     ASSERT_(found)
+     needed(ivar) = .true.
+
+     if (twovar) then
+        found = .false.
+        do i=1,size(var)
+           if ( trim(tmpstring2) == trim(var(i)) ) then
+              ivar = i
+              found = .true.
+              exit
+           end if
+        end do
+        ASSERT_(found)
+        needed(ivar) = .true.
+     end if
+     RETURN_(ESMF_SUCCESS)
+  end subroutine GetMaskName
 
   subroutine MAPL_ExtDataEvaluateMask(state,exportName,exportExpr,rc)
 
@@ -2999,10 +4925,9 @@ contains
     i1 = index(exportExpr,"(")
     ASSERT_(i1 > 0)
     functionname = adjustl(exportExpr(:i1-1))
-    functionname = ESMF_UtilStringLowerCase(functionname,rc=status)
+    functionname = ESMF_UtilStringLowerCase(functionname, __RC__)
 
     if (trim(functionname) == "regionmask") then
-
        ! get mask string
        ib = index(exportExpr,";")
        ie = index(exportExpr,")")
@@ -3056,7 +4981,6 @@ contains
           enddo
        end if
        deallocate( mask)
-
     elseif(trim(functionname) == "zonemask") then
 
        ib = index(exportExpr,"(")
@@ -3099,7 +5023,6 @@ contains
        end if
 
     elseif(trim(functionname) == "boxmask") then
-
        is=index(exportExpr,'(')
        ie=index(exportExpr,')')
        strtmp = exportExpr(is+1:ie-1)
@@ -3113,7 +5036,7 @@ contains
           strtmp = strtmp(is+1:)
        end do
 
-       varToMask=args(1) 
+       varToMask=args(1)
 
        READ(args(2),*,IOSTAT=status) limitS
        VERIFY_(status)
@@ -3134,7 +5057,7 @@ contains
        call ESMF_GridGetCoord(grid, coordDim=2, localDE=0, &
             staggerloc=ESMF_STAGGERLOC_CENTER, farrayPtr=lats, rc=status)
        VERIFY_(status)
-        
+
        ! do some tests if cube goes from 0 to 360, lat-lon -180 to 180
        call MAPL_GridGet(grid, globalCellCountPerDim=COUNTS,rc=status)
        VERIFY_(STATUS)
@@ -3146,7 +5069,6 @@ contains
 
        twoBox = .false.
        if (isCube) then
-
           if (limitW < 0.0d0 .and. limitE >=0.0d0) then
              ! need two boxes
              twoBox=.true.
@@ -3154,7 +5076,7 @@ contains
              limitE1=limitE
              limitW2=limitW+360.0d0
              limitE2=360.0d0
- 
+
           else if (limitW <0.0d0 .and. limitE <0.0d0) then
              ! just shift
              limitW1=limitW+360.d0
@@ -3194,7 +5116,6 @@ contains
 
        limitN=limitN*MAPL_PI_R8/180.0d0
        limitS=limitS*MAPL_PI_R8/180.0d0
-
        if (rank == 2) then
           call MAPL_GetPointer(state,rvar2d,vartomask,__RC__)
           call MAPL_GetPointer(state,var2d,exportName,__RC__)
@@ -3204,7 +5125,7 @@ contains
        else
           ASSERT_(.false.)
        end if
-      
+
        if (rank == 2) then
           var2d = 0.0
           where(limitS <= lats .and. lats <=limitN .and. limitW1 <= lons .and. lons <= limitE1 ) var2d = rvar2d
@@ -3307,7 +5228,7 @@ contains
 !EOP
  CHARACTER(LEN=*), PARAMETER :: Iam = 'Chem_UtilExtractIntegers'
 
- INTEGER :: base,count,i,iDash,last,lenStr,status
+ INTEGER :: base,count,i,iDash,last,lenStr
  INTEGER :: multiplier,pos,posDelim,sign
  CHARACTER(LEN=255) :: str
  CHARACTER(LEN=1) :: char,delimChar
@@ -3439,21 +5360,51 @@ contains
      integer                               :: status
 
      integer :: iyr,imm,idd,ihr,imn,isc,begDate,begTime
-     type(ESMF_CFIO) :: cfio
+     type(ESMF_CFIO), pointer :: cfio
 
-     cfio =  ESMF_CFIOCreate (cfioObjName='cfio_obj',__RC__)
-     call ESMF_CFIOSet(CFIO, fName=fname,__RC__)
-     call ESMF_CFIOFileOpen  (CFIO, FMODE=1, cyclic=.false.,__RC__)
+     call MAPL_CFIORegistryGet(trim(fname),cfio,__RC__)
      begDate = cfio%date
      begTime = cfio%begTime
      call MAPL_UnpackTime(begDate,iyr,imm,idd)
      call MAPL_UnpackTime(begTime,ihr,imn,isc)
      call ESMF_TimeSet(sTime, yy=iyr, mm=imm, dd=idd,  h=ihr,  m=imn, s=isc, __RC__)
-     call ESMF_CFIODestroy(CFIO,__RC__)
+     nullify(CFIO)
 
      RETURN_(ESMF_SUCCESS)
 
   end function MAPL_ExtDataGetFStartTime
+
+  subroutine AdvanceAndCount(CF,nLines,rc)
+
+     type(ESMF_Config), intent(inout) :: cf
+     integer, intent(out)             :: nLines
+     integer, optional, intent(out)   :: rc
+
+     integer :: iCnt
+     logical :: inBlock
+     character(len=ESMF_MAXSTR) :: thisLine
+     integer :: status
+     character(len=ESMF_MAXSTR) :: Iam
+     Iam = "AdvanceAndCount"
+
+     inBlock = .true.
+     iCnt = 0
+     do while(inBlock)
+         call ESMF_ConfigNextLine(CF,rc=status)
+         VERIFY_(STATUS)
+         call ESMF_ConfigGetAttribute(CF,thisLine,rc=status)
+         VERIFY_(STATUS)
+         if (trim(thisLine) == "%%") then 
+            inBlock = .false.
+         else 
+            iCnt = iCnt + 1
+         end if
+     end do
+     nLines = iCnt
+
+     RETURN_(ESMF_SUCCESS)
+
+  end subroutine advanceAndCount
 
   subroutine CheckUpdate(doUpdate,updateTime,currTime,hasRun,primaryItem,derivedItem,rc) 
      logical,                       intent(out  ) :: doUpdate
@@ -3464,7 +5415,6 @@ contains
      type(DerivedExport), optional, intent(inout) :: derivedItem
      integer,             optional, intent(out  ) :: rc
 
-     logical                    :: isEnabled
      character(len=ESMF_MAXSTR) :: Iam
      integer                    :: status
      type(ESMF_Time)            :: time,time0,refresh_time
@@ -3512,14 +5462,15 @@ contains
               updateTime = time0
               if (.not. associated(derivedItem%refresh_time)) then
                 doUpdate = .false.
-              end if
-              refresh_time = timestamp_(time, derivedItem%refresh_template, __RC__)
-              if (refresh_time /= derivedItem%refresh_time) then
-                 doUpdate = .true.
-                 derivedItem%refresh_time = refresh_time
-                 time = refresh_time
               else
-                 doUpdate = .false.
+                 refresh_time = timestamp_(time, derivedItem%refresh_template, __RC__)
+                 if (refresh_time /= derivedItem%refresh_time) then
+                    doUpdate = .true.
+                    derivedItem%refresh_time = refresh_time
+                    time = refresh_time
+                 else
+                    doUpdate = .false.
+                 end if
               end if
            end if
         end if
@@ -3528,62 +5479,141 @@ contains
      RETURN_(ESMF_SUCCESS)
   end subroutine CheckUpdate
 
+  subroutine SetRefreshAlarms(clock,primaryItem,derivedItem,rc) 
+     type(ESMF_Clock),              intent(inout) :: Clock
+     type(PrimaryExport), optional, intent(inout) :: primaryItem
+     type(DerivedExport), optional, intent(inout) :: derivedItem
+     integer,             optional, intent(out  ) :: rc
+
+     integer                    :: pindex,cindex,iyy,imm,idd,ihh,imn,isc
+     character(len=ESMF_MAXSTR) :: refresh_template,ctInt
+     character(len=ESMF_MAXSTR) :: Iam
+     type(ESMF_TimeInterval)    :: tInterval
+     integer                    :: status
+     Iam = "SetRefreshAlarms"
+
+     if (present(primaryItem)) then
+        refresh_template = primaryItem%refresh_template
+     else if (present(derivedItem)) then
+        refresh_template = derivedItem%refresh_template
+     end if
+     pindex = index(refresh_template,'P')
+     if (pindex > 0) then
+        ! now get time interval. Put 0000-00-00 in front if not there so parsetimeunits doesn't complain
+        ctInt = refresh_template(pindex+1:)
+        cindex = index(ctInt,'T')
+        if (cindex == 0) ctInt = '0000-00-00T'//trim(ctInt)
+        call MAPL_NCIOParseTimeUnits(ctInt,iyy,imm,idd,ihh,imn,isc,status)
+        VERIFY_(STATUS)
+        call ESMF_TimeIntervalSet(tInterval,yy=iyy,mm=imm,d=idd,h=ihh,m=imn,s=isc,rc=status)
+        VERIFY_(STATUS) 
+        if (present(primaryItem)) then 
+           primaryItem%update_alarm = ESMF_AlarmCreate(clock=clock,ringInterval=tInterval,sticky=.false.,rc=status)
+           VERIFY_(STATUS)
+           primaryItem%alarmIsEnabled = .true.
+        else if (present(derivedItem)) then
+           DerivedItem%update_alarm = ESMF_AlarmCreate(clock=clock,ringInterval=tInterval,sticky=.false.,rc=status)
+           VERIFY_(STATUS)
+           derivedItem%alarmIsEnabled = .true.
+        end if
+     end if
+
+     RETURN_(ESMF_SUCCESS)
+  end subroutine SetRefreshAlarms
+
   ! This is a routine to make the appropriate call to MAPL_CFIO so we do not need to
   ! duplicate the calls with lots of if/else for voting, fractional etc ...
-  subroutine MAPL_ExtDataGridCompRead(file,time,trans,val,ignorecase,field,bundle,name,rc)
+  subroutine MAPL_ExtDataGridCompRead(item,file,ExtState,side,rc)
+     type(PrimaryExport),              intent(INOUT) :: item
      character(len=*),                 intent(IN   ) :: file
-     type(ESMF_Time),                  intent(INOUT) :: time
-     integer,                          intent(IN   ) :: trans
-     integer,                          intent(IN   ) :: val
-     logical,                          intent(IN   ) :: ignorecase
-     type(ESMF_Field),       optional, intent(INOUT) :: field
-     type(ESMF_FieldBundle), optional, intent(INOUT) :: bundle
-     character(len=*),       optional, intent(IN   ) :: name
+     type(MAPL_ExtData_State),         intent(INOUT) :: ExtState
+     integer,                          intent(IN   ) :: side
      integer,                optional, intent(  OUT) :: rc
 
      character(len = ESMF_MAXSTR) :: Iam
      integer                      :: Status
 
+     type(ESMF_Field)             :: field
+     type(ESMF_FieldBundle)       :: bundle
+     type(ESMF_Time)              :: time
+     character(len=ESMF_MAXSTR)   :: name
+     integer                      :: trans
+     integer                      :: val
+     integer                      :: id_ps
+     logical                      :: ignoreCase
+     type(ESMF_Grid)              :: newGrid, Grid
+     type(ESMF_Field)             :: newField,psF
+
      Iam = "MAPL_ExtDataGridCompRead"
 
-     if (present(field)) then
-        ASSERT_(present(name))
+     if (side == MAPL_ExtDataLeft) then
+        time = item%time1
+     else if (side == MAPL_ExtDataRight) then 
+        time = item%time2
+     end if
+     name  = trim(item%var)
+     trans = item%trans
+     val   = item%FracVal
+     ignoreCase = ExtState%ignoreCase
+
+     if ((item%do_Fill .or. item%do_VertInterp) .and. item%VarType == MAPL_FieldItem) then
+
+        ASSERT_(item%VarType == MAPL_FieldItem)
+        call MAPL_ExtDataGetBracket(item,side,field=Field,__RC__) 
+        call ESMF_FieldGet(field,grid=grid,__RC__)
+        newGrid = MAPL_ExtDataGridChangeLev(grid,ExtState%cf,item%lm,__RC__)
+        newField = MAPL_FieldCreate(field,newGrid,lm=item%lm,newName=name,__RC__)
+     
+     else if (.not. item%do_VertInterp .and. .not. item%do_Fill .and. item%VarType == MAPL_FieldItem) then
+ 
+        call MAPL_ExtDataGetBracket(item,side,field=NewField,__RC__)
+
      end if
 
-     if (present(field)) then
-        if (trans == MAPL_HorzTransOrderBilinear) then
-           call MAPL_CFIORead(name, file, time, field, &
+     if (item%VarType == MAPL_FieldItem) then
+!!$        if (trans == MAPL_HorzTransOrderBilinear) then
+        if (trans == REGRID_METHOD_BILINEAR) then
+           call MAPL_CFIORead(name, file, time, newfield, &
                 time_is_cyclic=.false., time_interp=.false., ignoreCase = ignoreCase, &
-                __RC__) 
-        else if (trans == MAPL_HorzTransOrderBinning) then
-           call MAPL_CFIORead(name, file, time, field, &
+                __RC__)
+!!$        else if (trans == MAPL_HorzTransOrderBinning) then
+        else if (trans == REGRID_METHOD_CONSERVE) then
+           call MAPL_CFIORead(name, file, time, newfield, &
                 time_is_cyclic=.false., time_interp=.false., ignoreCase = ignoreCase, &
-                Conservative = .true., __RC__) 
-        else if (trans == MAPL_HorzTransOrderSample) then
-           call MAPL_CFIORead(name, file, time, field, &
+                Conservative = .true., __RC__)
+!!$        else if (trans == MAPL_HorzTransOrderSample) then
+        else if (trans == REGRID_METHOD_VOTE) then
+           call MAPL_CFIORead(name, file, time, newfield, &
                 time_is_cyclic=.false., time_interp=.false., ignoreCase = ignoreCase, &
-                Conservative = .true., Voting = .true., __RC__) 
-        else if (trans == MAPL_HorzTransOrderFraction) then
-           call MAPL_CFIORead(name, file, time, field, &
+                Conservative = .true., Voting = .true., __RC__)
+!!$        else if (trans == MAPL_HorzTransOrderFraction) then
+        else if (trans == REGRID_METHOD_FRACTION) then
+           call MAPL_CFIORead(name, file, time, newfield, &
                 time_is_cyclic=.false., time_interp=.false., ignoreCase = ignoreCase, &
-                Conservative = .true., getFrac = val, __RC__) 
+                Conservative = .true., getFrac = val, __RC__)
         end if
 
-     else if (present(bundle)) then
+     else if (item%VarType == MAPL_BundleItem) then
 
-        if (trans == MAPL_HorzTransOrderBilinear) then
+        call MAPL_ExtDataGetBracket(item,side,bundle=bundle,__RC__)
+
+!!$        if (trans == MAPL_HorzTransOrderBilinear) then
+        if (trans == REGRID_METHOD_BILINEAR) then
            call MAPL_CFIORead(file, time, bundle, &
                 time_is_cyclic=.false., time_interp=.false., ignoreCase = ignoreCase, &
                 __RC__)
-        else if (trans == MAPL_HorzTransOrderBinning) then
+!!$        else if (trans == MAPL_HorzTransOrderBinning) then
+        else if (trans == REGRID_METHOD_CONSERVE) then
            call MAPL_CFIORead(file, time, bundle, &
                 time_is_cyclic=.false., time_interp=.false., ignoreCase = ignoreCase, &
                 Conservative = .true., __RC__)
-        else if (trans == MAPL_HorzTransOrderSample) then
+!!$        else if (trans == MAPL_HorzTransOrderSample) then
+        else if (trans == REGRID_METHOD_VOTE) then
            call MAPL_CFIORead(file, time, bundle, &
                 time_is_cyclic=.false., time_interp=.false., ignoreCase = ignoreCase, &
                 Conservative = .true., Voting = .true., __RC__)
-        else if (trans == MAPL_HorzTransOrderFraction) then
+!!$        else if (trans == MAPL_HorzTransOrderFraction) then
+        else if (trans == REGRID_METHOD_FRACTION) then
            call MAPL_CFIORead(file, time, bundle, &
                 time_is_cyclic=.false., time_interp=.false., ignoreCase = ignoreCase, &
                 Conservative = .true., getFrac = val, __RC__)
@@ -3591,85 +5621,148 @@ contains
 
      end if
 
-     RETURN_(ESMF_SUCCESS)
+     if (item%do_VertInterp .and. item%VarType == MAPL_FieldItem) then
+        call MAPL_ExtDataGetBracket(item,side,field=Field,__RC__) 
+        id_ps = ExtState%primaryOrder(1)
+        call MAPL_ExtDataGetBracket(ExtState%primary%item(id_ps),side,field=psF,__RC__)
+        call vertInterpolation_pressKappa(field,newfield,psF,item%levs,MAPL_UNDEF,__RC__)
 
-  end subroutine MAPL_ExtDataGridCompRead
-
-! ............................................................................
-
-  type (ESMF_Time) function timestamp_(time, template, rc)
-     type(ESMF_Time), intent(inout)         :: time
-     character(len=ESMF_MAXSTR), intent(in) :: template
-     integer, optional, intent(inout)       :: rc 
-
-      __Iam__('timestamp_')
-
-     ! locals
-     integer, parameter :: DATETIME_MAXSTR_ = 32
-     integer :: yy, mm, dd, hs, ms, ss
-     character(len=DATETIME_MAXSTR_) :: buff, buff_date, buff_time
-     character(len=DATETIME_MAXSTR_) :: str_yy, str_mm, str_dd
-     character(len=DATETIME_MAXSTR_) :: str_hs, str_ms, str_ss
-
-     integer :: i, il, ir
-     integer :: stat
-    
-     ! test the length of the timestamp template
-     ASSERT_(len_trim(template) < DATETIME_MAXSTR_)
-
-     buff = trim(template)
-     buff = ESMF_UtilStringLowerCase(buff, rc=stat)
-      
-     ! test if the template is empty and return the current time as result
-     if (buff == '-'  .or. buff == '--'   .or. buff == '---' .or. &
-         buff == 'na' .or. buff == 'none' .or. buff == 'n/a') then
-
-        timestamp_ = time
-     else   
-        ! split the time stamp template into a date and time strings
-        i = scan(buff, 't')
-        ASSERT_(i > 3)
-
-        buff_date = buff(1:i-1)
-        buff_time = buff(i+1:)
-
-        ! parse the date string
-        il = scan(buff_date, '-', back=.false.)
-        ir = scan(buff_date, '-', back=.true. )
-        str_yy = trim(buff_date(1:il-1))
-        str_mm = trim(buff_date(il+1:ir-1))
-        str_dd = trim(buff_date(ir+1:))
-
-        ! parse the time string
-        il = scan(buff_time, ':', back=.false.)
-        ir = scan(buff_time, ':', back=.true. )
-        str_hs = trim(buff_time(1:il-1))
-        str_ms = trim(buff_time(il+1:ir-1))
-        str_ss = trim(buff_time(ir+1:))
-     
-        ! remove the trailing 'Z' from the seconds string
-        i = scan(str_ss, 'z')
-        if (i > 0) then
-           str_ss = trim(str_ss(1:i-1))
-        end if
-
-        ! apply the timestamp template
-        call ESMF_TimeGet(time, yy=yy, mm=mm, dd=dd, h=hs, m=ms, s=ss, __RC__)
-
-        i = scan(str_yy, '%'); if (i == 0) read (str_yy, '(I4)'), yy
-        i = scan(str_mm, '%'); if (i == 0) read (str_mm, '(I2)'), mm
-        i = scan(str_dd, '%'); if (i == 0) read (str_dd, '(I2)'), dd
-        i = scan(str_hs, '%'); if (i == 0) read (str_hs, '(I2)'), hs
-        i = scan(str_ms, '%'); if (i == 0) read (str_ms, '(I2)'), ms
-        i = scan(str_ss, '%'); if (i == 0) read (str_ss, '(I2)'), ss
-
-        call ESMF_TimeSet(timestamp_, yy=yy, mm=mm, dd=dd, h=hs, m=ms, s=ss, __RC__)
+     else if (item%do_Fill .and. item%VarType == MAPL_FieldItem) then
+        call MAPL_ExtDataFillField(field,newfield,rc=status)
+        VERIFY_(STATUS)
      end if
 
      RETURN_(ESMF_SUCCESS)
 
-  end function timestamp_
+  end subroutine MAPL_ExtDataGridCompRead
 
-#endif
+  function MAPL_ExtDataGridChangeLev(Grid,CF,lm,rc) result(NewGrid)
+
+     type(ESMF_Grid), intent(inout) :: Grid
+     type(ESMF_Config), intent(inout) :: CF
+     integer,         intent(in)    :: lm
+     integer, optional, intent(out) :: rc
+
+     integer :: status
+     character(len=ESMF_MAXSTR) :: Iam
+
+     character(len=ESMF_MAXSTR) :: gname
+     integer :: counts(3)
+     integer :: NX,NY
+     type(ESMF_Grid)           :: newGrid
+!     type(ESMF_Grid), external :: AppGridCreateF
+
+     IAM = "MAPL_ExtDataGridChangeLev"
+
+
+     call MAPL_GridGet(grid,globalCellCountPerDim=counts,__RC__)
+     call ESMF_GridGet(grid,name=gName,__RC__)
+     call ESMF_ConfigGetAttribute(CF, value = NX, Label="NX:", __RC__)
+     call ESMF_ConfigGetAttribute(CF, value = NY, Label="NY:", __RC__)
+     if (counts(2) == 6*counts(1)) then
+        newgrid = AppGridCreateF(counts(1),counts(2),lm,NX,NY,status)
+        VERIFY_(STATUS)
+     else
+        newgrid = MAPL_LatLonGridCreate(name="gName", &
+                              NX = NX,                &
+                              NY = NY,                &
+                              IM_World = counts(1),   &
+                              JM_World = counts(2),   &
+                              LM_World = lm,     &
+                                    RC=STATUS )
+        VERIFY_(STATUS)
+     end if
+     RETURN_(ESMF_SUCCESS)
+
+  end function MAPL_ExtDataGridChangeLev
+
+  subroutine MAPL_ExtDataGetBracket(item,Bside,field,bundle,vcomp,rc)
+
+     type(PrimaryExport),              intent(inout) :: item
+     integer,                          intent(in   ) :: bside
+     type(ESMF_Field),       optional, intent(inout) ::field
+     type(ESMF_FieldBundle), optional, intent(inout) ::bundle
+     integer,                optional, intent(in   ) :: vcomp
+     integer,                optional, intent(out  ) :: rc
+
+     character(len=ESMF_MAXSTR) :: Iam
+     
+     Iam = "MAPL_ExtDataGetBracket"
+
+     if (present(vcomp)) then
+
+        if (present(field)) then
+           if (Bside == MAPL_ExtDataLeft .and. vcomp == 1) then 
+              field = item%v1_finterp1
+              RETURN_(ESMF_SUCCESS)
+           else if (Bside == MAPL_ExtDataLeft .and. vcomp == 2) then 
+              field = item%v2_finterp1
+              RETURN_(ESMF_SUCCESS)
+           else if (Bside == MAPL_ExtDataRight .and. vcomp == 1) then 
+              field = item%v1_finterp2
+              RETURN_(ESMF_SUCCESS)
+           else if (Bside == MAPL_ExtDataRight .and. vcomp == 2) then 
+              field = item%v2_finterp2
+              RETURN_(ESMF_SUCCESS)
+           end if
+        else if (present(bundle)) then
+           RETURN_(ESMF_FAILURE)
+        end if
+
+     else
+
+        if (present(field)) then
+           if (Bside == MAPL_ExtDataLeft) then 
+              field = item%finterp1
+              RETURN_(ESMF_SUCCESS)
+           else if (Bside == MAPL_ExtDataRight) then 
+              field = item%finterp2
+              RETURN_(ESMF_SUCCESS)
+           end if
+        else if (present(bundle)) then
+           if (Bside == MAPL_ExtDataLeft) then 
+              bundle = item%binterp1
+              RETURN_(ESMF_SUCCESS)
+           else if (Bside == MAPL_ExtDataRight) then 
+              bundle = item%binterp2
+              RETURN_(ESMF_SUCCESS)
+           end if
+
+        end if
+
+     end if
+     RETURN_(ESMF_FAILURE)
+
+  end subroutine MAPL_ExtDataGetBracket
+
+  subroutine MAPL_ExtDataFillField(FieldF,FieldR,rc)
+
+  type(ESMF_Field), intent(inout) :: FieldF
+  type(ESMF_Field), intent(inout) :: FieldR
+  integer, optional, intent(out)  :: rc
+
+  character(len=ESMF_MAXSTR) :: Iam
+  integer :: status
+
+  real, pointer :: ptrF(:,:,:),ptrR(:,:,:)
+  integer :: lm_in,lm_out,i
+
+  Iam = "MAPL_ExtDataFillField"
+
+  call ESMF_FieldGet(FieldF,0,farrayPtr=ptrF,rc=status)
+  VERIFY_(STATUS)
+  call ESMF_FieldGet(FieldR,0,farrayPtr=ptrR,rc=status)
+  VERIFY_(STATUS)
+  ptrF = 0.0
+  lm_in= size(ptrR,3)
+  lm_out = size(ptrF,3)
+  do i=1,lm_in
+     ptrF(:,:,lm_out-i+1)=ptrR(:,:,i)
+  enddo
+
+  RETURN_(ESMF_SUCCESS)
+  
+  end subroutine MAPL_ExtDataFillField
+
     
   end module EXTDATA

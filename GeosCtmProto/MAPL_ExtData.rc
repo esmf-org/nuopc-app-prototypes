@@ -99,10 +99,10 @@ V           'm s-1'          N        N           0                 0.0      1.0
 #----------------
 #AdvCore Specific
 #----------------
-pressure_at_layer_edges_before_advection        'Pa'             N        N           0                 0.0      1.0     PLE	   /glade/p/work/peggyl/ctmdata/MERRA2_300.tavg3_3d_nav_Ne.%y4%m2%d2.nc4
-pressure_at_layer_edges_after_advection        'Pa'             N	      N           0;3000            0.0      1.0     PLE	   /glade/p/work/peggyl/ctmdata/MERRA2_300.tavg3_3d_nav_Ne.%y4%m2%d2.nc
-eastward_wind_on_C-Grid_before_advection;northward_wind_on_C-Grid_before_advection     'm s-1'          N        N           0                 0.0      1.0     U;V	   /glade/p/work/peggyl/ctmdata/MERRA2_300.inst3_3d_asm_Nv.%y4%m2%d2.nc4
-eastward_wind_on_C-Grid_after_advection;northward_wind_on_C-Grid_after_advection     'm s-1'          N	      N           0;3000            0.0      1.0     U;V	   /glade/p/work/peggyl/ctmdata/MERRA2_300.inst3_3d_asm_Nv.%y4%m2%d2.nc4
+pressure_at_layer_edges_before_advection        'Pa'             N        N           0                 0.0      1.0     PLE	   /discover/nobackup/jkouatch/TICKETS/forPeggy/MERRA2_300.tavg3_3d_nav_Ne.%y4%m2%d2.nc4
+pressure_at_layer_edges_after_advection         'Pa'             N	      N           0;3000            0.0      1.0     PLE	   /discover/nobackup/jkouatch/TICKETS/forPeggy/MERRA2_300.tavg3_3d_nav_Ne.%y4%m2%d2.nc4
+eastward_wind_on_C-Grid_before_advection;northward_wind_on_C-Grid_before_advection 'm s-1'          N        N           0                 0.0      1.0     U;V /discover/nobackup/jkouatch/TICKETS/forPeggy/MERRA2_300.inst3_3d_asm_Nv.%y4%m2%d2.nc4
+eastward_wind_on_C-Grid_after_advection;northward_wind_on_C-Grid_after_advection     'm s-1'          N	      N           0;3000            0.0      1.0     U;V	   /discover/nobackup/jkouatch/TICKETS/forPeggy/MERRA2_300.inst3_3d_asm_Nv.%y4%m2%d2.nc4
 %%
 
 Masks%%
