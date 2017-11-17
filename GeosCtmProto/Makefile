@@ -18,21 +18,19 @@
 ## flexible and non-portable.                                                 ##
 ################################################################################
 
-ifneq ($(origin ESMFMKFILE), environment)
-$(error Environment variable ESMFMKFILE was not set.)
-endif
+NEWBASEDIR = $(BASEDIR)/Linux
+ESMFMKFILE = $(NEWBASEDIR)/lib/esmf.mk
 
 include $(ESMFMKFILE)
-
 # add MAPL includes and libs
-MAPL_INSTALL_ROOT = $(ESMF_INTERNAL_DIR)/src/addon/MAPL5_2/Linux
-MAPL_INCLUDEPATHS = -I$(MAPL_INSTALL_ROOT)/include/MAPL_cfio -I$(MAPL_INSTALL_ROOT)/include/MAPL_Base -I$(MAPL_INSTALL_ROOT)/include/GMAO_mpeu -I$(ESMF_INTERNAL_DIR)/src/include
+MAPL_INSTALL_ROOT = /gpfsm/dnb31/pli/NUOPC/build
+MAPL_INCLUDEPATHS = -I$(MAPL_INSTALL_ROOT)/include/MAPL_cfio_r4 -I$(MAPL_INSTALL_ROOT)/include/MAPL_Base -I$(NEWBASEDIR)/include/esmf
 MAPL_LINKPATHS    = -L$(MAPL_INSTALL_ROOT)/lib
-MAPL_LINKLIBS     = -lMAPL_Base -lMAPL_Base_stubs -lMAPL_cfio -lGMAO_mpeu
+MAPL_LINKLIBS     = -lMAPL_Base -lMAPL_cfio_r4
 
 ESMF_F90COMPILEPATHS      += $(MAPL_INCLUDEPATHS)
 ESMF_F90LINKPATHS         += $(MAPL_LINKPATHS)
-ESMF_F90ESMFLINKLIBS          += $(MAPL_LINKLIBS)
+#ESMF_F90ESMFLINKLIBS          += $(MAPL_LINKLIBS)
 
 ################################################################################
 ################################################################################
@@ -55,7 +53,7 @@ ESMF_F90ESMFLINKLIBS          += $(MAPL_LINKLIBS)
 # -----------------------------------------------------------------------------
 #ctmApp: ctmApp.o driver.o ctm.o history.o extdata.o ectm.o ptracer.o advcore.o NUOPC_Generic.o
 ctmApp: ctmApp.o driver.o extdata.o ctm.o ectm.o ptracer.o advcore.o NUOPC_Generic.o
-	$(ESMF_F90LINKER) $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS) -o $@ $^ $(ESMF_F90ESMFLINKLIBS) 
+	$(ESMF_F90LINKER) $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS) -o $@ $^ $(MAPL_LINKLIBS) $(ESMF_F90ESMFLINKLIBS) 
 
 # module dependencies:
 ctmApp.o: driver.o 
