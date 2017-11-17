@@ -141,7 +141,9 @@ module driverCTM
       file=__FILE__)) &
       return  ! bail out
 
-    call ESMF_GridCompSet(comp, configfile=trim(extConfigfile), rc=rc)
+    ! Set the config to be the root config as done by MAPL Cap !
+!    call ESMF_GridCompSet(comp, configfile=trim(extConfigfile), rc=rc)
+    call ESMF_GridCompSet(comp, config=config, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
          line=__LINE__, &
          file=__FILE__)) &
