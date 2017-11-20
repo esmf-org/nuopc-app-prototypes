@@ -25,6 +25,8 @@ endif
 include $(ESMFMKFILE)
 include $(COMP)
 
+COMMA := ,
+
 ifneq (,$(findstring .h,$(ESMF_DEP_FRONT)))
 DEP_FRONTS    := $(DEP_FRONTS) -DFRONT_H_COMP=\"$(ESMF_DEP_FRONT)\" -DFRONT_H_ATMF_SS=SetServices_$(subst .h,,$(ESMF_DEP_FRONT))
 else ifneq (,$(findstring .so,$(ESMF_DEP_FRONT)))
