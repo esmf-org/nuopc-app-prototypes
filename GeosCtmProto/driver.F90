@@ -169,14 +169,7 @@ module driverCTM
          file=__FILE__)) &
          return  ! bail out
     
-    call ESMF_ConfigLoadFile(ctmconfig, TRIM(ctmConfigfile), rc=rc )
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-         line=__LINE__, &
-         file=__FILE__)) &
-         return  ! bail out
-
-    
-    call ESMF_GridCompSet(comp, config=ctmconfig, rc=rc)
+    call ESMF_GridCompSet(comp, configfile=TRIM(ctmConfigfile), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

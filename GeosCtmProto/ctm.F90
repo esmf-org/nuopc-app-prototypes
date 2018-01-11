@@ -187,7 +187,9 @@
 
       type (ESMF_Config)                  :: configFile
       CHARACTER(LEN=ESMF_MAXSTR)          :: rcfilen = 'CTM_GridComp.rc'
+      CHARACTER(LEN=ESMF_MAXSTR)          :: rootfile
       type (ESMF_CplComp)                 :: conn
+      type (ESMF_GridComp)                :: comp
       integer                             :: i
       
       rc = ESMF_SUCCESS
@@ -258,25 +260,49 @@
       ! Create children`s gridded components and invoke their SetServices
       ! -----------------------------------------------------------------
 
+      call ESMF_GridCompGet(GC, configFile=rootfile, rc=rc)      
+         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+           line=__LINE__, &
+           file=__FILE__)) &
+           return  ! bail out
+      print *, 'CTM config file:', trim(rootfile)
       IF (enable_pTracers) THEN
          ! Doing passive tracer experiment
          !--------------------------------
          call NUOPC_DriverAddComp(GC, 'CTMenv', EctmSetServices, &
-            rc=rc)
+            comp=comp, rc=rc)
+         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+           line=__LINE__, &
+           file=__FILE__)) &
+           return  ! bail out
+
+         call ESMF_GridCompSet(comp, configfile=trim(rootfile), rc=rc)
          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
            return  ! bail out
 
          call NUOPC_DriverAddComp(GC, 'DYNAMICS', AdvCSetServices, &
-            rc=rc)
+            comp=comp, rc=rc)
+         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+           line=__LINE__, &
+           file=__FILE__)) &
+           return  ! bail out
+
+         call ESMF_GridCompSet(comp, configfile=trim(rootfile), rc=rc)
          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
            return  ! bail out
 
          call NUOPC_DriverAddComp(GC, 'PTRACERS', pTraSetServices, &
-            rc=rc)
+            comp=comp, rc=rc)
+         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+           line=__LINE__, &
+           file=__FILE__)) &
+           return  ! bail out
+
+         call ESMF_GridCompSet(comp, configfile=rootfile, rc=rc)
          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
@@ -815,15 +841,18 @@
 !         GRIDNAME: PE48x288-CF
 
 subroutine My_GridCreate(GC, rc)
+    use CubedSphereGridFactoryMod, only: CubedSphereGridFactory
+    use MAPL_GridManagerMod, only: grid_manager
+   
     type(ESMF_GridComp) :: GC
     integer             :: rc
-   
+
    ! local variables
     type(ESMF_Config)               :: config
     integer                         :: NX, NY
     character(len=ESMF_MAXSTR)      :: Gridname
     type (ESMF_Grid)                :: GRID
-    integer                         :: IM_WORLD
+    integer                         :: IM_WORLD, val
     integer                         :: JM_WORLD
     integer                         :: LM,L,NN
     character(len=4)                :: imsz
@@ -831,7 +860,8 @@ subroutine My_GridCreate(GC, rc)
     character(len=2)                :: date
     character(len=2)                :: pole
     integer, allocatable            :: regDecomp(:,:)
- 
+    type(CubedSphereGridFactory)    :: factory
+
     rc = ESMF_SUCCESS
 
     call ESMF_GridCompGet(GC, config=config, rc=rc)   
@@ -870,8 +900,10 @@ subroutine My_GridCreate(GC, rc)
     read(IMSZ,*) IM_WORLD
     read(JMSZ,*) JM_WORLD
 
+! The new code set NY=NX
     ! date='CF' for cubed sphere
     if (date=='CF' .or. date=='DP') then
+#if 0
       ! make sure NY is divisble by 6 and JM_WORLD is IM_WORLD*6
       if (mod(NY, 6) /= 0) then
         call ESMF_LogSetError(ESMF_RC_ARG_BAD, msg='NY has to be multiple of 6', &
@@ -879,6 +911,38 @@ subroutine My_GridCreate(GC, rc)
           file=__FILE__, rcToReturn=rc) 
         return
       endif
+#endif
+
+#if 0
+    ! Need "IM_WORLD:" in the config, but the following code does not work.
+    ! Somehow the standalone test program works (adding a new attribute in the
+    ! config)  So, as a workaround, I added IM_WORLD: 48 in GEOSCTM.rc
+
+    call ESMF_ConfigSetAttribute(config, value=IM_WORLD, label='IM_WORLD:', rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call ESMF_ConfigGetAttribute(config, value=val, label='IM_WORLD:', rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+     ! print *, 'IM_WORLD:', val
+#endif
+
+    ! Register to the MAPL GridManager and MAPL RegridderManager
+    call register_grid_and_regridders()
+    ! create ESMF cubed sphere grid using the new MAPL and FV3 code
+    grid = grid_manager%make_grid(config, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+#if 0
       allocate(regDecomp(2,6))
       regDecomp(1,:)=NX
       regDecomp(2,:)=NY/6
@@ -890,13 +954,21 @@ subroutine My_GridCreate(GC, rc)
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-    endif
 
     call ESMF_AttributeSet(grid, name='GRID_LM', value=LM, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
+
+    call ESMF_AttributeSet(grid, name='GridType', value='Cubed-Sphere', rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+#endif
+    endif
 
     ! Set grid to the GridComp
     call ESMF_GridCompSet(GC, grid=grid, rc=rc)
@@ -908,64 +980,29 @@ subroutine My_GridCreate(GC, rc)
     return
 end subroutine My_GridCreate
 
-#if 0
-  subroutine SetRunSequence(driver, rc)
-    type(ESMF_GridComp)  :: driver
-    integer, intent(out) :: rc
+  subroutine register_grid_and_regridders()
+    use MAPL_GridManagerMod, only: grid_manager
+    use MAPL_RegridderManagerMod, only: regridder_manager
+    use MAPL_RegridderSpecMod, only: REGRID_METHOD_BILINEAR
+    use CubedSphereGridFactoryMod, only: CubedSphereGridFactory    
+    use LatLonToCubeRegridderMod
+    use CubeToLatLonRegridderMod
+    use CubeToCubeRegridderMod
     
-    ! local variables
-    character(ESMF_MAXSTR)              :: name
-    type(NUOPC_FreeFormat)              :: runSeqFF
-
-    rc = ESMF_SUCCESS
+    type (CubedSphereGridFactory) :: factory
     
-    ! query the Component for info
-    call ESMF_GridCompGet(driver, name=name, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+    type (CubeToLatLonRegridder) :: cube_to_latlon_prototype
+    type (LatLonToCubeRegridder) :: latlon_to_cube_prototype
+    type (CubeToCubeRegridder) :: cube_to_cube_prototype
     
-    ! set up free format run sequence
-    runSeqFF = NUOPC_FreeFormatCreate(stringList=(/ &
-      " @1800         ",    &
-      "   MED         ",    &
-      "   MED -> ATM  ",    &
-      "   MED -> OCN  ",    &
-      "   ATM         ",    &
-      "   OCN         ",    &
-      "   ATM -> MED  ",    &
-      "   OCN -> MED  ",    &
-      "   MED         ",    &
-      " @             " /), &
-      rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
-      
-#if 1
-    call NUOPC_FreeFormatPrint(runSeqFF, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
-#endif
+    call grid_manager%add_prototype('Cubed-Sphere',factory)
+    associate (method => REGRID_METHOD_BILINEAR, mgr => regridder_manager)
+      call mgr%add_prototype('Cubed-Sphere', 'LatLon', method, cube_to_latlon_prototype)
+      call mgr%add_prototype('LatLon', 'Cubed-Sphere', method, latlon_to_cube_prototype)
+      call mgr%add_prototype('Cubed-Sphere', 'Cubed-Sphere', method, cube_to_cube_prototype)
+    end associate
 
-    ! ingest FreeFormat run sequence
-    call NUOPC_DriverIngestRunSequence(driver, runSeqFF, &
-      autoAddConnectors=.true., rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
-
-#if 0
-    ! Diagnostic output
-    call NUOPC_DriverPrint(driver, orderflag=.true., rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
-#endif
-
-    ! clean-up
-    call NUOPC_FreeFormatDestroy(runSeqFF, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
-      
-  end subroutine
-#endif
+  end subroutine register_grid_and_regridders
 
 
 !EOC

@@ -2,7 +2,7 @@
 # Model Resolution and Timestep Parameters
 # ----------------------------------------
                NX: 1
-               NY: 6
+               NY: 1
        GEOSCTM_IM: 48
        GEOSCTM_JM: 288
                LM: 72
@@ -10,7 +10,8 @@
 AdvCore_Advection: 1
            DYCORE: OFF
      HEARTBEAT_DT: 900
-
+        GRID_TYPE: Cubed-Sphere
+         IM_WORLD: 48
 
 # Print Resource Parameters (0: Non-Default values, 1: ALL values)
 #-----------------------------------------------------------------
