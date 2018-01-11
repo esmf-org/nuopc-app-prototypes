@@ -473,7 +473,7 @@ contains
     integer               :: RANK
     integer               :: DIMS
     integer               :: STAT
-    integer               :: KND
+    integer               :: KND = ESMF_KIND_R4
     integer               :: LOCATION
     character(ESMF_MAXSTR):: SHORT_NAME
     character(ESMF_MAXSTR):: LONG_NAME
@@ -501,7 +501,7 @@ contains
     real(kind=ESMF_KIND_R8)                 :: def_val_8
     type(ESMF_TypeKind_Flag)                :: typekind
     logical                                 :: has_ungrd
-    logical                                 :: doNotAllocate
+    logical                                 :: doNotAllocate=.false.
     logical                                 :: alwaysAllocate
     integer                                 :: field_type
     integer                                 :: staggering
@@ -513,7 +513,6 @@ contains
     real,                    pointer        :: ungridded_coords(:)
     integer                                 :: szUngrd
     integer                                 :: rstReq
-
 
 #define DEBUGPRINT__OFF
 #ifdef DEBUGPRINT
@@ -630,9 +629,13 @@ contains
                              return  ! bail out
                      
                   end if
-
-               end if
-            else
+               end if  !has_ungrd
+               call ESMF_AttributeSet(FIELD, NAME='PRECISION', VALUE=KND, RC=RC)
+               if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                  line=__LINE__, &
+                  file=__FILE__)) &
+                  return  ! bail out
+            else !doNotAllocate
                call ESMF_AttributeSet(FIELD, NAME='doNotAllocate', VALUE=1, RC=RC)
                if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                        line=__LINE__, &
@@ -640,7 +643,7 @@ contains
                        return  ! bail out
                
             end if
-         else
+         else ! deferAlloc
             call ESMF_AttributeSet(FIELD, NAME='PRECISION', VALUE=KND, RC=RC)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                   line=__LINE__, &
@@ -664,20 +667,19 @@ contains
             if (defaultProvided) then
                call ESMF_AttributeSet(FIELD, NAME='DEFAULT_VALUE', &
                     value=default_value, RC=RC)
-            if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+               if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                   line=__LINE__, &
                   file=__FILE__)) &
                   return  ! bail out
-               
             end if
             if (has_ungrd) then
                call ESMF_AttributeSet(FIELD, NAME='UNGRIDDED_DIMS', valueList=UNGRD, RC=RC)
-            if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+               if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                   line=__LINE__, &
                   file=__FILE__)) &
                   return  ! bail out
-               
             end if
+
          end if
 
 ! Put the FIELD in the MAPL FIELD (VAR SPEC)

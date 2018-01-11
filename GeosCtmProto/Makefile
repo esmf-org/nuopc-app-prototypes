@@ -23,17 +23,19 @@ ESMFMKFILE = $(NEWBASEDIR)/lib/esmf.mk
 
 include $(ESMFMKFILE)
 # add MAPL includes and libs
-MAPL_INSTALL_ROOT = /gpfsm/dnb31/pli/NUOPC/build
-MAPL_INCLUDEPATHS = -I$(MAPL_INSTALL_ROOT)/include/MAPL_cfio_r4 -I$(MAPL_INSTALL_ROOT)/include/MAPL_Base -I$(NEWBASEDIR)/include/esmf
-MAPL_LINKPATHS    = -L$(MAPL_INSTALL_ROOT)/lib
-MAPL_LINKLIBS     = -lMAPL_Base -lMAPL_cfio_r4
+MAPL_INSTALL_ROOT = /gpfsm/dnb31/pli/GEOSctm_lite/Linux
+MAPL_INCDIR = $(MAPL_INSTALL_ROOT)/include
+MAPL_INCLUDEPATHS = -I$(MAPL_INCDIR)/MAPL_cfio_r4 -I$(MAPL_INCDIR)/MAPL_Base -I$(MAPL_INCDIR)/FVdycoreCubed_GridComp -I$(MAPL_INCDIR)/fvdycore -I$(MAPL_INCDIR)/GFDL_fms -I$(NEWBASEDIR)/include/esmf
+MAPL_LINKPATHS    = -L$(MAPL_INSTALL_ROOT)/lib 
+MAPL_LINKLIBS     = -lMAPL_Base -lMAPL_cfio_r4 -lFVdycoreCubed_GridComp -lfvdycore -lGEOS_Shared -lGMAO_mpeu -lGFDL_fms
 
-ESMF_F90COMPILEPATHS      += $(MAPL_INCLUDEPATHS)
+ESMF_F90COMPILEPATHS      += $(MAPL_INCLUDEPATHS) $(SUBDIR)
 ESMF_F90LINKPATHS         += $(MAPL_LINKPATHS)
 #ESMF_F90ESMFLINKLIBS          += $(MAPL_LINKLIBS)
 
 ################################################################################
 ################################################################################
+
 
 .SUFFIXES: .f90 .F90 .c .C
 
@@ -52,7 +54,8 @@ ESMF_F90LINKPATHS         += $(MAPL_LINKPATHS)
 
 # -----------------------------------------------------------------------------
 #ctmApp: ctmApp.o driver.o ctm.o history.o extdata.o ectm.o ptracer.o advcore.o NUOPC_Generic.o
-ctmApp: ctmApp.o driver.o extdata.o ctm.o ectm.o ptracer.o advcore.o NUOPC_Generic.o
+
+ctmApp: ctmApp.o driver.o extdata.o ctm.o ectm.o ptracer.o advcore.o NUOPC_Generic.o 
 	$(ESMF_F90LINKER) $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS) -o $@ $^ $(MAPL_LINKLIBS) $(ESMF_F90ESMFLINKLIBS) 
 
 # module dependencies:

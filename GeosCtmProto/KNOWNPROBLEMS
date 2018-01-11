@@ -1,0 +1,32 @@
+1. The new grid factory code requires the following attributes in CTM's config
+object:  GRID_TYPE and IM_WORLD.  These two values can be derived from the
+GRIDNAME attribute (PE48x288-CF).  But, ESMF Config library does not support
+adding a non-integer attribute such as "GRID_TYPE".  Also,
+ESMF_ConfigSetAttribute somehow doesn't work properly when adding IM_WORLD.
+So, I added GRID_TYPE and IM_WORLD into GEOSCTM.rc
+
+2. In fvcore_layout.rc (the config file for AdvCore component), there are
+attributes npx and npy.  In the earlier version of GEOSctm_lite, the values
+are both 48, but the new code expected npy to be 6*npx.  So I changed it to
+288.
+
+3. Extdata export fields are mirrored from the import fields of CTM.  But, the
+attributes of the fields are not copied when the fields are mirrored.  What it
+is looking for includes:  RESOLUTION, STAGGERING, ROTATION
+
+4. Extdata needs to know the value of NX and NY from its config.  But, NX and
+NY are defined in GEOSCTM.rc, which is the ROOT_CF defined in CAP.rc.  I
+currently set the config for the Extdata component to be CAP.rc.
+
+5. The Makefile has to be changed to link with MAPL libraries in the
+GEOSctm_lite directory.  The changes are:
+
+MAPL_INSTALL_ROOT = /gpfsm/dnb31/pli/GEOSctm_lite/Linux
+MAPL_INCDIR = $(MAPL_INSTALL_ROOT)/include
+MAPL_INCLUDEPATHS = -I$(MAPL_INCDIR)/MAPL_cfio_r4 -I$(MAPL_INCDIR)/MAPL_Base -I$(MAPL_INCDIR)/FVdycoreCubed_GridComp -I$(MAPL_INCDIR)/fvdycore -I$(MAPL_INCDIR)/GFDL_fms -I$(NEWBASEDIR)/include/esmf
+MAPL_LINKPATHS    = -L$(MAPL_INSTALL_ROOT)/lib 
+MAPL_LINKLIBS     = -lMAPL_Base -lMAPL_cfio_r4 -lFVdycoreCubed_GridComp -lfvdycore -lGEOS_Shared -lGMAO_mpeu -lGFDL_fms
+
+Also $(MAPL_LINKLIBS) has to come before $(ESMF_F90ESMFLINKLIBS) in the
+linking process
+

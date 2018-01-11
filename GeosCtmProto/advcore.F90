@@ -63,19 +63,19 @@ module ADVCORE
            model_label_DataInitialize   => label_DataInitialize, &
            model_label_Advance   => label_Advance
       use NUOPC_Generic
-#if 0
-      use m_set_eta,       only: set_eta
+
+!      use m_set_eta,       only: set_eta
       use fv_arrays_mod,   only: fv_atmos_type, FVPRC, REAL4, REAL8
       use fms_mod,         only: fms_init, set_domain, nullify_domain
-      use fv_control_mod,  only: fv_init, fv_end
+      use fv_control_mod,  only: fv_init1, fv_init2, fv_end
+      use fv_mp_mod,       only: is,ie, js,je, tile
+      use mpp_mod,         only: mpp_pe, mpp_root_pe
       use fv_tracer2d_mod, only: offline_tracer_advection
-      use fv_control_mod,  only: npx,npy,npz,ntiles
-      use fv_mp_mod,       only: npes_x, npes_y, is,ie, js,je, gid, masterproc
-      use fv_grid_tools_mod, only: globalsum
+      use fv_grid_utils_mod,  only: g_sum
 
       USE FV_StateMod,     only: AdvCoreTracers => T_TRACERS
-      USE fv_grid_tools_mod, only: gridCellArea => area
-#endif
+      USE FV_StateMod,     only: FV_Atm
+
       implicit none
       private
 
@@ -84,13 +84,12 @@ module ADVCORE
       integer     :: q_split
       logical     :: z_tracer
       logical     :: fill
-!      real(FVPRC) :: dt
+      real(FVPRC) :: dt
       logical     :: FV3_DynCoreIsRunning=.false.
       integer     :: AdvCore_Advection=1
       logical     :: chk_mass=.false.
 
       integer,  parameter :: ntiles_per_pe = 1
-!      type(fv_atmos_type), save :: FV_Atm(ntiles_per_pe)
 
 ! Tracer I/O History stuff
 ! -------------------------------------
@@ -105,6 +104,7 @@ module ADVCORE
 ! !PUBLIC MEMBER FUNCTIONS:
 
       public SetServices
+      logical, allocatable, save             :: grids_on_my_pe(:)
 
 !EOP
 
@@ -134,11 +134,11 @@ contains
       character(len=ESMF_MAXSTR)              :: IAm
       character(len=ESMF_MAXSTR)              :: COMP_NAME
       character(len=ESMF_MAXSTR)              :: DYCORE
-      CHARACTER(LEN=ESMF_MAXSTR)              :: rcfilen = 'fvcore_layout.rc'
-      type(ESMF_Config)                       :: configFile
       type (mystates_WRAP)                    :: mystates_ptr
       type (my_States), pointer               :: mystates
-
+      type(ESMF_VM)                           :: VM
+      integer                                 :: STATUS
+      integer                                 :: comm
 !=============================================================================
 
 ! Begin...
@@ -155,24 +155,6 @@ contains
       Iam = trim(COMP_NAME) // '::SetServices'
 
       call ESMF_LogWrite(Iam, ESMF_LOGMSG_INFO, rc=rc)      
-
-      configFile = ESMF_ConfigCreate(rc=rc )
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-
-      call ESMF_ConfigLoadFile(configFile, TRIM(rcfilen), rc=rc )
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-
-      call ESMF_GridCompSet(GC, config=ConfigFile, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-       line=__LINE__, &
-       file=__FILE__)) &
-       return  ! bail out
 
       allocate(mystates)
       mystates_ptr%ptr => mystates
@@ -226,6 +208,21 @@ contains
        file=__FILE__)) &
        return  ! bail out
 
+      ! Original AdvCore code
+      ! Start up FMS/MPP
+      !-------------------------------------------
+      call ESMF_VMGetCurrent(vm,rc=rc)
+     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+       line=__LINE__, &
+       file=__FILE__)) &
+       return  ! bail out
+      call ESMF_VMGet(VM,mpiCommunicator=comm,rc=STATUS)
+      VERIFY_(STATUS)
+      call fms_init(comm)
+      VERIFY_(STATUS)
+
+
+
 !BOS
 
   end subroutine SetServices
@@ -237,9 +234,19 @@ contains
     type(ESMF_State)      :: importState, exportState
     type(ESMF_Clock)      :: clock
     integer, intent(out)  :: rc
+
+      character(len=ESMF_MAXSTR)              :: IAm
+      CHARACTER(LEN=ESMF_MAXSTR)              :: rcfilen = 'fvcore_layout.rc'
+      type(ESMF_Config)                       :: configFile
+      type(ESMF_Config)                       :: rootConfig  ! GEOSCTM.rc
+      integer                                 :: STATUS
+      integer                                 :: comm, ndt
+      integer                                 :: p_split=1
+
+      Iam = 'DYNAMICS::InitializeP0'
     
     rc = ESMF_SUCCESS
-    call ESMF_LogWrite("dyn InitializeP0", ESMF_LOGMSG_INFO, rc=rc)
+    call ESMF_LogWrite(trim(Iam), ESMF_LOGMSG_INFO, rc=rc)
 
     ! Switch to IPDv02 (for datainitialize dependency loop) 
     ! by filtering all other phaseMap entries
@@ -249,6 +256,85 @@ contains
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+      configFile = ESMF_ConfigCreate(rc=rc )
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+      call ESMF_ConfigLoadFile(configFile, TRIM(rcfilen), rc=rc )
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+      ! FV3 setup code from SetServices -- 
+      if (.NOT. FV3_DynCoreIsRunning) then
+         call fv_init1(FV_Atm, dt, grids_on_my_pe, p_split)
+      endif
+
+      ! Make sure FV3 is setup
+      ! -----------------------
+
+      ! Get Resolution Information
+      !---------------------------
+! FV grid dimensions setup from MAPL
+      call ESMF_ConfigGetAttribute( configFile, FV_Atm(1)%flagstruct%npx, label='npx:', default= 32, RC=STATUS )
+      VERIFY_(STATUS)
+      call ESMF_ConfigGetAttribute( configFile, FV_Atm(1)%flagstruct%npy, label='npy:', default=192, RC=STATUS )
+      VERIFY_(STATUS)
+      call ESMF_ConfigGetAttribute( configFile, FV_Atm(1)%flagstruct%npz, label='npz:', default= 72, RC=STATUS )
+      VERIFY_(STATUS)
+! FV likes npx;npy in terms of cell vertices
+      if (FV_Atm(1)%flagstruct%npy == 6*FV_Atm(1)%flagstruct%npx) then
+         FV_Atm(1)%flagstruct%ntiles = 6
+         FV_Atm(1)%flagstruct%npy    = FV_Atm(1)%flagstruct%npx+1
+         FV_Atm(1)%flagstruct%npx    = FV_Atm(1)%flagstruct%npx+1
+      else
+         FV_Atm(1)%flagstruct%ntiles = 1
+         FV_Atm(1)%flagstruct%npy    = FV_Atm(1)%flagstruct%npy+1
+         FV_Atm(1)%flagstruct%npx    = FV_Atm(1)%flagstruct%npx+1
+      endif
+
+      call ESMF_ConfigGetAttribute( configFile, ndt, label='dt:', default=0, RC=STATUS )
+      VERIFY_(STATUS)
+      DT = ndt
+      
+      ! -----------------------
+      ! Get Domain decomposition
+      !-------------------------
+      call ESMF_GridCompGet(gcomp, config=rootConfig, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+       line=__LINE__, &
+       file=__FILE__)) &
+       return  ! bail out
+
+      call ESMF_ConfigGetAttribute( rootConfig, nx, label='NX:', default=0, RC=STATUS )
+      VERIFY_(STATUS)
+      FV_Atm(1)%layout(1) = nx
+      call ESMF_ConfigGetAttribute(rootConfig, ny, label='NY:', default=0, RC=STATUS )
+      VERIFY_(STATUS)
+      if (FV_Atm(1)%flagstruct%grid_type == 4) then
+         FV_Atm(1)%layout(2) = ny
+      else
+         FV_Atm(1)%layout(2) = ny / 6
+      end if
+
+      ! Start up FV if AdvCore is running without FV3_DynCoreIsRunning
+      !--------------------------------------------------
+      if (.NOT. FV3_DynCoreIsRunning) then
+         call fv_init2(FV_Atm, dt, grids_on_my_pe, p_split)
+      endif
+
+      ! Moved from  initialize() in AdvCore_GridCompMod.F90
+      !-------------------------------------------------------
+      if (.NOT. FV3_DynCoreIsRunning) then
+         IS = FV_Atm(1)%bd%isc
+         IE = FV_Atm(1)%bd%iec
+         JS = FV_Atm(1)%bd%jsc
+         JE = FV_Atm(1)%bd%jec
+      endif
     
   end subroutine
 
@@ -280,7 +366,7 @@ contains
          SHORT_NAME = 'MFX',                                       &
          LONG_NAME  = 'pressure_weighted_eastward_mass_flux',      &
          UNITS      = 'Pa m+2 s-1',                                &
-         PRECISION  = ESMF_KIND_R8,                                &
+         PRECISION  = ESMF_KIND_R4,                                &
          DIMS       = MAPL_DimsHorzVert,                           &
          VLOCATION  = MAPL_VLocationCenter,             RC=RC  )
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -292,7 +378,7 @@ contains
          SHORT_NAME = 'MFY',                                       &
          LONG_NAME  = 'pressure_weighted_northward_mass_flux',     &
          UNITS      = 'Pa m+2 s-1',                                &
-         PRECISION  = ESMF_KIND_R8,                                &
+         PRECISION  = ESMF_KIND_R4,                                &
          DIMS       = MAPL_DimsHorzVert,                           &
          VLOCATION  = MAPL_VLocationCenter,             RC=RC  )
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -304,7 +390,7 @@ contains
          SHORT_NAME = 'CX',                                        &
          LONG_NAME  = 'eastward_accumulated_courant_number',       &
          UNITS      = '1',                                          &
-         PRECISION  = ESMF_KIND_R8,                                &
+         PRECISION  = ESMF_KIND_R4,                                &
          DIMS       = MAPL_DimsHorzVert,                           &
          VLOCATION  = MAPL_VLocationCenter,             RC=RC  )
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -316,7 +402,7 @@ contains
          SHORT_NAME = 'CY',                                        &
          LONG_NAME  = 'northward_accumulated_courant_number',      &
          UNITS      = '1',                                          &
-         PRECISION  = ESMF_KIND_R8,                                &
+         PRECISION  = ESMF_KIND_R4,                                &
          DIMS       = MAPL_DimsHorzVert,                           &
          VLOCATION  = MAPL_VLocationCenter,             RC=RC  )
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -328,7 +414,7 @@ contains
          SHORT_NAME = 'PLE0',                                      &
          LONG_NAME  = 'pressure_at_layer_edges_before_advection',  &
          UNITS      = 'Pa',                                        &
-         PRECISION  = ESMF_KIND_R8,                                &
+         PRECISION  = ESMF_KIND_R4,                                &
          DIMS       = MAPL_DimsHorzVert,                           &
          VLOCATION  = MAPL_VLocationEdge,             RC=RC  )
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -340,7 +426,7 @@ contains
          SHORT_NAME = 'PLE1',                                      &
          LONG_NAME  = 'pressure_at_layer_edges_after_advection',   &                
          UNITS      = 'Pa',                                        &
-         PRECISION  = ESMF_KIND_R8,                                &
+         PRECISION  = ESMF_KIND_R4,                                &
          DIMS       = MAPL_DimsHorzVert,                           &
          VLOCATION  = MAPL_VLocationEdge,             RC=RC  )
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -836,42 +922,45 @@ contains
 !=============================================================================
 !BOC
 ! !LOCAL VARIABLES:
+      type(ESMF_Clock)                  :: clock
+      type(ESMF_State)                  :: import, export
       character(len=ESMF_MAXSTR)    :: IAm
       integer                       :: STATUS
       character(len=ESMF_MAXSTR)    :: COMP_NAME
       type (ESMF_Grid)              :: ESMFGRID
-      type (MAPL_MetaComp), pointer :: MAPL
+      !type (MAPL_MetaComp), pointer :: MAPL
       type (ESMF_Alarm)             :: ALARM
       type(ESMF_Config)             :: CF          ! Universal Config 
 
-#if 0
 ! Imports
-      REAL(ESMF_KIND_R8), POINTER, DIMENSION(:,:,:)   :: CX
-      REAL(ESMF_KIND_R8), POINTER, DIMENSION(:,:,:)   :: CY
-      REAL(ESMF_KIND_R8), POINTER, DIMENSION(:,:,:)   :: MFX
-      REAL(ESMF_KIND_R8), POINTER, DIMENSION(:,:,:)   :: MFY
-      REAL(ESMF_KIND_R8), POINTER, DIMENSION(:,:,:)   :: PLE0
-      REAL(ESMF_KIND_R8), POINTER, DIMENSION(:,:,:)   :: PLE1
+      REAL(FVPRC), POINTER, DIMENSION(:,:,:)   :: CX
+      REAL(FVPRC), POINTER, DIMENSION(:,:,:)   :: CY
+      REAL(FVPRC), POINTER, DIMENSION(:,:,:)   :: MFX
+      REAL(FVPRC), POINTER, DIMENSION(:,:,:)   :: MFY
+      REAL(FVPRC), POINTER, DIMENSION(:,:,:)   :: PLE0
+      REAL(FVPRC), POINTER, DIMENSION(:,:,:)   :: PLE1
 
 ! Locals
-      REAL(ESMF_KIND_R8), POINTER, DIMENSION(:)       :: AK
-      REAL(ESMF_KIND_R8), POINTER, DIMENSION(:)       :: BK
-      REAL(ESMF_KIND_R8), POINTER, DIMENSION(:,:,:,:) :: TRACERS
-      REAL(ESMF_KIND_R8) :: tmassL, MASSfac, MASS1, TMASS1(ntracers)
+      REAL(REAL8), POINTER, DIMENSION(:)       :: AK
+      REAL(REAL8), POINTER, DIMENSION(:)       :: BK
+      REAL(FVPRC), POINTER, DIMENSION(:,:,:,:) :: TRACERS
+      REAL(FVPRC) :: tmassL, MASSfac, MASS1, TMASS1(ntracers)
       TYPE(AdvCoreTracers), POINTER :: advTracers(:)
       type(ESMF_FieldBundle) :: TRADV
       type(ESMF_Field)       :: field
       type(ESMF_Array)       :: array
       INTEGER :: IM, JM, LM, N, NQ, I,J,L, LS
-      REAL(ESMF_KIND_R8) :: PTOP, PINT
+      REAL(FVPRC) :: PTOP, PINT
+      REAL(REAL8) :: ptop_r8,pint_r8
 ! Temporaries for exports/tracers
       REAL, POINTER :: temp3D(:,:,:)
       REAL, POINTER :: ptArray3D(:,:,:)
       real(REAL4),        pointer     :: tracer_r4 (:,:,:)
-      real(ESMF_KIND_R8),        pointer     :: tracer_r8 (:,:,:)
+      real(REAL8),        pointer     :: tracer_r8 (:,:,:)
       character(len=ESMF_MAXSTR)    :: fieldName
       type(ESMF_TypeKind_Flag)      :: kind
-
+      integer                       :: gid, masterproc
+      
 ! Get my name and set-up traceback handle
 ! ---------------------------------------
 
@@ -879,20 +968,27 @@ contains
       call ESMF_GridCompGet( GC, name=COMP_NAME, grid=ESMFGRID, RC=STATUS )
       VERIFY_(STATUS)
       Iam = trim(COMP_NAME) // Iam
+      call NUOPC_ModelGet(GC, modelClock=clock, importState=IMPORT, &
+        exportState=EXPORT, rc=STATUS)
+      VERIFY_(STATUS)
 
+#if 0
 !WMP  if (AdvCore_Advection>0) then
+
+      gid = mpp_pe()
+      masterproc = mpp_root_pe()
 
 ! Get parameters from generic state.
 !-----------------------------------
-      call MAPL_GetObjectFromGC ( GC, MAPL, RC=STATUS)
-      VERIFY_(STATUS)
-      call MAPL_Get( MAPL, IM=IM, JM=JM, LM=LM,   &
-                                RUNALARM = ALARM, &
-                                      RC = STATUS )
-      VERIFY_(STATUS)
+      !call MAPL_GetObjectFromGC ( GC, MAPL, RC=STATUS)
+      !VERIFY_(STATUS)
+      !call MAPL_Get( MAPL, IM=IM, JM=JM, LM=LM,   &
+      !                          RUNALARM = ALARM, &
+      !                                RC = STATUS )
+      !VERIFY_(STATUS)
 
-      call MAPL_TimerOn(MAPL,"TOTAL")
-      call MAPL_TimerOn(MAPL,"RUN")
+      !call MAPL_TimerOn(MAPL,"TOTAL")
+      !call MAPL_TimerOn(MAPL,"RUN")
 
 ! Get AKs and BKs for vertical grid
 !----------------------------------
@@ -900,7 +996,13 @@ contains
       VERIFY_(STATUS)
       AllOCATE( BK(LM+1) ,stat=STATUS )
       VERIFY_(STATUS)
-      call set_eta(LM,LS,PTOP,PINT,AK,BK)
+      ptop=0.0
+      pint=0.0
+      ak=0.0
+      bk=0.0
+      call set_eta(LM,LS,ptop_r8,pint_r8,AK,BK)
+      ptop = ptop_r8
+      pint = pint_r8
 
       CALL MAPL_GetPointer(IMPORT, PLE0, 'PLE0', ALLOC = .TRUE., RC=STATUS)
       VERIFY_(STATUS)
@@ -959,11 +1061,11 @@ contains
          if (chk_mass) then
         ! Check Mass conservation
             if (firstRun .and. AdvCore_Advection>0) then
-               MASS0 = globalsum(PLE0(:,:,LM), npx, npy, is,ie, js,je)
+               MASS0 = g_sum(FV_Atm(1)%domain, PLE0(:,:,LM), is,ie, js,je, FV_Atm(1)%ng, FV_Atm(1)%gridstruct%area_64, 1, .true.)
                call global_integral(TMASS0, TRACERS, PLE0, IM,JM,LM,NQ)
                if (MASS0 /= 0.0) TMASS0=TMASS0/MASS0
             elseif (firstRun) then
-               MASS0 = globalsum(PLE1(:,:,LM), npx, npy, is,ie, js,je)
+               MASS0 = g_sum(FV_Atm(1)%domain, PLE1(:,:,LM), is,ie, js,je, FV_Atm(1)%ng, FV_Atm(1)%gridstruct%area_64, 1, .true.)
                call global_integral(TMASS0, TRACERS, PLE1, IM,JM,LM,NQ)
                if (MASS0 /= 0.0) TMASS0=TMASS0/MASS0
             endif
@@ -974,14 +1076,17 @@ contains
          !------------------
          if (AdvCore_Advection>0) then
          call WRITE_PARALLEL("offline_tracer_advection")
-         call offline_tracer_advection(TRACERS, PLE0, PLE1, MFX, MFY, CX, CY, AK, BK, PTOP, npx, npy, npz,   &
-                                       NQ, hord_tr, kord_tr, q_split, dt, z_tracer, fill)
+         call offline_tracer_advection(TRACERS, PLE0, PLE1, MFX, MFY, CX, CY, &
+                                       fv_atm(1)%gridstruct, fv_atm(1)%flagstruct, fv_atm(1)%bd, &
+                                       fv_atm(1)%domain, AK, BK, PTOP, FV_Atm(1)%npx, FV_Atm(1)%npy, FV_Atm(1)%npz,   &
+                                       NQ, fv_atm(1)%flagstruct%hord_tr, fv_atm(1)%flagstruct%kord_tr, fv_atm(1)%flagstruct%q_split, fv_atm(1)%flagstruct%k_split, dt, fv_atm(1)%flagstruct%z_tracer, fill)
+
          endif
 
          ! Update tracer mass conservation
          !-------------------------------------------------------------------------
          if (chk_mass) then 
-            MASS1 = globalsum(PLE1(:,:,LM), npx, npy, is,ie, js,je)
+            MASS1 = g_sum(FV_Atm(1)%domain, PLE1(:,:,LM), is,ie, js,je, FV_Atm(1)%ng, FV_Atm(1)%gridstruct%area_64, 1, .true.)
             call global_integral(TMASS1, TRACERS, PLE1, IM,JM,LM,NQ)
             if (MASS1 /= 0.0) TMASS1=TMASS1/MASS1
          endif
@@ -1017,7 +1122,7 @@ contains
                advTracers(N)%content_r4 = TRACERS(:,:,:,N)
             else
                advTracers(N)%content    = TRACERS(:,:,:,N)
-            end if 
+            end if
 ! Fill Export States
             write(myTracer, "('TEST_TRACER',i1.1)") N-1
             call MAPL_GetPointer(EXPORT, temp3D, TRIM(myTracer), rc=status)
@@ -1041,16 +1146,15 @@ contains
       DEALLOCATE( BK ,stat=STATUS )
       VERIFY_(STATUS)
 
-      call MAPL_TimerOff(MAPL,"RUN")
-      call MAPL_TimerOff(MAPL,"TOTAL")
+      !call MAPL_TimerOff(MAPL,"RUN")
+      !call MAPL_TimerOff(MAPL,"TOTAL")
 
 !WMP  end if ! AdvCore_Advection
-
 #endif
+
       RETURN_(ESMF_SUCCESS)
 
-      end subroutine ModelAdvance
-!EOC
+      end subroutine modelAdvance
 
 #if 0
 !------------------------------------------------------------------------------

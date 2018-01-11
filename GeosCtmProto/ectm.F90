@@ -349,7 +349,7 @@
            SHORT_NAME = 'CXr8',                                      &
            LONG_NAME  = 'eastward_accumulated_courant_number',       &
            UNITS      = '1',                                          &
-           PRECISION  = ESMF_KIND_R8,                                &
+           PRECISION  = ESMF_KIND_R4,                                &
            DIMS       = MAPL_DimsHorzVert,                           &
            VLOCATION  = MAPL_VLocationCenter,             RC=rc  )
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -362,7 +362,7 @@
            SHORT_NAME = 'CYr8',                                      &
            LONG_NAME  = 'northward_accumulated_courant_number',      &
            UNITS      = '1',                                          &
-           PRECISION  = ESMF_KIND_R8,                                &
+           PRECISION  = ESMF_KIND_R4,                                &
            DIMS       = MAPL_DimsHorzVert,                           &
            VLOCATION  = MAPL_VLocationCenter,             RC=rc  )
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -377,7 +377,7 @@
 !           LONG_NAME  = 'pressure_weighted_accumulated_eastward_mass_flux', &   
            LONG_NAME  = 'pressure_weighted_eastward_mass_flux', &
            UNITS      = 'Pa m+2 s-1',                                &
-           PRECISION  = ESMF_KIND_R8,                                &
+           PRECISION  = ESMF_KIND_R4,                                &
            DIMS       = MAPL_DimsHorzVert,                           &
            VLOCATION  = MAPL_VLocationCenter,             RC=rc  )
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -392,7 +392,7 @@
 !           LONG_NAME  = 'pressure_weighted_accumulated_northward_mass_flux', &
            LONG_NAME  = 'pressure_weighted_northward_mass_flux', &
            UNITS      = 'Pa m+2 s-1',                                &
-           PRECISION  = ESMF_KIND_R8,                                &
+           PRECISION  = ESMF_KIND_R4,                                &
            DIMS       = MAPL_DimsHorzVert,                           &
            VLOCATION  = MAPL_VLocationCenter,             RC=rc  )
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -405,7 +405,7 @@
            SHORT_NAME = 'PLE1r8',                                    &
            LONG_NAME  = 'pressure_at_layer_edges_after_advection',   &
            UNITS      = 'Pa',                                        &
-           PRECISION  = ESMF_KIND_R8,                                &
+           PRECISION  = ESMF_KIND_R4,                                &
            DIMS       = MAPL_DimsHorzVert,                           &
            VLOCATION  = MAPL_VLocationEdge,             RC=rc  )
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -418,7 +418,7 @@
            SHORT_NAME = 'PLE0r8',                                    &
            LONG_NAME  = 'pressure_at_layer_edges_before_advection',  &
            UNITS      = 'Pa',                                        &
-           PRECISION  = ESMF_KIND_R8,                                &
+           PRECISION  = ESMF_KIND_R4,                                &
            DIMS       = MAPL_DimsHorzVert,                           &
            VLOCATION  = MAPL_VLocationEdge,             RC=rc  )
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
