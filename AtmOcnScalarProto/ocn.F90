@@ -123,6 +123,7 @@ module OCN
     
     type(ESMF_ArraySpec)    :: arrayspec  !!!!!! TODO: remove arrayspec once
     !!!! FieldCreate is fixed to allow direct typekind spec with replicated dims
+    type(ESMF_DELayout)     :: delayout
     type(ESMF_DistGrid)     :: distgrid
     type(ESMF_Grid)         :: grid
 
@@ -183,8 +184,14 @@ module OCN
       return  ! bail out
 #else
     ! create a DistGrid with a single index space element, which gets mapped
-    ! onto DE 0.
-    distgrid = ESMF_DistGridCreate(minIndex=(/1/), maxIndex=(/1/), rc=rc)
+    ! onto DE 0. Here also create a DELayout that only has a single DE.
+    delayout = ESMF_DELayoutCreate(deCount=1, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    distgrid = ESMF_DistGridCreate(minIndex=(/1/), maxIndex=(/1/), &
+      delayout=delayout, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -314,12 +321,15 @@ module OCN
     ! write out the Fields in the exportState
     status=ESMF_FILESTATUS_OLD
     if (step==1) status=ESMF_FILESTATUS_REPLACE
+#ifdef IOLAYER_CAN_WRITE_SMALL_SINGLE_DE
+    ! Currently the IO layer cannot deal with writing small single DEs
     call NUOPC_Write(importState, fileNamePrefix="field_ocn_import_adv_", &
       timeslice=step, status=status, relaxedFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     call NUOPC_Write(exportState, fileNamePrefix="field_ocn_export_adv_", &
       timeslice=step, status=status, relaxedFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
