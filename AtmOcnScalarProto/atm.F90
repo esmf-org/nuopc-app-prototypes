@@ -282,12 +282,15 @@ module ATM
     endif
     status=ESMF_FILESTATUS_OLD
     if (step==1) status=ESMF_FILESTATUS_REPLACE
+#ifdef IOLAYER_CAN_WRITE_SMALL_SINGLE_DE
+    ! Currently the IO layer cannot deal with writing small single DEs
     call NUOPC_Write(exportState, fileNamePrefix="field_atm_export_adv_", &
       timeslice=step, status=status, relaxedFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     step=step+1
     
   end subroutine
