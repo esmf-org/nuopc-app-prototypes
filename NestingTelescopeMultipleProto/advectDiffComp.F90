@@ -284,8 +284,6 @@ module advectDiffComp
         ! the child domain also needs a transfer Grid/Field for coupling to parent
         is%wrap%gridTrans = ESMF_GridCreateNoPeriDim( &
           ! Define a regular distribution (no regDecomp arg -> divide along i w/ DEs)
-!          minIndex=(/1-iHaloDepth,1-jHaloDepth/), &         ! begin of index space
-!          maxIndex=(/iCount+iHaloDepth,jCount+jHaloDepth/), & ! end of index space
           minIndex=(/1,1/), &         ! begin of index space
           maxIndex=(/iCount,jCount/), & ! end of index space
           ! Specify mapping of coords dim to Grid dim
@@ -360,8 +358,6 @@ module advectDiffComp
         ! the child domain also needs a transfer Grid/Field for coupling to parent
         is%wrap%gridTrans = ESMF_GridCreateNoPeriDim( &
           ! Define a regular distribution (no regDecomp arg -> divide along i w/ DEs)
-!          minIndex=(/1-iHaloDepth,1-jHaloDepth/), &         ! begin of index space
-!          maxIndex=(/iCount+iHaloDepth,jCount+jHaloDepth/), & ! end of index space
           minIndex=(/1,1/), &         ! begin of index space
           maxIndex=(/iCount,jCount/), & ! end of index space
           ! Specify mapping of coords dim to Grid dim
@@ -436,8 +432,6 @@ module advectDiffComp
         ! the child domain also needs a transfer Grid/Field for coupling to parent
         is%wrap%gridTrans = ESMF_GridCreateNoPeriDim( &
           ! Define a regular distribution (no regDecomp arg -> divide along i w/ DEs)
-!          minIndex=(/1-iHaloDepth,1-jHaloDepth/), &         ! begin of index space
-!          maxIndex=(/iCount+iHaloDepth,jCount+jHaloDepth/), & ! end of index space
           minIndex=(/1,1/), &         ! begin of index space
           maxIndex=(/iCount,jCount/), & ! end of index space
           ! Specify mapping of coords dim to Grid dim
