@@ -12,7 +12,7 @@ are both 48, but the new code expected npy to be 6*npx.  So I changed it to
 
 3. Extdata export fields are mirrored from the import fields of CTM.  But, the
 attributes of the fields are not copied when the fields are mirrored.  What it
-is looking for includes:  RESOLUTION, STAGGERING, ROTATION
+is looking for includes:  PRECISION, STAGGERING, ROTATION
 
 4. Extdata needs to know the value of NX and NY from its config.  But, NX and
 NY are defined in GEOSCTM.rc, which is the ROOT_CF defined in CAP.rc.  I
