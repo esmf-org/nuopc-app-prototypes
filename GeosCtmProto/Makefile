@@ -23,7 +23,7 @@ ESMFMKFILE = $(NEWBASEDIR)/lib/esmf.mk
 
 include $(ESMFMKFILE)
 # add MAPL includes and libs
-MAPL_INSTALL_ROOT = /gpfsm/dnb31/pli/GEOSctm_lite/Linux
+MAPL_INSTALL_ROOT = $(ESMADIR)/Linux
 MAPL_INCDIR = $(MAPL_INSTALL_ROOT)/include
 MAPL_INCLUDEPATHS = -I$(MAPL_INCDIR)/MAPL_cfio_r4 -I$(MAPL_INCDIR)/MAPL_Base -I$(MAPL_INCDIR)/FVdycoreCubed_GridComp -I$(MAPL_INCDIR)/fvdycore -I$(MAPL_INCDIR)/GFDL_fms -I$(NEWBASEDIR)/include/esmf
 MAPL_LINKPATHS    = -L$(MAPL_INSTALL_ROOT)/lib 
