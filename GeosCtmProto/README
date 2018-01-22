@@ -58,7 +58,12 @@ setenv BASEDIR ..../ESMA-Baselibs-5.0.5/x86_64-unknown-linux-gnu/ifort_17.0.4.19
 6.  Check out GeosCtmProto from esmfcontriv svn repro
 
     % svn co https://svn.code.sf.net/p/esmfcontrib/svn/NUOPC/trunk/GeosCtmProto
-   
+
+7.  Make sure envirment variables ESMADIR and BASEDIR are set, then just cd to
+GeosCtmProto directory to do %gmake
+
+8.  To run the code, do %mpirun -np 6 ./ctmApp 
+    
 ------------------------------------------
 
 How to compile GeosCtmProto with Tom Clune's MAPL repro on discover
