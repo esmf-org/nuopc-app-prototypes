@@ -8,6 +8,8 @@
 ! Licensed under the University of Illinois-NCSA License.
 !==============================================================================
 
+#define TESTAUTOADDCONNECTORS
+
 module ESM
 
   !-----------------------------------------------------------------------------
@@ -142,7 +144,6 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
 
-#define TESTAUTOADDCONNECTORS
 #ifndef TESTAUTOADDCONNECTORS
     ! SetServices for atm2med
     call NUOPC_DriverAddComp(driver, srcCompLabel="ATM", dstCompLabel="MED", &
@@ -276,7 +277,10 @@ module ESM
 
     ! ingest FreeFormat run sequence
     call NUOPC_DriverIngestRunSequence(driver, runSeqFF, &
-      autoAddConnectors=.true., rc=rc)
+#ifdef TESTAUTOADDCONNECTORS
+      autoAddConnectors=.true., &
+#endif
+      rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
 

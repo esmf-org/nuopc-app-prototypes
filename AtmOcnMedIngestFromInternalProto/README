@@ -1,22 +1,18 @@
-README for ATM-OCN-MED with petList NUOPC prototype and two time scales
+README for ATM-OCN-MED, ingesting run sequence from internal FreeFormat object
 NUOPC prototype
------------------------------------------------------------------------
+------------------------------------------------------------------------------
 
 Description:
 
   A two-way coupled system with a single driver (ESM), two model components
   (ATM, OCN), and a mediator (MED).
-  
-  The ESM driver uses explicitly constructed petLists when adding the ATM, OCN,
-  and MED components. 
 
-  The ESM driver constructs a custom run sequence with two time scales to
-  implement coupling between ATM, OCN, and MED components: slow & fast
+  The ESM driver constructs a NUOPC_FreeFormat object, holding a custom run
+  sequence. The NUOPC_FreeFormat is then ingests by the driver to implement
+  coupling between ATM, OCN, and MED components.
   
-  The MED component uses two clocks, and specializes two label_Advance phases:
-  slow & fast
-  
-  The connector components are explicitly added by the driver.
+  The connector components are either explicitly added by the driver, or
+  automatically added by the run sequence ingestion method.
   
   ATM, OCN, and MED components use a simple two-phase initialization,
   consisting of advertise and realize.
@@ -39,9 +35,7 @@ Code structure:
   - atm.F90     - The ATM component, specializing generic NUOPC_Model.
   - ocn.F90     - The OCN component, specializing generic NUOPC_Model.
   - med.F90     - The Mediator component, specializing generic 
-                  NUOPC_Mediator, implementing two Advance phases: slow & fast
+                  NUOPC_Mediator.
   - esm.F90     - The Earth System Model (ESM) component, specializing generic
-                  NUOPC_Driver. Define partial petLists for
-                  ATM, OCN, and MEDm; Set custom RunSequence with two 
-                  timescales: slow interaction w/ OCN & fast interaction w/ ATM.
+                  NUOPC_Driver. Define partial petLists for ATM, OCN, and MED.
   - esmApp.F90  - ESM driver application.
