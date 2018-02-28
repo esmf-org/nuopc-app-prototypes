@@ -1,5 +1,15 @@
 #!/bin/bash
 
+#==============================================================================
+# Earth System Modeling Framework
+# Copyright 2002-2018, University Corporation for Atmospheric Research, 
+# Massachusetts Institute of Technology, Geophysical Fluid Dynamics 
+# Laboratory, University of Michigan, National Centers for Environmental 
+# Prediction, Los Alamos National Laboratory, Argonne National Laboratory, 
+# NASA Goddard Space Flight Center.
+# Licensed under the University of Illinois-NCSA License.
+#==============================================================================
+
 count=0
 
 function TestProto {
@@ -159,6 +169,7 @@ TestProto AsyncIONonblockingProto           asyncIOApp
 TestProto AtmOcnConProto                    esmApp
 TestProto AtmOcnCplListProto                esmApp
 TestProto AtmOcnFDSynoProto                 esmApp
+TestProto AtmOcnIceSimpleImplicitProto      esmApp
 TestProto AtmOcnImplicitProto               esmApp
 TestProto AtmOcnLndProto                    esmApp
 TestProto AtmOcnMedIngestFromConfigProto    esmApp
@@ -174,7 +185,6 @@ TestProto AtmOcnScalarProto                 esmApp
 TestSelectExternalProto   AtmOcnSelectExternalProto    esmApp
 TestSelectProto           AtmOcnSelectProto            esmApp
 TestProto AtmOcnSimpleImplicitProto         esmApp
-TestProto AtmOcnIceSimpleImplicitProto      esmApp
 TestProto AtmOcnTransferGridProto           esmApp
 TestProto AtmOcnTransferLocStreamProto      esmApp
 TestProto DriverInDriverProto               mainApp
