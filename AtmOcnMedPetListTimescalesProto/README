@@ -2,6 +2,9 @@ README for ATM-OCN-MED with petList NUOPC prototype and two time scales
 NUOPC prototype
 -----------------------------------------------------------------------
 
+Show how a Driver can setup a run sequence with two time scales, and the 
+Mediator has slow and fast run phases.
+
 Description:
 
   A two-way coupled system with a single driver (ESM), two model components
@@ -21,6 +24,7 @@ Description:
   ATM, OCN, and MED components use a simple two-phase initialization,
   consisting of advertise and realize.
   
+
 Build:
   - Set environment variable ESMFMKFILE to point to the esmf.mk of your ESMF
     installation.

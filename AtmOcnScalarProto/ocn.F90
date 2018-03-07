@@ -177,7 +177,7 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
 
-#if 0
+#ifdef REPLICATED_WORKING
     ! importable field: scalar_test
     ! - use the gridOut to provide the underlying decomposition and distribution
     ! - however, replicate the field across all DEs of gridIn via gridToFieldMap
