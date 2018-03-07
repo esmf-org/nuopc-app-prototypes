@@ -281,7 +281,7 @@ module ESM
       return  ! bail out
 #endif
 
-    ! set the model clock
+    ! set the driver clock
     call ESMF_TimeIntervalSet(timeStep, m=15, rc=rc) ! 15 minute default step
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &

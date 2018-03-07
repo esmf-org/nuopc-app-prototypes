@@ -198,7 +198,7 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
       
-    ! set the model clock
+    ! set the driver clock
     call ESMF_TimeIntervalSet(timeStep, h=24, rc=rc)   ! 24h for slow timescale
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -250,54 +250,55 @@ module ESM
 
     rc = ESMF_SUCCESS
     
-    ! Replace the default RunSequence with a customized sequ. with two slots
+    ! Replace the default RunSequence with a customized run sequence w/ 2 slots
     call NUOPC_DriverNewRunSequence(driver, slotCount=2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=1, &
+    call NUOPC_DriverAddRunElement(driver, slot=1, &  ! slow loop
       srcCompLabel="ATM", dstCompLabel="RTM", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=1, &
+    call NUOPC_DriverAddRunElement(driver, slot=1, &  ! slow loop
       srcCompLabel="RTM", dstCompLabel="OCN", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    ! link the fast loop into the slow loop
     call NUOPC_DriverAddRunElement(driver, slot=1, linkSlot=2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=1, &
+    call NUOPC_DriverAddRunElement(driver, slot=1, &  ! slow loop
       compLabel="RTM", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=2, &
+    call NUOPC_DriverAddRunElement(driver, slot=2, &  ! fast loop
       srcCompLabel="ATM", dstCompLabel="OCN", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=2, &
+    call NUOPC_DriverAddRunElement(driver, slot=2, &  ! fast loop
       srcCompLabel="OCN", dstCompLabel="ATM", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=2, &
+    call NUOPC_DriverAddRunElement(driver, slot=2, &  ! fast loop
       compLabel="ATM", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=2, &
+    call NUOPC_DriverAddRunElement(driver, slot=2, &  ! fast loop
       compLabel="OCN", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
