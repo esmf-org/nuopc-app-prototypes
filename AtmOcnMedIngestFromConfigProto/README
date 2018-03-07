@@ -1,6 +1,11 @@
 README for ATM-OCN-MED, ingesting run sequence from config file NUOPC prototype
 -------------------------------------------------------------------------------
 
+Show how a Driver can ingest a run sequence from config file, potentially 
+automatically adding Connector components according to the run sequence.
+Demonstrate how to specialize compatibility checking in the components to allow
+run sequence switching that changes time lags between components.
+
 Description:
 
   A two-way coupled system with a single driver (ESM), two model components
@@ -17,6 +22,7 @@ Description:
   
   Two alternative run sequences are provided in the esmApp.runconfig file.
   
+
 Build:
   - Set environment variable ESMFMKFILE to point to the esmf.mk of your ESMF
     installation.

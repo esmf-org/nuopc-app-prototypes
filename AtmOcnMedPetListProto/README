@@ -1,6 +1,9 @@
 README for ATM-OCN-MED with petList NUOPC prototype
 ---------------------------------------------------
 
+A simple two model system with a Mediator, where Model and Mediator components
+run on assigned PETs.
+
 Description:
 
   A two-way coupled system with a single driver (ESM), two model components
@@ -17,6 +20,7 @@ Description:
   ATM, OCN, and MED components use a simple two-phase initialization,
   consisting of advertise and realize.
   
+
 Build:
   - Set environment variable ESMFMKFILE to point to the esmf.mk of your ESMF
     installation.

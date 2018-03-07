@@ -181,7 +181,7 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
-#if 0      
+#ifdef REPLICATED_WORKING
     ! exportable field: scalar_test
     ! - use the gridOut to provide the underlying decomposition and distribution
     ! - however, replicate the field across all DEs of gridOut via gridToFieldMap
