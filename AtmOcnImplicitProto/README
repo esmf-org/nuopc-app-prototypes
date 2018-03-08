@@ -43,4 +43,4 @@ Code structure:
                   but don't use generic Run() routine.
   - esm.F90     - The Earth System Model (ESM) component, specializing generic
                   NUOPC_Driver
-  - esmApp.F90  - ESM driver application.
+  - esmApp.F90  - ESM application.

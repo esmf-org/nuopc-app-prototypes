@@ -43,4 +43,4 @@ Code structure:
                   time scales:
                     slow timeloop is over RTM, interacting with ATM-OCN system
                     fast timeloop is over ATM-OCN coupling
-  - esmApp.F90  - ESM driver application.
+  - esmApp.F90  - ESM application.

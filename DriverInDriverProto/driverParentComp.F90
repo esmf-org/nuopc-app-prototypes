@@ -119,7 +119,7 @@ module driverParentComp
       file=__FILE__)) &
       return  ! bail out
 #if 1
-! turning this connector of will trigger an error in the driverChild
+! turning this connector off will trigger an error in the driverChild
 ! InternalInitializeRealize() routine, detecting that there is no producer
 ! for this field.
     ! SetServices for OCN2ATM

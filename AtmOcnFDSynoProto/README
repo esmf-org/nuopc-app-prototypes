@@ -39,4 +39,4 @@ Code structure:
   - esm.F90     - The Earth System Model (ESM) component, specializing generic
                   NUOPC_Driver. Adding an entry to the field dictionary and
                   setting a dictionary synonym.
-  - esmApp.F90  - ESM driver application.
+  - esmApp.F90  - ESM application.
