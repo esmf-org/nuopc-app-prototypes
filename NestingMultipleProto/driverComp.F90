@@ -189,7 +189,7 @@ module driverComp
       file=__FILE__)) &
       return  ! bail out
 
-    ! SetServices for parent2nestling0
+    ! SetServices for connector: parent->nestling0
     call NUOPC_DriverAddComp(driver, srcCompLabel="advectDiff_Parent", &
       dstCompLabel="advectDiff_Nestling0", compSetServicesRoutine=cplSS, &
       comp=connector, rc=rc)
@@ -201,7 +201,7 @@ module driverComp
     call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", &
       rc=rc)
 
-    ! SetServices for parent2nestling1
+    ! SetServices for connector: parent->nestling1
     call NUOPC_DriverAddComp(driver, srcCompLabel="advectDiff_Parent", &
       dstCompLabel="advectDiff_Nestling1", compSetServicesRoutine=cplSS, &
       comp=connector, rc=rc)

@@ -1,9 +1,33 @@
 README for ATM-OCN with transferred Grids between ATM and OCN Components
 ------------------------------------------------------------------------
 
-Dependencies:
-  - ESMF v7.1.0 beta
+Show how grids can be trasferred in memory between components. The OCN 
+component provides grids that the ATM component accepts during initialization.
+Transfer for different grid decomposition schemes are exercised.
+
+Description:
+
+  A two-way coupled system with a single driver (ESM) and two model components
+  (ATM, OCN).
   
+  The ESM driver uses explicitly constructed petLists when adding the two
+  model components.
+
+  The ESM driver component uses the default run sequence to implement coupling
+  between ATM and OCN components. 
+  
+  The connector components are explicitly added by the driver.
+  
+  The ESMF driver modifies the CplList attribute on the connectors after they
+  have been auto-generated in order to specify custom regridding options.
+  
+  The OCN component uses a simple two-phase initialization, consisting of 
+  advertise and realize.
+  
+  The ATM component uses a four-phase initialization, consisting of advertise,
+  receive-DistGrid, accept-Grid, and realize.
+  
+
 Build:
   - Set environment variable ESMFMKFILE to point to the esmf.mk of your ESMF
     installation.
@@ -11,13 +35,11 @@ Build:
   
 Execution:
   - Optionally set environment variable ESMF_RUNTIME_COMPLIANCECHECK to ON.
-  - mpirun -np X ./esmApp (where X is the total number of PETs)
+  - mpirun -np X ./esmApp (where X is the total number of PETs, typically 4)
   
 Output:
   - PET*.Log files containing compliance checker output if turned on.
   - The prototype outputs time stepping information to stdout.
-  
-
 
 Code structure:
   - Makefile    - Makefile that is based on the standard esmf.mk mechanism.
@@ -31,5 +53,4 @@ Code structure:
   - esm.F90     - The Earth System Model (ESM) component, specializing generic
                   NUOPC_Driver. Define partial petLists for ATM
                   and OCN.
-  - esmApp.F90  - ESM driver application.
-  
+  - esmApp.F90  - ESM application.

@@ -9,9 +9,6 @@ Description:
   A two-way coupled system with a single driver (ESM) and two model components
   (ATM, OCN).
   
-  The ESMF driver modifies the CplList attribute on the connectors after they
-  have been auto-generated in order to specify custom regridding options.
-  
   The ESM driver uses explicitly constructed petLists when adding the two
   model components.
 
@@ -19,6 +16,9 @@ Description:
   between ATM and OCN components. 
   
   The connector components are explicitly added by the driver.
+  
+  The ESMF driver modifies the CplList attribute on the connectors after they
+  have been auto-generated in order to specify custom regridding options.
   
   Both ATM and OCN components use a simple two-phase initialization,
   consisting of advertise and realize.
@@ -44,4 +44,4 @@ Code structure:
   - esm.F90     - The Earth System Model (ESM) component, specializing generic
                   NUOPC_Driver. Sets an internal initialization method:
                   ModifyCplLists() to modify the CplList of the Connectors.
-  - esmApp.F90  - ESM driver application.
+  - esmApp.F90  - ESM application.

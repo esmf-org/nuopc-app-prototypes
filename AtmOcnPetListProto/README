@@ -39,4 +39,4 @@ Code structure:
   - ocn.F90     - The OCN component, specializing generic NUOPC_Model.
   - esm.F90     - The Earth System Model (ESM) component, specializing generic
                   NUOPC_Driver. Define partial petLists for ATM and OCN.
-  - esmApp.F90  - ESM driver application.
+  - esmApp.F90  - ESM application.
