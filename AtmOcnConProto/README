@@ -46,4 +46,4 @@ Code structure:
   - conn.F90    - The CON component, specializing generic NUOPC_Connector.
   - esm.F90     - The Earth System Model (ESM) component, specializing generic
                   NUOPC_Driver.
-  - esmApp.F90  - ESM driver application.
+  - esmApp.F90  - ESM application.

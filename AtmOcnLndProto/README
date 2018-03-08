@@ -41,4 +41,4 @@ Code structure:
   - lnd.F90     - The LND component, specializing generic NUOPC_Model.
   - esm.F90     - The Earth System Model (ESM) component, specializing generic
                   NUOPC_Driver.
-  - esmApp.F90  - ESM driver application.
+  - esmApp.F90  - ESM application.
