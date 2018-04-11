@@ -248,7 +248,7 @@ module ESM
 
     rc = ESMF_SUCCESS
     
-    ! query the Component for info
+    ! query the driver for its name
     call ESMF_GridCompGet(driver, name=name, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
