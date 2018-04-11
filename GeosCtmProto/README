@@ -1,3 +1,28 @@
+How to compile and run GeosCtmProto using Peggy's BASELIB and GEOSctm_lite
+
+Peggy Li, 4/10/2018
+
+1. Load the following modules
+
+module load other/comp/gcc-5.3-sp3
+module load comp/intel-17.0.4.196
+module load mpi/impi-18.0.0.128
+module load lib/mkl-17.0.4.196
+module load other/SIVO-PyD/spd_1.24.0_gcc-5.3-sp3_mkl-16.0.1.150
+module load other/git
+module load other/cmake
+
+2.  Define the following environment variables
+
+setenv BASEDIR /gpfsm/dnb31/pli/ESMA-Baselibs-5.0.5/x86_64-unknown-linux-gnu/ifort_17.0.4.196-intelmpi_18.0.0.128
+setenv ESMADIR /gpfsm/dnb31/pli/GEOSctm_lite
+
+3.  Untar GeosCtmProto.tar and compile
+
+4.  Run it using %mpirun -np 6 ./ctmApp
+
+--------------------------------------
+
 How to compile GeosCtmProto with the latest GEOSctm_lite that contains Tom
 Clune's latest MAPL code and the new CubedSphereFactory code
 

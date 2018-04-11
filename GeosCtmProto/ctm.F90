@@ -18,9 +18,7 @@
       use ESMF
       use MAPL_Mod
       use NUOPC
-      use NUOPC_Driver, &
-        driver_routine_SS             => SetServices, &
-        driver_label_SetModelServices => label_SetModelServices
+      use NUOPC_Driver, driver_routine_SS          => SetServices
       use NUOPC_Connector, only : cplSS            => SetServices
       use ENVCTM,          only : EctmSetServices  => SetServices
       use ADVCORE,         only : AdvCSetServices  => SetServices
@@ -153,12 +151,19 @@
       ! ------------------------------------
 
       ! attach specializing method(s)
-      call NUOPC_CompSpecialize(GC, specLabel=driver_label_SetModelServices, &
+      call NUOPC_CompSpecialize(GC, specLabel=label_SetModelServices, &
         specRoutine=SetModelServices, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
+
+      call NUOPC_CompSpecialize(GC, specLabel=label_SetRunSequence, &
+         specRoutine=SetRunSequence, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, &
+         file=__FILE__)) &
+         return  ! bail out            
 
 #if 0
       call NUOPC_CompSetEntryPoint (GC, ESMF_METHOD_INITIALIZE, &
@@ -174,6 +179,7 @@
           line=__LINE__, &
           file=__FILE__)) &
           return  ! bail out
+
 #endif
 
       return
@@ -431,6 +437,56 @@
   
       end subroutine SetModelServices
 
+  subroutine SetRunSequence(driver, rc)
+    type(ESMF_GridComp)  :: driver
+    integer, intent(out) :: rc
+
+    ! local variables                                                                                           
+    character(ESMF_MAXSTR)              :: name
+    type(ESMF_Config)                   :: config
+    type(NUOPC_FreeFormat)              :: runSeqFF
+
+    rc = ESMF_SUCCESS
+
+    ! query the Component for info                                                                              
+    call ESMF_GridCompGet(driver, name=name, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out                                        
+
+    ! read free format run sequence from config                                                                 
+    call ESMF_GridCompGet(driver, config=config, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out                                        
+
+    runSeqFF = NUOPC_FreeFormatCreate(config, label="runSeq::", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out                                        
+
+#if 0
+    call NUOPC_FreeFormatPrint(runSeqFF, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out                                        
+#endif
+
+    ! ingest FreeFormat run sequence                                                                            
+    call NUOPC_DriverIngestRunSequence(driver, runSeqFF, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out                                        
+
+#if 0
+    ! Diagnostic output                                                                                         
+    call NUOPC_DriverPrint(driver, orderflag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out                                        
+#endif
+
+    ! clean-up                                                                                                  
+    call NUOPC_FreeFormatDestroy(runSeqFF, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out                                        
+
+  end subroutine
+
 !EOC
 !------------------------------------------------------------------------------
 !BOP
@@ -630,207 +686,6 @@
 
       end subroutine Initialize
 
-#if 0
-!EOC
-!------------------------------------------------------------------------------
-!BOP
-!
-! !IROUTINE: Run -- Run method for the GEOS CTM Gridded Component
-!
-! !INTERFACE:
-
-   subroutine Run ( GC, IMPORT, EXPORT, CLOCK, RC )
-!
-! !INPUT/OUTPUT PARAMETERS:
-     type(ESMF_GridComp), intent(inout) :: GC     ! Gridded component 
-     type(ESMF_State),    intent(inout) :: IMPORT ! Import state
-     type(ESMF_State),    intent(inout) :: EXPORT ! Export state
-     type(ESMF_Clock),    intent(inout) :: CLOCK  ! The clock
-!
-! !OUTPUT PARAMETERS:
-     integer, optional,   intent(  out) :: RC     ! Error code
-!
-! !DESCRIPTION: 
-!  The run method for the GEOSctm calls the children`s
-!   run methods. 
-!
-!EOP  
-!=============================================================================
-!BOC
-!
-
-
-
-! !LOCAL VARIABLES:
-      integer                             :: STATUS
-      type (MAPL_MetaComp),      pointer  :: STATE
-      type (ESMF_GridComp),      pointer  :: GCS(:)
-      type (ESMF_State),         pointer  :: GIM(:)
-      type (ESMF_State),         pointer  :: GEX(:)
-      type (ESMF_State)                   :: INTERNAL
-      type (ESMF_Config)                  :: CF
-      character(len=ESMF_MAXSTR),pointer  :: GCNames(:)
-      integer                             :: I, L, K
-      integer                             :: IM, JM, LM
-      real                                :: DT
-      character(len=ESMF_MAXSTR)          :: COMP_NAME
-      character(len=ESMF_MAXSTR)          :: IAm = "Run"
-
-      type (ESMF_FieldBundle)             :: Bundle
-
-      character(len=ESMF_MAXSTR), pointer :: Names(:)
-      character(len=ESMF_MAXSTR)          :: STRING
-
-      CHARACTER(LEN=ESMF_MAXSTR)          :: fieldName
-
-
-      ! Get the target components name and set-up traceback handle.
-      ! -----------------------------------------------------------
-
-      call ESMF_GridCompGet ( GC, name=COMP_NAME, config=CF, RC=STATUS )
-      VERIFY_(STATUS)
-      Iam = trim(COMP_NAME) // "::" // TRIM(Iam)
-
-      ! Get my internal MAPL_Generic state
-      !-----------------------------------
-
-      call MAPL_GetObjectFromGC ( GC, STATE, RC=STATUS)
-      VERIFY_(STATUS)
-
-      call MAPL_TimerOn(STATE,"TOTAL")
-      call MAPL_TimerOn(STATE,"RUN")
-
-      ! Get the children`s states from the generic state
-      !-------------------------------------------------
-
-      call MAPL_Get ( STATE,   &
-          GCS=GCS, GIM=GIM, GEX=GEX,       &
-          IM = IM, JM = JM, LM = LM,       &
-          GCNames = GCNames,               &
-          INTERNAL_ESMF_STATE = INTERNAL,  &
-                               RC=STATUS )
-      VERIFY_(STATUS)
-
-      call ESMF_ConfigGetAttribute(CF, DT, Label="RUN_DT:" , RC=STATUS)
-      VERIFY_(STATUS)     
-
-      !---------------------
-      ! Cinderella Component: to derive variables for other components
-      !---------------------
-      I=ECTM
-
-      call MAPL_TimerOn (STATE,GCNames(I))
-      call ESMF_GridCompRun (GCS(I),               &
-                             importState = GIM(I), &
-                             exportState = GEX(I), &
-                             clock       = CLOCK,  &
-                             userRC      = STATUS  )
-      VERIFY_(STATUS)
-      call MAPL_TimerOff(STATE,GCNames(I))
-
-      !--------
-      ! advCore
-      !--------
-      I=ADV3
-
-      call MAPL_TimerOn (STATE,GCNames(I))
-      call ESMF_GridCompRun (GCS(I),               &
-                           importState = GIM(I), &
-                           exportState = GEX(I), &
-                           clock       = CLOCK,  &
-                           userRC      = STATUS  )
-      VERIFY_(STATUS)
-      call MAPL_TimerOff(STATE,GCNames(I))
-
-      !-----------
-      ! Convection
-      !-----------
-     !IF (do_ctmConvection) THEN
-     !   I=CONV
-
-     !   call MAPL_TimerOn (STATE,GCNames(I))
-     !   call ESMF_GridCompRun (GCS(I),               &
-     !                          importState = GIM(I), &
-     !                          exportState = GEX(I), &
-     !                             clock       = CLOCK,  &
-     !                          userRC      = STATUS  )
-     !   VERIFY_(STATUS)
-     !   call MAPL_TimerOff(STATE,GCNames(I))
-     !END IF
-
-     !IF (.NOT. enable_pTracers) THEN
-         !----------
-         ! Chemistry: Phase 1
-         !----------
-     !   I=CHEM   
-
-     !   call MAPL_TimerOn (STATE,GCNames(I))
-     !   call ESMF_GridCompRun (GCS(I),               &
-     !                          importState = GIM(I), &
-     !                          exportState = GEX(I), &
-     !                          clock       = CLOCK,  &
-     !                          phase       = 1,      &
-     !                          userRC      = STATUS  )
-     !   VERIFY_(STATUS)
-     !   call MAPL_TimerOff(STATE,GCNames(I))
-     !END IF
-
-
-      !----------
-      ! Diffusion
-      !----------
-     !IF (do_ctmDiffusion) THEN
-     !   I=DIFF
-
-     !   call MAPL_TimerOn (STATE,GCNames(I))
-     !   call ESMF_GridCompRun (GCS(I),               &
-     !                          importState = GIM(I), &
-     !                             exportState = GEX(I), &
-     !                          clock       = CLOCK,  &
-     !                          userRC      = STATUS  )
-     !   VERIFY_(STATUS)
-     !   call MAPL_TimerOff(STATE,GCNames(I))
-     !END IF
-
-      IF (enable_pTracers) THEN
-         !---------------
-         ! Passive Tracer
-         !---------------
-         I=PTRA
-
-         call MAPL_TimerOn (STATE,GCNames(I))
-         call ESMF_GridCompRun (GCS(I),               &
-                                importState = GIM(I), &
-                                exportState = GEX(I), &
-                                clock       = CLOCK,  &
-                                userRC      = STATUS  )
-         VERIFY_(STATUS)
-         call MAPL_TimerOff(STATE,GCNames(I))
-      ELSE
-         !----------
-         ! Chemistry: Phase 2
-         !----------
-     !   I=CHEM   
-
-     !   call MAPL_TimerOn (STATE,GCNames(I))
-     !   call ESMF_GridCompRun (GCS(I),               &
-     !                          importState = GIM(I), &
-     !                          exportState = GEX(I), &
-     !                          clock       = CLOCK,  &
-     !                          phase       = 2,      &
-     !                          userRC      = STATUS  )
-     !   VERIFY_(STATUS)
-     !   call MAPL_TimerOff(STATE,GCNames(I))
-      END IF
-
-      call MAPL_TimerOff(STATE,"RUN")
-      call MAPL_TimerOff(STATE,"TOTAL")
-
-      RETURN_(ESMF_SUCCESS)
-
-      end subroutine Run
-#endif
-!
 
 ! Mimicking the MAPL_GridCreate() by using the grid definition in the config file, example:
 !               NX: 4
@@ -903,7 +758,7 @@ subroutine My_GridCreate(GC, rc)
 ! The new code set NY=NX
     ! date='CF' for cubed sphere
     if (date=='CF' .or. date=='DP') then
-#if 0
+#if 1
       ! make sure NY is divisble by 6 and JM_WORLD is IM_WORLD*6
       if (mod(NY, 6) /= 0) then
         call ESMF_LogSetError(ESMF_RC_ARG_BAD, msg='NY has to be multiple of 6', &
@@ -911,6 +766,13 @@ subroutine My_GridCreate(GC, rc)
           file=__FILE__, rcToReturn=rc) 
         return
       endif
+      ! change NY value in the config to be NY/6
+      call ESMF_ConfigSetAttribute(config, value=NY/6, label='NY:', rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
 #endif
 
 #if 0
