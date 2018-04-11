@@ -2,14 +2,15 @@
 # Model Resolution and Timestep Parameters
 # ----------------------------------------
                NX: 1
-               NY: 1
-       GEOSCTM_IM: 48
-       GEOSCTM_JM: 288
+               NY: 6
+               IM: 48
+               JM: 288
                LM: 72
          GRIDNAME: PE48x288-CF
 AdvCore_Advection: 1
            DYCORE: OFF
      HEARTBEAT_DT: 900
+
         GRID_TYPE: Cubed-Sphere
          IM_WORLD: 48
 
@@ -25,6 +26,21 @@ NUM_READERS: 1
 NUM_WRITERS: 1
 
 MAPL_ENABLE_BOOTSTRAP: YES
+
+#GEOSCTM RunSequence
+runSeq::
+    @900             # 15min time step 
+      DYNAMICS -> CTMenv
+      PTRACERS -> DYNAMICS
+      DYNAMICS -> PTRACERS
+      CTMenv
+      CTMenv -> DYNAMICS
+      CTMenv -> PTRACERS
+      DYNAMICS
+      PTRACERS
+    @
+::
+
 
 # GEOSCTM Model Restart Files
 # ---------------------------------

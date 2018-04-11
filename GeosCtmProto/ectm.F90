@@ -14,11 +14,13 @@
       use ESMF
       use MAPL_mod
       use NUOPC
-      use NUOPC_Model, &
-           model_routine_SS      => SetServices, &
-           model_label_DataInitialize   => label_DataInitialize, &
-           model_label_Advance   => label_Advance
+      use NUOPC_Mediator, &
+           model_routine_SS      => SetServices
+!           model_label_DataInitialize   => label_DataInitialize, &
+!           model_label_Advance   => label_Advance
       use NUOPC_Generic  
+      use FV_StateMod, only : calcCourantNumberMassFlux => fv_computeMassFluxes
+      use m_set_eta,  only : set_eta
       implicit none
       private
 
@@ -145,14 +147,41 @@
         file=__FILE__)) &
         return  ! bail out
 
-     call NUOPC_CompSpecialize(GC, specLabel=model_label_DataInitialize, &
+     call NUOPC_CompSpecialize(GC, specLabel=label_DataInitialize, &
        specRoutine=dataInitialize, rc=rc)
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
        line=__LINE__, &
        file=__FILE__)) &
        return  ! bail out
 
-     call NUOPC_CompSpecialize(GC, specLabel=model_label_Advance, &
+     call ESMF_MethodRemove(GC, label=label_CheckImport,rc=rc)
+     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+       line=__LINE__, &
+       file=__FILE__)) &
+       return  ! bail out
+     call NUOPC_CompSpecialize(GC, specLabel=label_CheckImport, &
+       specRoutine=NUOPC_NoOp, rc=rc)
+     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+       line=__LINE__, &
+       file=__FILE__)) &
+       return  ! bail out
+
+      ! attach specializing method(s)                                                                             
+      ! -> NUOPC specializes by default --->>> first need to remove the default                                   
+      call ESMF_MethodRemove(GC, label_SetRunClock, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out                                                                                        
+      call NUOPC_CompSpecialize(GC, specLabel=label_SetRunClock, &
+        specRoutine=SetRunClock, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out                                                                                        
+
+
+     call NUOPC_CompSpecialize(GC, specLabel=label_Advance, &
        specRoutine=ModelAdvance, rc=rc)
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
        line=__LINE__, &
@@ -349,7 +378,7 @@
            SHORT_NAME = 'CXr8',                                      &
            LONG_NAME  = 'eastward_accumulated_courant_number',       &
            UNITS      = '1',                                          &
-           PRECISION  = ESMF_KIND_R4,                                &
+           PRECISION  = ESMF_KIND_R8,                                &
            DIMS       = MAPL_DimsHorzVert,                           &
            VLOCATION  = MAPL_VLocationCenter,             RC=rc  )
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -362,7 +391,7 @@
            SHORT_NAME = 'CYr8',                                      &
            LONG_NAME  = 'northward_accumulated_courant_number',      &
            UNITS      = '1',                                          &
-           PRECISION  = ESMF_KIND_R4,                                &
+           PRECISION  = ESMF_KIND_R8,                                &
            DIMS       = MAPL_DimsHorzVert,                           &
            VLOCATION  = MAPL_VLocationCenter,             RC=rc  )
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -377,7 +406,7 @@
 !           LONG_NAME  = 'pressure_weighted_accumulated_eastward_mass_flux', &   
            LONG_NAME  = 'pressure_weighted_eastward_mass_flux', &
            UNITS      = 'Pa m+2 s-1',                                &
-           PRECISION  = ESMF_KIND_R4,                                &
+           PRECISION  = ESMF_KIND_R8,                                &
            DIMS       = MAPL_DimsHorzVert,                           &
            VLOCATION  = MAPL_VLocationCenter,             RC=rc  )
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -392,7 +421,7 @@
 !           LONG_NAME  = 'pressure_weighted_accumulated_northward_mass_flux', &
            LONG_NAME  = 'pressure_weighted_northward_mass_flux', &
            UNITS      = 'Pa m+2 s-1',                                &
-           PRECISION  = ESMF_KIND_R4,                                &
+           PRECISION  = ESMF_KIND_R8,                                &
            DIMS       = MAPL_DimsHorzVert,                           &
            VLOCATION  = MAPL_VLocationCenter,             RC=rc  )
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -405,7 +434,7 @@
            SHORT_NAME = 'PLE1r8',                                    &
            LONG_NAME  = 'pressure_at_layer_edges_after_advection',   &
            UNITS      = 'Pa',                                        &
-           PRECISION  = ESMF_KIND_R4,                                &
+           PRECISION  = ESMF_KIND_R8,                                &
            DIMS       = MAPL_DimsHorzVert,                           &
            VLOCATION  = MAPL_VLocationEdge,             RC=rc  )
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -418,7 +447,7 @@
            SHORT_NAME = 'PLE0r8',                                    &
            LONG_NAME  = 'pressure_at_layer_edges_before_advection',  &
            UNITS      = 'Pa',                                        &
-           PRECISION  = ESMF_KIND_R4,                                &
+           PRECISION  = ESMF_KIND_R8,                                &
            DIMS       = MAPL_DimsHorzVert,                           &
            VLOCATION  = MAPL_VLocationEdge,             RC=rc  )
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -542,6 +571,12 @@
      ! -----------------------------------------------------------------
      !call MAPL_GenericSetServices    ( GC, RC=rc )
      !VERIFY_(rc)
+
+     call ESMF_ConfigDestroy(configfile, rc=rc )
+     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
 
      RETURN_(ESMF_SUCCESS)
   
@@ -703,7 +738,8 @@
            return  ! bail out
 
     ! query the Component for its clock, importState and exportState
-    call NUOPC_ModelGet(GC, modelClock=clock, importState=importState, &
+    !call NUOPC_ModelGet(GC, modelClock=clock, importState=importState, &
+    call ESMF_GridCompGet(GC, clock=clock, importState=importState, &
       exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -727,6 +763,46 @@
 
      return
      end subroutine dataInitialize
+
+  subroutine SetRunClock(mediator, rc)
+    type(ESMF_GridComp)  :: mediator
+    integer, intent(out) :: rc
+
+    ! local variables                                                                                           
+    type(ESMF_Clock)              :: mediatorClock, driverClock
+    type(ESMF_Time)               :: currTime
+
+    rc = ESMF_SUCCESS
+
+    ! query the Mediator for clocks                                                                             
+    call NUOPC_MediatorGet(mediator, mediatorClock=mediatorClock, &
+      driverClock=driverClock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out                                                                                        
+
+    ! set the mediatorClock to have the current start time as the driverClock                                   
+    call ESMF_ClockGet(driverClock, currTime=currTime, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out                                                                                        
+    call ESMF_ClockSet(mediatorClock, currTime=currTime, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out                                                                                        
+
+    ! check and set the component clock against the driver clock                                                
+    call NUOPC_CompCheckSetClock(mediator, driverClock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, &
+      msg="NUOPC INCOMPATIBILITY DETECTED: between model and driver clocks", &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out                                                                                        
+
+  end subroutine
 
 !EOC
 !-------------------------------------------------------------------------
@@ -757,8 +833,10 @@
       character(len=ESMF_MAXSTR)      :: COMP_NAME
       !type (MAPL_MetaComp), pointer   :: ggState
       type (ESMF_Grid)                :: esmfGrid
+      CHARACTER(LEN=ESMF_MAXSTR)  :: rcfilen = 'CTM_GridComp.rc'
+      type(ESMF_Config)           :: configFile 
 
-#if 0
+#if 1
       ! Imports
       !--------
       real, pointer, dimension(:,:,:) ::      PLE1 => null()
@@ -838,6 +916,33 @@
       integer :: ndt, isd, ied, jsd, jed, i, j, l
       real(r8) :: DT
 
+    ! local variables
+    type(ESMF_Clock)          :: clock
+    type(ESMF_State)          :: IMPORT, EXPORT
+
+    call ESMF_LogWrite('CTMenv: modelAdvance', ESMF_LOGMSG_INFO, rc=rc)
+
+    ! query the Component for its clock, importState and exportState
+    call ESMF_GridCompGet(GC, clock=clock, importState=IMPORT, &
+!    call NUOPC_ModelGet(GC, modelClock=clock, importState=IMPORT, &
+      exportState=EXPORT, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+     configFile = ESMF_ConfigCreate(rc=rc )
+     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+     call ESMF_ConfigLoadFile(configFile, TRIM(rcfilen), rc=rc )
+     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
       ! Get the target components name and set-up traceback handle.
       ! -----------------------------------------------------------
       call ESMF_GridCompGet ( GC, name=COMP_NAME, Grid=esmfGrid, RC=RC)
@@ -859,11 +964,12 @@
       ! -----------------------
       ! call MAPL_GetResource( ggState, ndt, 'RUN_DT:', default=0, __RC__ )
 
-      call ESMF_AttributeGet ( GC, DT, Label="RUN_DT:", RC=RC )
+      call ESMF_AttributeGet ( GC, 'RUN_DT:', ndt, RC=RC )
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
+      DT = ndt
 
       !-----------------------------
       ! Required Imports and Exports
@@ -889,6 +995,10 @@
 
       is = lbound(PLE,1); ie = ubound(PLE,1)
       js = lbound(PLE,2); je = ubound(PLE,2)
+      if (MAPL_Am_I_Root()) then
+      	 print *, "ECTM: PLE", PLE(is,js,1), PLE(ie,je,1)
+      endif
+
       LM = size  (PLE,3) - 1
       nc = (ie-is+1)*(je-js+1)
 
@@ -1044,7 +1154,7 @@
 
          ALLOCATE( flashRate(is:ie,js:je),   STAT=STATUS); VERIFY_(STATUS)
 
-         call computeFlashRate (ggState, nc, LM, TS, CNV_TOPP, FROCEAN, &
+         call computeFlashRate (configfile, nc, LM, TS, CNV_TOPP, FROCEAN, &
                           CN_PRCP, CAPE, CNV_MFC, TH, PLE, ZLE, flashRate, RC=STATUS)
          VERIFY_(STATUS)
 
@@ -1078,10 +1188,16 @@
          DEALLOCATE(totflux)
       END IF ! .NOT. enable_pTracers
 
-      call MAPL_TimerOff(ggState,"RUN")
-      call MAPL_TimerOff(ggState,"TOTAL")
+      !call MAPL_TimerOff(ggState,"RUN")
+      !call MAPL_TimerOff(ggState,"TOTAL")
 
 #endif
+
+     call ESMF_ConfigDestroy(configfile, rc=rc )
+     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
 
       ! All Done
       ! --------
@@ -1378,10 +1494,11 @@
 !
 ! !INTERFACE:
 !
-      subroutine computeFlashRate (STATE, nc, lm, TS, CCTP, FROCEAN, CN_PRCP, &
+      subroutine computeFlashRate (configFile, nc, lm, TS, CCTP, FROCEAN, CN_PRCP, &
                         CAPE, CNV_MFC, TH, PLE, ZLE, strokeRate, RC)
 !
 ! !INPUT PARAMETERS:
+      type(ESMF_CONFIG)   :: configFile
       INTEGER, INTENT(IN) :: nc     ! Number of cells
       INTEGER, INTENT(IN) :: lm     ! Number of layers
     
@@ -1500,62 +1617,62 @@
 
       ! Coefficients of the predictors, marine locations
       ! ------------------------------------------------
-      CALL MAPL_GetResource(STATE,a0m,'MARINE_A0:',DEFAULT= 0.0139868,RC=STATUS)
+      CALL ESMF_ConfigGetAttribute(configFile,a0m,label='MARINE_A0:',DEFAULT= 0.0139868,RC=STATUS)
       VERIFY_(STATUS)
-      CALL MAPL_GetResource(STATE,a1m,'MARINE_A1:',DEFAULT= 0.0358764,RC=STATUS)
+      CALL ESMF_ConfigGetAttribute(configFile,a1m,label='MARINE_A1:',DEFAULT= 0.0358764,RC=STATUS)
       VERIFY_(STATUS)
-      CALL MAPL_GetResource(STATE,a2m,'MARINE_A2:',DEFAULT=-0.0610214,RC=STATUS)
+      CALL ESMF_ConfigGetAttribute(configFile,a2m,label='MARINE_A2:',DEFAULT=-0.0610214,RC=STATUS)
       VERIFY_(STATUS)
-      CALL MAPL_GetResource(STATE,a3m,'MARINE_A3:',DEFAULT=-0.0102320,RC=STATUS)
+      CALL ESMF_ConfigGetAttribute(configFile,a3m,label='MARINE_A3:',DEFAULT=-0.0102320,RC=STATUS)
       VERIFY_(STATUS)
-      CALL MAPL_GetResource(STATE,a4m,'MARINE_A4:',DEFAULT= 0.0031352,RC=STATUS)
+      CALL ESMF_ConfigGetAttribute(configFile,a4m,label='MARINE_A4:',DEFAULT= 0.0031352,RC=STATUS)
       VERIFY_(STATUS)
-      CALL MAPL_GetResource(STATE,a5m,'MARINE_A5:',DEFAULT= 0.0346241,RC=STATUS)
+      CALL ESMF_ConfigGetAttribute(configFile,a5m,label='MARINE_A5:',DEFAULT= 0.0346241,RC=STATUS)
       VERIFY_(STATUS)
     
       ! Coefficients of the predictors, continental locations
       ! -----------------------------------------------------
-      CALL MAPL_GetResource(STATE,a0c,'CONTINENT_A0:',DEFAULT=-0.0183172,RC=STATUS)
+      CALL ESMF_ConfigGetAttribute(configFile,a0c,label='CONTINENT_A0:',DEFAULT=-0.0183172,RC=STATUS)
       VERIFY_(STATUS)
-      CALL MAPL_GetResource(STATE,a1c,'CONTINENT_A1:',DEFAULT=-0.0562338,RC=STATUS)
+      CALL ESMF_ConfigGetAttribute(configFile,a1c,label='CONTINENT_A1:',DEFAULT=-0.0562338,RC=STATUS)
       VERIFY_(STATUS)
-      CALL MAPL_GetResource(STATE,a2c,'CONTINENT_A2:',DEFAULT= 0.1862740,RC=STATUS)
+      CALL ESMF_ConfigGetAttribute(configFile,a2c,label='CONTINENT_A2:',DEFAULT= 0.1862740,RC=STATUS)
       VERIFY_(STATUS)
-      CALL MAPL_GetResource(STATE,a3c,'CONTINENT_A3:',DEFAULT=-0.0023363,RC=STATUS)
+      CALL ESMF_ConfigGetAttribute(configFile,a3c,label='CONTINENT_A3:',DEFAULT=-0.0023363,RC=STATUS)
       VERIFY_(STATUS)
-      CALL MAPL_GetResource(STATE,a4c,'CONTINENT_A4:',DEFAULT=-0.0013838,RC=STATUS)
+      CALL ESMF_ConfigGetAttribute(configFile,a4c,label='CONTINENT_A4:',DEFAULT=-0.0013838,RC=STATUS)
       VERIFY_(STATUS)
-      CALL MAPL_GetResource(STATE,a5c,'CONTINENT_A5:',DEFAULT= 0.0114759,RC=STATUS)
+      CALL ESMF_ConfigGetAttribute(configFile,a5c,label='CONTINENT_A5:',DEFAULT= 0.0114759,RC=STATUS)
       VERIFY_(STATUS)
     
       ! Divisors for nondimensionalization of the predictors
       ! ----------------------------------------------------
-      CALL MAPL_GetResource(STATE,x1Divisor,'X1_DIVISOR:',DEFAULT=4.36,RC=STATUS)
+      CALL ESMF_ConfigGetAttribute(configFile,x1Divisor,label='X1_DIVISOR:',DEFAULT=4.36,RC=STATUS)
       VERIFY_(STATUS)
-      CALL MAPL_GetResource(STATE,x2Divisor,'X2_DIVISOR:',DEFAULT=9.27,RC=STATUS)
+      CALL ESMF_ConfigGetAttribute(configFile,x2Divisor,label='X2_DIVISOR:',DEFAULT=9.27,RC=STATUS)
       VERIFY_(STATUS)
-      CALL MAPL_GetResource(STATE,x3Divisor,'X3_DIVISOR:',DEFAULT=34.4,RC=STATUS)
+      CALL ESMF_ConfigGetAttribute(configFile,x3Divisor,label='X3_DIVISOR:',DEFAULT=34.4,RC=STATUS)
       VERIFY_(STATUS)
-      CALL MAPL_GetResource(STATE,x4Divisor,'X4_DIVISOR:',DEFAULT=21.4,RC=STATUS)
+      CALL ESMF_ConfigGetAttribute(configFile,x4Divisor,label='X4_DIVISOR:',DEFAULT=21.4,RC=STATUS)
       VERIFY_(STATUS)
-      CALL MAPL_GetResource(STATE,x5Divisor,'X5_DIVISOR:',DEFAULT=14600.,RC=STATUS)
+      CALL ESMF_ConfigGetAttribute(configFile,x5Divisor,label='X5_DIVISOR:',DEFAULT=14600.,RC=STATUS)
       VERIFY_(STATUS)
     
       ! Exponent for the surface temperature deviation predictor
       ! --------------------------------------------------------
-      CALL MAPL_GetResource(STATE,x5Power,'X5_EXPONENT:',DEFAULT=3.00,RC=STATUS)
+      CALL ESMF_ConfigGetAttribute(configFile,x5Power,label='X5_EXPONENT:',DEFAULT=3.00,RC=STATUS)
       VERIFY_(STATUS)
     
       ! Threshold temperatures
       ! ----------------------
-      CALL MAPL_GetResource(STATE,sfcTLimit,'SFC_T_LIMIT:',DEFAULT=273.0,RC=STATUS)
+      CALL ESMF_ConfigGetAttribute(configFile,sfcTLimit,label='SFC_T_LIMIT:',DEFAULT=273.0,RC=STATUS)
       VERIFY_(STATUS)
-      CALL MAPL_GetResource(STATE,airTLimit,'AIR_T_LIMIT:',DEFAULT=263.0,RC=STATUS)
+      CALL ESMF_ConfigGetAttribute(configFile,airTLimit,label='AIR_T_LIMIT:',DEFAULT=263.0,RC=STATUS)
       VERIFY_(STATUS)
     
       ! Cloud-top pressure limiter
       ! --------------------------
-      CALL MAPL_GetResource(STATE,hPaCldTop,'CLOUD_TOP_LIMIT:',DEFAULT=500.,RC=STATUS)
+      CALL ESMF_ConfigGetAttribute(configFile,hPaCldTop,label='CLOUD_TOP_LIMIT:',DEFAULT=500.,RC=STATUS)
       VERIFY_(STATUS)
     
       ! Layer depths [m]

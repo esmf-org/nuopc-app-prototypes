@@ -32,10 +32,10 @@
    use linearVerticalInterpolation_mod
 #endif
    use NUOPC
-   use NUOPC_Model, &
-           model_routine_SS      => SetServices, &
-           model_label_Advance   => label_Advance, &
-           model_label_DataInitialize   => label_DataInitialize
+   use NUOPC_Mediator, &
+           model_routine_SS      => SetServices
+!           model_label_Advance   => label_Advance, &
+!           model_label_DataInitialize   => label_DataInitialize
    use NUOPC_Generic
       
    implicit none
@@ -222,9 +222,6 @@ contains
       character(len=ESMF_MAXSTR)       :: IAm = 'SetServices'
       integer                          :: STATUS
       character(len=ESMF_MAXSTR)       :: COMP_NAME
-! Local derived type aliases
-      type (mystates_WRAP)             :: mystates_ptr
-      type (my_States), pointer        :: mystates
       type (MAPL_ExtData_State), pointer  :: self   ! internal, that is
       type (MAPL_ExtData_wrap)            :: wrap
       
@@ -238,14 +235,6 @@ contains
       
       call ESMF_LogWrite(Iam, ESMF_LOGMSG_INFO, rc=rc)      
 
-      allocate(mystates)
-      mystates_ptr%ptr => mystates
-      call ESMF_UserCompSetInternalState(GC, 'MAPL_VarSpec', mystates_ptr, rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-           line=__LINE__, &
-           file=__FILE__)) &
-           return  ! bail out           
-      
       ! the NUOPC model component will register the generic methods
       call NUOPC_CompDerive(GC, model_routine_SS, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -292,14 +281,41 @@ contains
  !          file=__FILE__)) &
  !          return  ! bail out
 
-      call NUOPC_CompSpecialize(GC, specLabel=model_label_DataInitialize, &
+      call NUOPC_CompSpecialize(GC, specLabel=label_DataInitialize, &
         specRoutine=dataInitialize, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
            return  ! bail out
       
-      call NUOPC_CompSpecialize(GC, specLabel=model_label_Advance, &
+      ! attach specializing method(s)                                                                             
+      ! -> NUOPC specializes by default --->>> first need to remove the default                                   
+      call ESMF_MethodRemove(GC, label_SetRunClock, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out                                                                                        
+      call NUOPC_CompSpecialize(GC, specLabel=label_SetRunClock, &
+        specRoutine=SetRunClock, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out                                                                                        
+
+     call ESMF_MethodRemove(GC, label=label_CheckImport,rc=rc)
+     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+       line=__LINE__, &
+       file=__FILE__)) &
+       return  ! bail out
+     call NUOPC_CompSpecialize(GC, specLabel=label_CheckImport, &
+       specRoutine=NUOPC_NoOp, rc=rc)
+     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+       line=__LINE__, &
+       file=__FILE__)) &
+       return  ! bail out
+
+
+      call NUOPC_CompSpecialize(GC, specLabel=label_Advance, &
            specRoutine=ModelAdvance, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
@@ -464,6 +480,47 @@ contains
 
   !-----------------------------------------------------------------------------
 
+  subroutine SetRunClock(mediator, rc)
+    type(ESMF_GridComp)  :: mediator
+    integer, intent(out) :: rc
+
+    ! local variables                                                                                           
+    type(ESMF_Clock)              :: mediatorClock, driverClock
+    type(ESMF_Time)               :: currTime
+
+    rc = ESMF_SUCCESS
+
+    call ESMF_LogWrite("ExtData: SetRunClock", ESMF_LOGMSG_INFO, rc=rc)
+
+    ! query the Mediator for clocks                                                                             
+    call NUOPC_MediatorGet(mediator, mediatorClock=mediatorClock, &
+      driverClock=driverClock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out                                                                                        
+
+    ! set the mediatorClock to have the current start time as the driverClock                                   
+    call ESMF_ClockGet(driverClock, currTime=currTime, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out                                                                                        
+    call ESMF_ClockSet(mediatorClock, currTime=currTime, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out                                                                                        
+
+    ! check and set the component clock against the driver clock                                                
+    call NUOPC_CompCheckSetClock(mediator, driverClock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, &
+      msg="NUOPC INCOMPATIBILITY DETECTED: between model and driver clocks", &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out                                                                                        
+
+  end subroutine
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -787,7 +844,8 @@ contains
         file=__FILE__)) &
         return  ! bail out
 
-      call NUOPC_ModelGet(GC, modelClock=clock, importState=importState, &
+     ! call NUOPC_ModelGet(GC, modelClock=clock, importState=importState, &
+      call ESMF_GridCompGet(GC, clock=clock, importState=importState, &
         exportState=exportState, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
@@ -1016,7 +1074,7 @@ contains
         file=__FILE__)) &
         return  ! bail out
    VERIFY_(STATUS)
-   Ext_Debug = 20
+   !Ext_Debug = 20
    CFtemp = ESMF_ConfigCreate (rc=STATUS )
    VERIFY_(STATUS)
    call ESMF_ConfigLoadFile(CFtemp,EXTDATA_CF,rc=status)
@@ -1780,9 +1838,15 @@ contains
    Iam = 'ModelAdvance'
    call ESMF_GridCompGet( GC, name=comp_name, __RC__ )
    Iam = trim(comp_name) // '::' // trim(Iam)
-   call NUOPC_ModelGet(GC, modelClock=clock, importState=IMPORT, &
+   call ESMF_GridCompGet(GC, clock=clock, importState=IMPORT, &
+   !call NUOPC_ModelGet(GC, modelClock=clock, importState=IMPORT, &
         exportState=EXPORT, rc=rc)
-
+   if (ESMF_LogFoundError(rcToCheck=status, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+   
+    call ESMF_LogWrite('ExtData: modelAdvance', ESMF_LOGMSG_INFO, rc=rc)
 
 !  Call Run for every Child
 !  -------------------------
@@ -4008,9 +4072,8 @@ contains
         end if
      end if
           
-     ! Change NY to NY*6
      factory = LatLonGridFactory(im_world=IM_WORLD, jm_world=jm_world, &
-          & nx=nx, ny=ny*6, lm=lmIn, pole='PC',dateline='DC',__RC__)
+          & nx=nx, ny=ny, lm=lmIn, pole='PC',dateline='DC',__RC__)
      gridIn = grid_manager%make_grid(factory,__RC__)
 
      call MAPL_GridGet(gridIn, localCellCountPerDim=dims,__RC__)

@@ -6,11 +6,8 @@ module driverCTM
 
   use ESMF
   use NUOPC
-  use NUOPC_Driver, &
-    driver_routine_SS             => SetServices, &
-    driver_label_SetModelServices => label_SetModelServices
-  
-  use CTM, only: ctmSS => SetServices
+  use NUOPC_Driver, driver_routine_SS  => SetServices
+  use CTM, only: ctmSS  =>  SetServices
   use ExtData, only: extDataSS => SetServices
 !  use HISTORY, only: historySS => SetServices
   
@@ -41,13 +38,19 @@ module driverCTM
       return  ! bail out
       
     ! attach specializing method(s)
-    call NUOPC_CompSpecialize(driver, specLabel=driver_label_SetModelServices, &
+    call NUOPC_CompSpecialize(driver, specLabel=label_SetModelServices, &
       specRoutine=SetModelServices, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
+    call NUOPC_CompSpecialize(driver, specLabel=label_SetRunSequence, &
+      specRoutine=SetRunSequence, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out            
   end subroutine
 
   !-----------------------------------------------------------------------------
@@ -291,6 +294,58 @@ module driverCTM
       file=__FILE__)) &
       return  ! bail out
       
+  end subroutine
+
+  !-----------------------------------------------------------------------------                                
+
+  subroutine SetRunSequence(driver, rc)
+    type(ESMF_GridComp)  :: driver
+    integer, intent(out) :: rc
+
+    ! local variables                                                                                           
+    character(ESMF_MAXSTR)              :: name
+    type(ESMF_Config)                   :: config
+    type(NUOPC_FreeFormat)              :: runSeqFF
+
+    rc = ESMF_SUCCESS
+
+    ! query the Component for info                                                                              
+    call ESMF_GridCompGet(driver, name=name, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out                                        
+
+    ! read free format run sequence from config                                                                 
+    call ESMF_GridCompGet(driver, config=config, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out                                        
+
+    runSeqFF = NUOPC_FreeFormatCreate(config, label="runSeq::", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out                                        
+
+#if 0
+    call NUOPC_FreeFormatPrint(runSeqFF, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out                                        
+#endif
+
+    ! ingest FreeFormat run sequence                                                                            
+    call NUOPC_DriverIngestRunSequence(driver, runSeqFF, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out                                        
+
+#if 0
+    ! Diagnostic output                                                                                         
+    call NUOPC_DriverPrint(driver, orderflag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out                                        
+#endif
+
+    ! clean-up                                                                                                  
+    call NUOPC_FreeFormatDestroy(runSeqFF, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out                                        
+
   end subroutine
 
   !-----------------------------------------------------------------------------

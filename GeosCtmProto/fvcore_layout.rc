@@ -1,5 +1,5 @@
          npx: 48
-         npy: 288
+         npy: 48
          npz: 72
           dt: 900
     n_sponge: -1
