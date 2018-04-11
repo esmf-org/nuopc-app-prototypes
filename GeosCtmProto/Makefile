@@ -25,9 +25,9 @@ include $(ESMFMKFILE)
 # add MAPL includes and libs
 MAPL_INSTALL_ROOT = $(ESMADIR)/Linux
 MAPL_INCDIR = $(MAPL_INSTALL_ROOT)/include
-MAPL_INCLUDEPATHS = -I$(MAPL_INCDIR)/MAPL_cfio_r4 -I$(MAPL_INCDIR)/MAPL_Base -I$(MAPL_INCDIR)/FVdycoreCubed_GridComp -I$(MAPL_INCDIR)/fvdycore -I$(MAPL_INCDIR)/GFDL_fms -I$(NEWBASEDIR)/include/esmf
+MAPL_INCLUDEPATHS = -I$(MAPL_INCDIR)/MAPL_cfio_r4 -I$(MAPL_INCDIR)/MAPL_Base -I$(MAPL_INCDIR)/FVdycoreCubed_GridComp -I$(MAPL_INCDIR)/fvdycore -I$(MAPL_INCDIR)/GFDL_fms -I$(MAPL_INCDIR)/GMAO_hermes -I$(NEWBASEDIR)/include/esmf
 MAPL_LINKPATHS    = -L$(MAPL_INSTALL_ROOT)/lib 
-MAPL_LINKLIBS     = -lMAPL_Base -lMAPL_cfio_r4 -lFVdycoreCubed_GridComp -lfvdycore -lGEOS_Shared -lGMAO_mpeu -lGFDL_fms
+MAPL_LINKLIBS     = -lMAPL_Base -lMAPL_cfio_r4 -lFVdycoreCubed_GridComp -lfvdycore -lGEOS_Shared -lGMAO_mpeu -lGFDL_fms -lGMAO_hermes
 
 ESMF_F90COMPILEPATHS      += $(MAPL_INCLUDEPATHS) $(SUBDIR)
 ESMF_F90LINKPATHS         += $(MAPL_LINKPATHS)

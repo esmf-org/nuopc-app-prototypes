@@ -21,4 +21,16 @@ MAPL_ENABLE_TIMERS: NO
 MAPL_ENABLE_MEMUTILS: NO
 PRINTSPEC: 0  # (0: OFF, 1: IMPORT & EXPORT, 2: IMPORT, 3: EXPORT)
 
+###############################################
+####  GeosCtmProto Top-level RunSequence  #####
+###############################################
+
+# Encoding a simple run sequence
+runSeq::
+   @900
+      ExtData
+      ExtData -> CTM
+      CTM
+   @      
+::
 

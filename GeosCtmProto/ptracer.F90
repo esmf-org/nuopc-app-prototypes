@@ -16,13 +16,14 @@
       use NUOPC_Model, &
            model_routine_SS      => SetServices, &
            model_label_Advance   => label_Advance, &
-           model_label_DataInitialize   => label_DataInitialize
+           model_label_DataInitialize   => label_DataInitialize, &
+	   model_label_CheckImport => label_CheckImport
       use NUOPC_Generic
-!      use m_set_eta,       only: set_eta
+      use m_set_eta,       only: set_eta
       use MAPL_Mod
 !      USE Chem_UtilMod
       
-!      USE jw, only : tracer_q, tracer_q1_q2, tracer_q3
+      USE jw, only : tracer_q, tracer_q1_q2, tracer_q3
 
       implicit none
 !
@@ -157,6 +158,20 @@ contains
        file=__FILE__)) &
        return  ! bail out
 
+#if 0
+     call ESMF_MethodRemove(GC, label=model_label_CheckImport,rc=rc)
+     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+       line=__LINE__, &
+       file=__FILE__)) &
+       return  ! bail out
+     call NUOPC_CompSpecialize(GC, specLabel=model_label_CheckImport, &
+       specRoutine=NUOPC_NoOp, rc=rc)
+     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+       line=__LINE__, &
+       file=__FILE__)) &
+       return  ! bail out
+#endif
+
      call NUOPC_CompSpecialize(GC, specLabel=model_label_Advance, &
        specRoutine=ModelAdvance, rc=rc)
      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -213,7 +228,8 @@ contains
      character(len=2)                 :: id
      character(len=ESMF_MAXSTR)       :: short_name, long_name
      character(len=ESMF_MAXSTR)       :: units
-     
+     integer                          :: STATUS
+
      rc = ESMF_SUCCESS
 
     call ESMF_LogWrite("PTRACER:InitAdvertise", ESMF_LOGMSG_INFO, rc=rc)      
@@ -313,9 +329,12 @@ contains
      if (do_AdvColdStart) then
          numTracers = 5
 
-         allocate(state%vname(numTracers), stat=rc)
-         allocate(state%vunits(numTracers), stat=rc)
-         allocate(state%vtitle(numTracers), stat=rc)
+         allocate(state%vname(numTracers), stat=STATUS)
+         VERIFY_(STATUS)
+         allocate(state%vunits(numTracers), stat=STATUS)
+         VERIFY_(STATUS)
+         allocate(state%vtitle(numTracers), stat=STATUS)
+         VERIFY_(STATUS)
   
          do ic = 1, numTracers
             write (id  ,'(i2.2)') ic-1
@@ -325,7 +344,8 @@ contains
          end do
 
       else
-         call rcEsmfReadTable2String(configFile, longList, "vNames::", rc=rc)
+         call rcEsmfReadTable2String(configFile, longList, "vNames::", rc=STATUS)
+         VERIFY_(STATUS)
      
          !-------------------------------------
          ! Obtain the name of all the tracers
@@ -336,18 +356,22 @@ contains
 
          numTracers = Count (tempNames(:) /= '')
 
-         allocate(state%vname(numTracers))
+         allocate(state%vname(numTracers), stat=STATUS)
+         VERIFY_(STATUS)
 
          state%vname(:) = tempNames(1:numTracers)
 
-         allocate(state%vunits(numTracers))
+         allocate(state%vunits(numTracers), stat=STATUS)
+         VERIFY_(STATUS)
 
-         allocate(state%vtitle(numTracers))
+         allocate(state%vtitle(numTracers), stat=STATUS)
+         VERIFY_(STATUS)
          state%vtitle(:) = ''
 
          ! Obtain the units of tracers
          !----------------------------
-         call rcEsmfReadTable2String(configFile, longList, "vunits::", rc=rc)
+         call rcEsmfReadTable2String(configFile, longList, "vunits::", rc=STATUS)
+         VERIFY_(STATUS)
 
          tempNames(:) = ''
          call constructListNames(tempNames, longList)
@@ -658,8 +682,8 @@ contains
       character(len=ESMF_MAXSTR)       :: Iam = 'PTRACER:initTracer'
       type(ESMF_State)                 :: IMPORT, EXPORT
       type(ESMF_State)                 :: INTERNAL
-      type(ESMF_Clock)              :: clock
-
+      type(ESMF_Clock)                 :: clock
+      integer                         :: STATUS
 
       ! Get my private state from the component
       !----------------------------------------
@@ -732,18 +756,20 @@ contains
       if (do_AdvColdStart) then
          ! Get AKs and BKs for vertical grid
          !----------------------------------
-         AllOCATE( AK(0:KM))
-         AllOCATE( BK(0:KM))
+         AllOCATE( AK(0:KM) ,stat=STATUS )
+         VERIFY_(STATUS)
+         AllOCATE( BK(0:KM) ,stat=STATUS )
+         VERIFY_(STATUS)
   
-         !call set_eta(KM,LS,PTOP,PINT,AK,BK)
-         !rot_ang = 0
+         call set_eta(KM,LS,PTOP,PINT,AK,BK)
+         rot_ang = 0
       end if
 
       nSpc = size(pTracers_STATE%tr(:))
 
       ! Consistency Checks
       !-------------------
-      ! ASSERT_ ( size(InternalSpec) == nSpc )
+      ASSERT_ ( size(InternalSpec) == nSpc )
 
       do ic = 1, size(InternalSpec)
          call MAPL_VarSpecGet ( InternalSpec(ic),          &
@@ -792,8 +818,7 @@ contains
                      do i=IS,IE
                         LONc = LONS(i,j)
                         LATc = LATS(i,j)
-                        !dummy_1 = tracer_q1_q2(LONc,LATc,eta,rot_ang,r0_6)
-                        dummy_1 = 2.0
+                        dummy_1 = tracer_q1_q2(LONc,LATc,eta,rot_ang,r0_6)
                         pTracers_STATE%tr(ic)%pArray3D(i,j,k) = dummy_1
                      enddo
                   enddo
@@ -805,8 +830,7 @@ contains
                      do i=IS,IE
                         LONc = LONS(i,j)
                         LATc = LATS(i,j)
-                        !dummy_1 = tracer_q1_q2(LONc,LATc,eta,rot_ang,r1_0)
-                        dummy_1 = 3.0
+                        dummy_1 = tracer_q1_q2(LONc,LATc,eta,rot_ang,r1_0)
                         pTracers_STATE%tr(ic)%pArray3D(i,j,k) = dummy_1
                      enddo
                   enddo
@@ -818,8 +842,7 @@ contains
                      do i=IS,IE
                         LONc = LONS(i,j)
                         LATc = LATS(i,j)
-                        !dummy_1 = tracer_q3(LONc,LATc,eta,rot_ang)
-                        dummy_1 = 4.0
+                        dummy_1 = tracer_q3(LONc,LATc,eta,rot_ang)
                         pTracers_STATE%tr(ic)%pArray3D(i,j,k) = dummy_1
                      enddo
                   enddo
@@ -876,6 +899,8 @@ contains
       RETURN_(ESMF_SUCCESS)
 
       end subroutine initTracer
+
+
 !EOC
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !BOP
@@ -911,6 +936,8 @@ contains
       type (T_pTracers_STATE), pointer :: pTracers_STATE
       type (pTracers_wrap)             :: WRAP
       type(ESMF_Grid)                  :: esmfGrid
+      integer                          :: AGCM_YY, AGCM_MM, AGCM_DD, AGCM_H, AGCM_M, AGCM_S
+      type(ESMF_Time)                  :: CurrTime
 
 ! Imports
       real, pointer, dimension(:,:,:)   ::  pe => null()
@@ -923,10 +950,19 @@ contains
       REAL, POINTER :: PLE(:,:,:) => null()
       REAL, POINTER :: cellArea(:,:) => null()
       integer :: DIMS(3), im, jm, km, k, nSpc, ic
+      integer :: is,js,ie,je
 
-!
-      ! Get the target components name and set-up traceback handle.
-      ! -----------------------------------------------------------
+    ! local variables
+    type(ESMF_Clock)          :: clock
+    type(ESMF_State)          :: IMPORT, EXPORT
+
+    ! query the Component for its clock, importState and exportState
+    call NUOPC_ModelGet(GC, modelClock=clock, importState=IMPORT, &
+      exportState=EXPORT, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 
       ! Get the target components name and set-up traceback handle.
       ! -----------------------------------------------------------
@@ -938,15 +974,15 @@ contains
       ! Retrieve the pointer to the generic state
       !------------------------------------------
 
-#if 0
-      call MAPL_GetObjectFromGC ( GC, ggState, RC=STATUS)
-      VERIFY_(STATUS)
+#if 1
+      !call MAPL_GetObjectFromGC ( GC, ggState, RC=STATUS)
+      !VERIFY_(STATUS)
 
       ! Start timer
       !------------
 
-      call MAPL_TimerOn (ggState,"TOTAL")
-      call MAPL_TimerOn (ggState,"RUN"  )
+      !call MAPL_TimerOn (ggState,"TOTAL")
+      !call MAPL_TimerOn (ggState,"RUN"  )
 
       ! Retrieve the pointer to the private internal state
       !---------------------------------------------------
@@ -958,16 +994,16 @@ contains
 
       !  Associate the Internal State fields with our legacy state 
       !  ---------------------------------------------------------
-      call MAPL_Get ( ggSTATE, INTERNALSPEC=InternalSpec, &
-                      INTERNAL_ESMF_STATE=internal, RC=STATUS  )
-      VERIFY_(STATUS)
+      !call MAPL_Get ( ggSTATE, INTERNALSPEC=InternalSpec, &
+      !                INTERNAL_ESMF_STATE=internal, RC=STATUS  )
+      !VERIFY_(STATUS)
 
 
       nSpc = size(pTracers_STATE%tr(:))
 
       ! Consistency Checks
       !-------------------
-      ASSERT_ ( size(InternalSpec) == nSpc )
+      ! ASSERT_ ( size(InternalSpec) == nSpc )
 
       IF (do_ComputeTracerMass) THEN
          CALL MAPL_GetPointer(IMPORT, PLE,  'PLE', ALLOC = .TRUE., RC=STATUS)
@@ -976,9 +1012,27 @@ contains
          call MAPL_GetPointer(IMPORT, cellArea, 'AREA', ALLOC=.true., rc=status)
          VERIFY_(STATUS)
 
+         call ESMF_ClockGet ( clock, CurrTime=currTime, rc=status )
+         VERIFY_(STATUS)
+         call ESMF_TimeGet  ( CurrTime, YY = AGCM_YY, &
+                                        MM = AGCM_MM, &
+                                        DD = AGCM_DD, &
+                                        H  = AGCM_H , &
+                                        M  = AGCM_M , &
+                                        S  = AGCM_S, rc=status )
+         VERIFY_(STATUS)
+
          if ( MAPL_am_I_root() ) then
+
+         write(6,1000) AGCM_YY,AGCM_MM,AGCM_DD,AGCM_H,AGCM_M,AGCM_S
+    1000 format(1x,'AGCM Date: ',i4.4,'/',i2.2,'/',i2.2,2x,'Time: ',i2.2,':',i2.2,':',i2.2)
+
+         is = lbound(PLE,1); ie = ubound(PLE,1)
+         js = lbound(PLE,2); je = ubound(PLE,2)
+      	 print *, "PTRACER: PLE", PLE(is,js,1), PLE(ie,je,1)
+
             PRINT*, "------------------------------------------------"
-            PRINT*, "------   Compute the mass of each tracer  ------"
+            PRINT*, "------  Compute the mass of each tracer  ------"
             PRINT*, "------------------------------------------------"
          end if
          do ic = 1, nSpc
@@ -991,8 +1045,8 @@ contains
          end if
       END IF
 
-      call MAPL_TimerOff (ggState,"RUN" )
-      call MAPL_TimerOff (ggState,"TOTAL"      )
+      !call MAPL_TimerOff (ggState,"RUN" )
+      !call MAPL_TimerOff (ggState,"TOTAL"      )
 
 #endif
       RETURN_(ESMF_SUCCESS)
