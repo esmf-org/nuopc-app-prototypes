@@ -77,7 +77,6 @@ module CON
     integer, intent(out) :: rc
     
     ! local variables
-    integer                       :: localrc
     type(ESMF_State)              :: state
     type(ESMF_FieldBundle)        :: dstFields, srcFields
     type(ESMF_Field), allocatable :: fields(:)
@@ -151,7 +150,6 @@ module CON
     integer, intent(out) :: rc
     
     ! local variables
-    integer                       :: localrc
     type(ESMF_FieldBundle)        :: dstFields, srcFields
     type(ESMF_Field), allocatable :: fields(:)
     integer                       :: fieldCount, i
@@ -252,7 +250,6 @@ module CON
     integer, intent(out) :: rc
     
     ! local variables
-    integer                       :: localrc
     type(ESMF_FieldBundle)        :: dstFields, srcFields
     type(ESMF_Field), allocatable :: fields(:)
     integer                       :: fieldCount, i

@@ -70,7 +70,6 @@ module driver
     integer, intent(out) :: rc
     
     ! local variables
-    integer                       :: localrc
     type(ESMF_GridComp)           :: child
     type(ESMF_CplComp)            :: connector
     type(ESMF_Time)               :: startTime

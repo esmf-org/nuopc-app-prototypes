@@ -72,7 +72,6 @@ module ESM
     integer, intent(out) :: rc
     
     ! local variables
-    integer                       :: localrc
     type(ESMF_Time)               :: startTime
     type(ESMF_Time)               :: stopTime
     type(ESMF_TimeInterval)       :: timeStep
