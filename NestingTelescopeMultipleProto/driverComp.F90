@@ -86,7 +86,6 @@ module driverComp
     integer, intent(out) :: rc
     
     ! local variables
-    integer                       :: localrc
     type(ESMF_Grid)               :: grid
     type(ESMF_Field)              :: field
     type(ESMF_Time)               :: startTime
@@ -227,42 +226,6 @@ module driverComp
       file=__FILE__)) &
       return  ! bail out
 
-    ! SetServices for parent-to-gen1nestling0
-    call NUOPC_DriverAddComp(driver, srcCompLabel="advectDiff_Parent", &
-      dstCompLabel="advectDiff_Gen1Nestling0", compSetServicesRoutine=cplSS, &
-      comp=connector, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    ! Set verbosity
-    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", &
-      rc=rc)
-
-    ! SetServices for parent-to-gen1nestling1
-    call NUOPC_DriverAddComp(driver, srcCompLabel="advectDiff_Parent", &
-      dstCompLabel="advectDiff_Gen1Nestling1", compSetServicesRoutine=cplSS, &
-      comp=connector, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    ! Set verbosity
-    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", &
-      rc=rc)
-
-    ! SetServices for gen1nestling0-to-gen2nestling0
-    call NUOPC_DriverAddComp(driver, srcCompLabel="advectDiff_Gen1Nestling0", &
-      dstCompLabel="advectDiff_Gen2Nestling0", compSetServicesRoutine=cplSS, &
-      comp=connector, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    ! Set verbosity
-    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", &
-      rc=rc)
-
     ! set the model clock
     call ESMF_TimeSet(startTime, s = 0, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -304,72 +267,44 @@ module driverComp
     integer, intent(out) :: rc
     
     ! local variables
-    integer                       :: localrc
-    type(ESMF_Time)               :: startTime
-    type(ESMF_Time)               :: stopTime
-    type(ESMF_TimeInterval)       :: timeStep
-    type(ESMF_Clock)              :: internalClock
+    character(ESMF_MAXSTR)              :: name
+    type(NUOPC_FreeFormat)              :: runSeqFF
+    type(ESMF_Time)                     :: startTime
+    type(ESMF_Time)                     :: stopTime
+    type(ESMF_TimeInterval)             :: timeStep
+    type(ESMF_Clock)                    :: internalClock
 
     rc = ESMF_SUCCESS
     
-    ! Replace the default RunSequence
-    call NUOPC_DriverNewRunSequence(driver, slotCount=2, rc=rc)
+    ! query the driver for its name
+    call ESMF_GridCompGet(driver, name=name, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=1, &
-      srcCompLabel="advectDiff_Parent", &
-      dstCompLabel="advectDiff_Gen1Nestling0", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=1, &
-      srcCompLabel="advectDiff_Parent", &
-      dstCompLabel="advectDiff_Gen1Nestling1", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=1, &
-      compLabel="advectDiff_Parent", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=1, linkSlot=2, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=2, &
-      srcCompLabel="advectDiff_Gen1Nestling0", &
-      dstCompLabel="advectDiff_Gen2Nestling0", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=2, &
-      compLabel="advectDiff_Gen1Nestling0", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=2, &
-      compLabel="advectDiff_Gen2Nestling0", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=1, &
-      compLabel="advectDiff_Gen1Nestling1", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
     
-    ! create clock for fast ATM-OCN interaction
+    ! set up free format run sequence
+    runSeqFF = NUOPC_FreeFormatCreate(stringList=(/ &
+      " @*                                                        ",    &
+      "   advectDiff_Parent -> advectDiff_Gen1Nestling0           ",    &
+      "   advectDiff_Parent -> advectDiff_Gen1Nestling1           ",    &
+      "   advectDiff_Parent                                       ",    &
+      "   @*                                                      ",    &
+      "     advectDiff_Gen1Nestling0 -> advectDiff_Gen2Nestling0  ",    &
+      "     advectDiff_Gen1Nestling0                              ",    &
+      "     advectDiff_Gen2Nestling0                              ",    &
+      "   @                                                       ",    &
+      "   advectDiff_Gen1Nestling1                                ",    &
+      " @                                                         " /), &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+
+    ! ingest FreeFormat run sequence
+    call NUOPC_DriverIngestRunSequence(driver, runSeqFF, &
+      autoAddConnectors=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+
+    ! create clock for fast nest interaction
     call ESMF_GridCompGet(driver, clock=internalClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -391,6 +326,13 @@ module driverComp
       return  ! bail out
     ! install clock for fast interaction in slot 2
     call NUOPC_DriverSetRunSequence(driver, slot=2, clock=internalClock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! print out info about the generated run sequence
+    call NUOPC_DriverPrint(driver, orderflag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

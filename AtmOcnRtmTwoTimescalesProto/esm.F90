@@ -85,7 +85,6 @@ module ESM
     integer, intent(out) :: rc
     
     ! local variables
-    integer                       :: localrc
     type(ESMF_Time)               :: startTime
     type(ESMF_Time)               :: stopTime
     type(ESMF_TimeInterval)       :: timeStep
@@ -142,62 +141,6 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
 
-    ! SetServices for atm2ocn
-    call NUOPC_DriverAddComp(driver, srcCompLabel="ATM", dstCompLabel="OCN", &
-      compSetServicesRoutine=cplSS, comp=connector, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", &
-      rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-      
-    ! SetServices for ocn2atm
-    call NUOPC_DriverAddComp(driver, srcCompLabel="OCN", dstCompLabel="ATM", &
-      compSetServicesRoutine=cplSS, comp=connector, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", &
-      rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-      
-    ! SetServices for atm2rtm
-    call NUOPC_DriverAddComp(driver, srcCompLabel="ATM", dstCompLabel="RTM", &
-      compSetServicesRoutine=cplSS, comp=connector, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", &
-      rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    ! SetServices for rtm2ocn
-    call NUOPC_DriverAddComp(driver, srcCompLabel="RTM", dstCompLabel="OCN", &
-      compSetServicesRoutine=cplSS, comp=connector, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", &
-      rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-      
     ! set the driver clock
     call ESMF_TimeIntervalSet(timeStep, h=24, rc=rc)   ! 24h for slow timescale
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -242,69 +185,43 @@ module ESM
     integer, intent(out) :: rc
     
     ! local variables
-    integer                       :: localrc
-    type(ESMF_Time)               :: startTime
-    type(ESMF_Time)               :: stopTime
-    type(ESMF_TimeInterval)       :: timeStep
-    type(ESMF_Clock)              :: internalClock
+    character(ESMF_MAXSTR)              :: name
+    type(NUOPC_FreeFormat)              :: runSeqFF
+    type(ESMF_Time)                     :: startTime
+    type(ESMF_Time)                     :: stopTime
+    type(ESMF_TimeInterval)             :: timeStep
+    type(ESMF_Clock)                    :: internalClock
 
     rc = ESMF_SUCCESS
     
-    ! Replace the default RunSequence with a customized run sequence w/ 2 slots
-    call NUOPC_DriverNewRunSequence(driver, slotCount=2, rc=rc)
+    ! query the driver for its name
+    call ESMF_GridCompGet(driver, name=name, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=1, &  ! slow loop
-      srcCompLabel="ATM", dstCompLabel="RTM", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=1, &  ! slow loop
-      srcCompLabel="RTM", dstCompLabel="OCN", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    ! link the fast loop into the slow loop
-    call NUOPC_DriverAddRunElement(driver, slot=1, linkSlot=2, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=1, &  ! slow loop
-      compLabel="RTM", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=2, &  ! fast loop
-      srcCompLabel="ATM", dstCompLabel="OCN", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=2, &  ! fast loop
-      srcCompLabel="OCN", dstCompLabel="ATM", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=2, &  ! fast loop
-      compLabel="ATM", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_DriverAddRunElement(driver, slot=2, &  ! fast loop
-      compLabel="OCN", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
     
+    ! set up free format run sequence
+    runSeqFF = NUOPC_FreeFormatCreate(stringList=(/ &
+      " @*            ",    &
+      "   ATM -> RTM  ",    &
+      "   RTM -> OCN  ",    &
+      "   @*          ",    &
+      "     ATM -> OCN",    &
+      "     OCN -> ATM",    &
+      "     ATM       ",    &
+      "     OCN       ",    &
+      "   @           ",    &
+      "   RTM         ",    &
+      " @             " /), &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+
+    ! ingest FreeFormat run sequence
+    call NUOPC_DriverIngestRunSequence(driver, runSeqFF, &
+      autoAddConnectors=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+
     ! create clock for fast ATM-OCN interaction
     call ESMF_GridCompGet(driver, clock=internalClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -324,14 +241,19 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    ! install clock for MED-ATM coupling in slot 2
+    ! install clock for ATM-OCN coupling in slot 2
     call NUOPC_DriverSetRunSequence(driver, slot=2, clock=internalClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
+    ! print out info about the generated run sequence
     call NUOPC_DriverPrint(driver, orderflag=.true.)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 
   end subroutine
 
