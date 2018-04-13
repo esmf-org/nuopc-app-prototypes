@@ -102,7 +102,6 @@ module driver
     integer, intent(out) :: rc
     
     ! local variables
-    integer                       :: localrc
     type(ESMF_GridComp)           :: child
     type(ESMF_Time)               :: startTime
     type(ESMF_Time)               :: stopTime
@@ -166,9 +165,6 @@ module driver
     type(ESMF_GridComp)  :: driver
     integer, intent(out) :: rc
     
-    ! local variables
-    integer                       :: localrc
-
     rc = ESMF_SUCCESS
     
     ! Replace the default RunSequence with a customized sequence, one time slot

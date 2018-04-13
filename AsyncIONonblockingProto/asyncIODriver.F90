@@ -72,7 +72,6 @@ module asyncIODriver
     integer, intent(out) :: rc
     
     ! local variables
-    integer                       :: localrc
     character(len=80)             :: name
     type(ESMF_Grid)               :: grid
     type(ESMF_Field)              :: field

@@ -77,7 +77,6 @@ module driverComp
     integer, intent(out) :: rc
     
     ! local variables
-    integer                       :: localrc
     type(ESMF_Grid)               :: grid
     type(ESMF_Field)              :: field
     type(ESMF_Time)               :: startTime
