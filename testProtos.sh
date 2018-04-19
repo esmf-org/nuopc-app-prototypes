@@ -10,6 +10,8 @@
 # Licensed under the University of Illinois-NCSA License.
 #==============================================================================
 
+#TOOLRUN="valgrind --leak-check=full"
+
 count=0
 
 function TestProto {
@@ -20,7 +22,9 @@ echo STARTING: $1
 cd $1
 gmake distclean
 gmake
-mpirun -np 4 ./$2
+set -x
+mpirun -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+set +x
 if [ $? -eq 0 ]
 then
 testResult[count]="PASS"
@@ -42,7 +46,9 @@ gmake ATM=A OCN=A,B
 echo "OCN_SELECT: A" > esm.config
 ((count++))
 testList[count]=$1
-mpirun -np 4 ./$2
+set -x
+mpirun -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+set +x
 if [ $? -eq 0 ]
 then
 testResult[count]="PASS"
@@ -55,7 +61,9 @@ gmake ATM=B OCN=A,B
 echo "OCN_SELECT: A" > esm.config
 ((count++))
 testList[count]=$1
-mpirun -np 4 ./$2
+set -x
+mpirun -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+set +x
 if [ $? -eq 0 ]
 then
 testResult[count]="PASS"
@@ -68,7 +76,9 @@ gmake ATM=A OCN=B
 echo "OCN_SELECT: B" > esm.config
 ((count++))
 testList[count]=$1
-mpirun -np 4 ./$2
+set -x
+mpirun -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+set +x
 if [ $? -eq 0 ]
 then
 testResult[count]="PASS"
@@ -92,7 +102,9 @@ gmake ATM=A OCN=A,B,C
 echo "OCN_SELECT: A" > esm.config
 ((count++))
 testList[count]=$1
-mpirun -np 4 ./$2
+set -x
+mpirun -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+set +x
 if [ $? -eq 0 ]
 then
 testResult[count]="PASS"
@@ -105,7 +117,9 @@ gmake ATM=B OCN=A,B,C
 echo "OCN_SELECT: B" > esm.config
 ((count++))
 testList[count]=$1
-mpirun -np 4 ./$2
+set -x
+mpirun -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+set +x
 if [ $? -eq 0 ]
 then
 testResult[count]="PASS"
@@ -118,7 +132,9 @@ gmake ATM=C OCN=A,B,C
 echo "OCN_SELECT: C" > esm.config
 ((count++))
 testList[count]=$1
-mpirun -np 4 ./$2
+set -x
+mpirun -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+set +x
 if [ $? -eq 0 ]
 then
 testResult[count]="PASS"
@@ -131,7 +147,9 @@ gmake ATM=D OCN=A,B,C
 echo "OCN_SELECT: A" > esm.config
 ((count++))
 testList[count]=$1
-mpirun -np 4 ./$2
+set -x
+mpirun -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+set +x
 if [ $? -eq 0 ]
 then
 testResult[count]="PASS"
@@ -145,7 +163,9 @@ gmake ATM=E OCN=A,B,C
 echo "OCN_SELECT: B" > esm.config
 ((count++))
 testList[count]=$1
-mpirun -np 4 ./$2
+set -x
+mpirun -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+set +x
 if [ $? -eq 0 ]
 then
 testResult[count]="PASS"
@@ -162,7 +182,6 @@ cd ..
 echo ---------------------------------------------------------------------------
 echo
 }
-
 
 TestProto AsyncIOBlockingProto              asyncIOApp
 TestProto AsyncIONonblockingProto           asyncIOApp
