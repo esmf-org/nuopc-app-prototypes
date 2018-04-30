@@ -131,8 +131,10 @@ module OCN
     integer, intent(out) :: rc
     
     ! local variables    
-    type(ESMF_Grid)         :: gridIn
-    type(ESMF_Grid)         :: gridOut
+    type(ESMF_Grid)           :: gridIn
+    type(ESMF_Grid)           :: gridOut
+    type(ESMF_Field)          :: field
+    type(ESMF_StateItem_Flag) :: itemType
     
     rc = ESMF_SUCCESS
     
@@ -178,8 +180,34 @@ module OCN
     ! exportable field: sea_surface_temperature
     call NUOPC_Realize(exportState, grid=gridOut, &
       fieldName="sst", &
-      selection="realize_connected_remove_others", &
-      dataFillScheme="sincos", rc=rc)
+      selection="realize_connected_remove_others", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    call ESMF_StateGet(exportState, itemName="sst", itemType=itemType, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out    
+    if (itemType==ESMF_STATEITEM_FIELD) then
+      call ESMF_StateGet(exportState, field=field, itemName="sst", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out    
+      call ESMF_FieldFill(field, dataFillScheme="sincos", &
+        param1I4=0, param2I4=1, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    endif
+
+    ! write out the Fields in the exportState
+    call NUOPC_Write(exportState, fileNamePrefix="field_ocn_export_datainit_", &
+      status=ESMF_FILESTATUS_REPLACE, relaxedFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -283,8 +311,8 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out    
-    call ESMF_FieldFill(field, dataFillScheme="sincos", member=1, step=step, &
-      rc=rc)
+    call ESMF_FieldFill(field, dataFillScheme="sincos", &
+      param1I4=step, param2I4=1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

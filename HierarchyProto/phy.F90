@@ -181,7 +181,8 @@ module PHY
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out    
-      call ESMF_FieldFill(field, dataFillScheme="sincos", member=4, rc=rc)
+      call ESMF_FieldFill(field, dataFillScheme="sincos", &
+        param1I4=0, param2I4=4, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
@@ -200,14 +201,15 @@ module PHY
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out    
-      call ESMF_FieldFill(field, dataFillScheme="sincos", member=5, rc=rc)
+      call ESMF_FieldFill(field, dataFillScheme="sincos", &
+        param1I4=0, param2I4=5, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
     endif
       
-    ! write out the Fields in the importState
+    ! write out the Fields in the exportState
     call NUOPC_Write(exportState, fileNamePrefix="field_phy_export_datainit_", &
       status=ESMF_FILESTATUS_REPLACE, relaxedFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -278,8 +280,8 @@ module PHY
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out    
-      call ESMF_FieldFill(field, dataFillScheme="sincos", member=4, step=step, &
-        rc=rc)
+      call ESMF_FieldFill(field, dataFillScheme="sincos", &
+        param1I4=step, param2I4=4, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
@@ -297,8 +299,8 @@ module PHY
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out    
-      call ESMF_FieldFill(field, dataFillScheme="sincos", member=5, step=step, &
-        rc=rc)
+      call ESMF_FieldFill(field, dataFillScheme="sincos", &
+        param1I4=step, param2I4=5, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
@@ -313,6 +315,7 @@ module PHY
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    ! write out the Fields in the exportState
     call NUOPC_Write(exportState, fileNamePrefix="field_phy_export_adv_", &
       timeslice=step, status=status, relaxedFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
