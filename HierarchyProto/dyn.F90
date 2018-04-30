@@ -321,7 +321,8 @@ module DYN
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-      call ESMF_FieldFill(field, dataFillScheme="sincos", member=2, rc=rc)
+      call ESMF_FieldFill(field, dataFillScheme="sincos", &
+        param1I4=0, param2I4=2, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
@@ -340,14 +341,15 @@ module DYN
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-      call ESMF_FieldFill(field, dataFillScheme="sincos", member=3, rc=rc)
+      call ESMF_FieldFill(field, dataFillScheme="sincos", &
+        param1I4=0, param2I4=3, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
     endif
 
-    ! write out the Fields in the importState
+    ! write out the Fields in the exportState
     call NUOPC_Write(exportState, fileNamePrefix="field_dyn_export_datainit_", &
       status=ESMF_FILESTATUS_REPLACE, relaxedFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -374,7 +376,9 @@ module DYN
     type(ESMF_Clock)              :: clock
     type(ESMF_State)              :: importState, exportState
     integer, save                 :: step=1
+    type(ESMF_Field)              :: field
     type(ESMF_FileStatus_Flag)    :: status
+    type(ESMF_StateItem_Flag)     :: itemType
 
     rc = ESMF_SUCCESS
     
@@ -407,6 +411,47 @@ module DYN
       file=__FILE__)) &
       return  ! bail out
 
+    ! update the export fields with data
+    call ESMF_StateGet(exportState, itemName="pmsl", &
+      itemType=itemType, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out    
+    if (itemType==ESMF_STATEITEM_FIELD) then
+      call ESMF_StateGet(exportState, field=field, &
+        itemName="pmsl", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out    
+      call ESMF_FieldFill(field, dataFillScheme="sincos", &
+        param1I4=step, param2I4=2, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    endif
+    call ESMF_StateGet(exportState, itemName="rsns", &
+      itemType=itemType, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out    
+    if (itemType==ESMF_STATEITEM_FIELD) then
+      call ESMF_StateGet(exportState, field=field, &
+        itemName="rsns", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out    
+      call ESMF_FieldFill(field, dataFillScheme="sincos", &
+        param1I4=step, param2I4=3, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    endif
     ! write out the Fields in the importState
     status=ESMF_FILESTATUS_OLD
     if (step==1) status=ESMF_FILESTATUS_REPLACE
@@ -416,6 +461,7 @@ module DYN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    ! write out the Fields in the exportState
     call NUOPC_Write(exportState, fileNamePrefix="field_dyn_export_adv_", &
       timeslice=step, status=status, relaxedFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
