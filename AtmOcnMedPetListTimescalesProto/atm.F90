@@ -197,11 +197,14 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
       
-    ! initialize internal clock
+    ! by default, the modelClock is a copy of the driverClock
+    ! here is the place to adjust the timeStep if it does not depend on 
+    ! the driverClock handed to the model during run sequence execution
+    
     ! here: parent Clock and stability timeStep determine actual model timeStep
     !TODO: stabilityTimeStep should be read in from configuation
     !TODO: or computed from internal Grid information
-    call ESMF_TimeIntervalSet(stabilityTimeStep, m=5, rc=rc) ! 5 minute steps
+    call ESMF_TimeIntervalSet(stabilityTimeStep, m=15, rc=rc) ! 15 minute steps
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
