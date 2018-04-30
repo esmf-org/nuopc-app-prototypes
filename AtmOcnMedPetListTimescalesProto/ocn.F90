@@ -191,14 +191,17 @@ module OCN
 
     rc = ESMF_SUCCESS
     
-    ! query the Component for its clock, importState and exportState
+    ! query the Component for its clock
     call NUOPC_ModelGet(model, modelClock=clock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
       
-    ! initialize internal clock
+    ! by default, the modelClock is a copy of the driverClock
+    ! here is the place to adjust the timeStep if it does not depend on 
+    ! the driverClock handed to the model during run sequence execution
+    
     ! here: parent Clock and stability timeStep determine actual model timeStep
     !TODO: stabilityTimeStep should be read in from configuation
     !TODO: or computed from internal Grid information
