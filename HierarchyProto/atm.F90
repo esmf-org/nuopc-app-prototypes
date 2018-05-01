@@ -8,6 +8,8 @@
 ! Licensed under the University of Illinois-NCSA License.
 !==============================================================================
 
+#define CUSTOMRUNSEQUENCE_on
+
 module ATM
 
   !-----------------------------------------------------------------------------
@@ -55,6 +57,15 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    
+#ifdef CUSTOMRUNSEQUENCE_on
+    call NUOPC_CompSpecialize(driver, specLabel=label_SetRunSequence, &
+      specRoutine=SetRunSequence, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
 
   end subroutine
 
@@ -93,7 +104,8 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
+#ifndef CUSTOMRUNSEQUENCE_on
     ! SetServices for PHY2DYN
     call NUOPC_DriverAddComp(driver, srcCompLabel="PHY", dstCompLabel="DYN", &
       compSetServicesRoutine=cplSS, comp=conn, rc=rc)
@@ -106,6 +118,7 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 
     ! The ATM subcomponents use fields with new standardNames
     call NUOPC_FieldDictionaryAddEntry("PHYEX", canonicalUnits="1", rc=rc)
@@ -114,6 +127,47 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
+  end subroutine
+
+  !-----------------------------------------------------------------------------
+
+  subroutine SetRunSequence(driver, rc)
+    type(ESMF_GridComp)  :: driver
+    integer, intent(out) :: rc
+    
+    ! local variables
+    character(ESMF_MAXSTR)              :: name
+    type(NUOPC_FreeFormat)              :: runSeqFF
+
+    rc = ESMF_SUCCESS
+    
+    ! query the driver for its name
+    call ESMF_GridCompGet(driver, name=name, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+    
+    ! set up free format run sequence
+    runSeqFF = NUOPC_FreeFormatCreate(stringList=(/ &
+      " @*            ",    &
+      "   PHY -> DYN  ",    &
+      "   DYN         ",    &
+      "   PHY         ",    &
+      " @             " /), &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+      
+    ! ingest FreeFormat run sequence
+    call NUOPC_DriverIngestRunSequence(driver, runSeqFF, &
+      autoAddConnectors=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+
+    ! clean-up
+    call NUOPC_FreeFormatDestroy(runSeqFF, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+      
   end subroutine
 
   !-----------------------------------------------------------------------------
