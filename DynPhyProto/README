@@ -17,8 +17,30 @@ Description:
   
   Both DYN and PHY components set SharePolicyField="share" when adverising
   the field with StandardName="PHYEX". This instructs the NUOP_Connector to
-  implement the connection via reference sharing for this field.
+  evaluate the possibility to implement the connection via reference sharing
+  for this field.
   
+  The DYN component uses the default TransferOfferField setting of 
+  "will provide" during Advertise (by not specifying it). The PHY component
+  explicitly sets TransferOfferField="can provide". Since both DYN and PHY 
+  components run on the same petList, the Connector is able to set the 
+  ShareStatusField="share" on both sides, and set TransferActionField="provide"
+  on the DYN side (which indicated "will provide"), and 
+  TransferActionField="accept" on the PHY side (which indicated just 
+  "can provide").
+  
+  The DYN component realizes in the standard way using NUOPC_Realize() for
+  convenience, with selection="realize_connected_remove_others". The PHY
+  component on the other hand must consider the TransferActionField="accept"
+  setting. Fields that have TransferActionField="accept" are realized 
+  automatically by the Connector using the data allocation sepcified by the
+  provider side (here DYN component). Fields can still be modified if needed,
+  but in most cases are fine the way they are. To simplify different treatment
+  depending on the TransferActionField setting, the NUOPC_Realize() provides
+  selection="realize_connected+provide_remove_others". This indicates that 
+  only fields that are connected _and_ have TransferActionField="provide", 
+  should be realized. Fields that have TransferActionField="accept" are left
+  untouched.
 
 Build:
   - Set environment variable ESMFMKFILE to point to the esmf.mk of your ESMF
