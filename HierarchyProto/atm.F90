@@ -78,6 +78,8 @@ module ATM
     ! local variables
     type(ESMF_GridComp)           :: child
     type(ESMF_CplComp)            :: conn
+    integer                       :: verbosity
+    character(len=10)             :: vString
 
     rc = ESMF_SUCCESS
     
@@ -87,7 +89,12 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(child, name="Verbosity", value="high", rc=rc)
+    verbosity = 0 ! reset
+    verbosity = ibset(verbosity,0)  ! log basic intro/extro and indentation
+    verbosity = ibset(verbosity,11) ! log info about data dependency loop
+    verbosity = ibset(verbosity,12) ! log info about run time-loop
+    write(vString,"(I10)") verbosity
+    call NUOPC_CompAttributeSet(child, name="Verbosity", value=vString, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -99,7 +106,11 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(child, name="Verbosity", value="high", rc=rc)
+    verbosity = 0 ! reset
+    verbosity = ibset(verbosity,0)  ! log basic intro/extro and indentation
+    verbosity = ibset(verbosity,11) ! log info about data dependency loop
+    verbosity = ibset(verbosity,12) ! log info about run time-loop
+    call NUOPC_CompAttributeSet(child, name="Verbosity", value=vString, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
