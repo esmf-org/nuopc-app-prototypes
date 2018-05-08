@@ -278,7 +278,7 @@ module DYN
     
 #if 1
     call ESMF_TimePrint(time, &
-      preString="DYN DataInitialize time: ", unit=msgString, rc=rc)
+      preString="DYN: DataInitialize time: ", unit=msgString, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
