@@ -674,7 +674,7 @@ contains
                       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                         line=__LINE__, file=__FILE__)) &
                         return  ! bail out
-
+                      
                       if (isPresent .and. itemCount > 0) then
                         allocate(ungriddedLBound(itemCount),stat=stat)
                         if (ESMF_LogFoundAllocError(statusToCheck=stat, &
@@ -691,7 +691,6 @@ contains
                           file=__FILE__)) &
                           return  ! bail out
 
-                        !print *, "UNGRIDDED LBOUND = ", ungriddedLBound
                       endif
 
                       call ESMF_AttributeGet(field, name="UngriddedUBound", &
@@ -716,11 +715,12 @@ contains
                           line=__LINE__, &
                           file=__FILE__)) &
                           return  ! bail out
+                        !print *, "UNGRIDDED UBOUND = ", ungriddedUBound
 
                       endif
 
                         call ESMF_AttributeGet(field, &
-                          name="PRECISION", value=knd, defaultvalue=ESMF_KIND_R4, rc=rc)
+                          name="PRECISION", value=knd, rc=rc)
                         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                           line=__LINE__, &
                           file=__FILE__)) &
@@ -1828,6 +1828,9 @@ contains
    logical                           :: updateL, updateR, swap
    logical, allocatable              :: doUpdate(:)
    type(ESMF_Time), allocatable      :: useTime(:)
+   real, pointer, dimension(:,:,:)   :: fptr
+   integer                           :: is, js, ie, je
+
 
 !  Declare pointers to IMPORT/EXPORT/INTERNAL states 
 !  -------------------------------------------------
@@ -1886,11 +1889,11 @@ contains
 
       if (item%isConst) cycle
       ! Debug level 1
-      If (Ext_Debug > 0) Then
+!      If (Ext_Debug > 0) Then
          If (MAPL_AM_I_ROOT()) Then
             Write(*,'(a,3(x,a))') '>> Reading ', trim(item%var), 'from', trim(item%file)
          End If
-      End If
+!      End If
 
       NotSingle = .true.
       if (trim(item%cyclic) == 'single') NotSingle = .false.
@@ -2175,6 +2178,16 @@ contains
    deallocate(doUpdate)
    deallocate(useTime)
 
+#define PEGGY_DEBUG
+#ifdef PEGGY_DEBUG
+!  Check the value of the PLE0 
+   call ESMF_StateGet(EXPORT,'pressure_at_layer_edges_before_advection',field, rc=rc)   
+   call ESMF_FieldGet(field, farrayPtr=fptr, rc=rc)
+   if (MAPL_Am_I_Root()) then
+    	 print *, "EXTDATA: PLE0", lbound(fptr), ubound(fptr)
+    endif
+#endif
+   
    if (hasRun .eqv. .false.) hasRun = .true.
 !   call MAPL_TimerOff(MAPLSTATE,"Run")
 !   call MAPL_TimerOff(MAPLSTATE,"TOTAL")
@@ -4043,11 +4056,11 @@ contains
      end if
 
      call MAPL_ExtDataGetBracket(item,side,field=Field,vcomp=1,__RC__)
-     call ESMF_AttributeGet(field, NAME='STAGGERING', value=gridStagger1, defaultvalue=MAPL_AGrid,__RC__)
-     call ESMF_AttributeGet(field, NAME='ROTATION',value=gridRotation1, defaultvalue=MAPL_RotateLL, __RC__)
+     call ESMF_AttributeGet(field, NAME='STAGGERING', value=gridStagger1, __RC__)
+     call ESMF_AttributeGet(field, NAME='ROTATION',value=gridRotation1,  __RC__)
      call MAPL_ExtDataGetBracket(item,side,field=Field,vcomp=2,__RC__)
-     call ESMF_AttributeGet(field, NAME='STAGGERING', value=gridStagger2, defaultvalue=MAPL_AGrid,__RC__)
-     call ESMF_AttributeGet(field, NAME='ROTATION',value=gridRotation2,defaultvalue=MAPL_RotateLL, __RC__)
+     call ESMF_AttributeGet(field, NAME='STAGGERING', value=gridStagger2, __RC__)
+     call ESMF_AttributeGet(field, NAME='ROTATION',value=gridRotation2, __RC__)
 
      ASSERT_(gridStagger1 == gridStagger2)
      ASSERT_(gridRotation1 == gridRotation2)

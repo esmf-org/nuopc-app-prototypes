@@ -90,7 +90,7 @@ module ADVCORE
       real(FVPRC) :: dt
       logical     :: FV3_DynCoreIsRunning=.false.
       integer     :: AdvCore_Advection=1
-      logical     :: chk_mass=.true.
+      logical     :: chk_mass=.false.
 
       integer,  parameter :: ntiles_per_pe = 1
 
@@ -103,7 +103,7 @@ module ADVCORE
       real(FVPRC), SAVE          :: TMASS0(ntracers)
       real(ESMF_KIND_R8), SAVE          ::  MASS0
       logical    , SAVE          :: firstRun=.true.
-
+      integer    , SAVE          :: steps=0
 ! !PUBLIC MEMBER FUNCTIONS:
 
       public SetServices
@@ -319,10 +319,9 @@ contains
          FV_Atm(1)%flagstruct%npx    = FV_Atm(1)%flagstruct%npx+1
       endif
 
-      call ESMF_ConfigGetAttribute( rootConfig, ndt, label='RUN_DT:', default=0, RC=STATUS )
+      call ESMF_AttributeGet( gcomp, 'RUN_DT:', ndt, RC=STATUS )
       VERIFY_(STATUS)
       DT = ndt
-      
 
       ! Start up FV if AdvCore is running without FV3_DynCoreIsRunning
       !--------------------------------------------------
@@ -479,12 +478,22 @@ contains
        !!! Need to do something different if mytype is MAPL_BundleItem, Nothing has been added into
        !!! the bundle yet.  Ignore it for now
        !!! if (mytype .ne. MAPL_BundleItem) then
+       if (short_name(1:5) .eq. "TRADV") then 
+        call NUOPC_Advertise(IMPORT, &
+           StandardName=long_name, name=short_name, units=units, &
+           SharePolicyField="share", TransferOfferField="can provide", rc=rc) 
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+           line=__LINE__, &
+           file=__FILE__)) &
+           return  ! bail out
+       else
         call NUOPC_Advertise(IMPORT, &
            StandardName=long_name, name=short_name, units=units, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
            return  ! bail out
+       endif
         !print *, 'ADVCORE: advertise import field ', long_name
        !!! endif
      end do
@@ -681,7 +690,7 @@ contains
       ! Get the time-step
       ! -----------------------
       ! call MAPL_GetResource( MAPL, ndt, 'RUN_DT:', default=0, RC=STATUS )
-      call ESMF_AttributeGet ( GC, "RUN_DT:", dt, RC=STATUS )
+      call ESMF_AttributeGet ( GC, "RUN_DT:", dt, RC=rc )
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
@@ -729,11 +738,13 @@ contains
       integer, intent(out), optional  :: rc
       ! local variables
       character(len=ESMF_MAXSTR)      :: fieldName
-      character(len=ESMF_MAXSTR)      :: name
+      character(len=ESMF_MAXSTR)      :: name, value
       integer                         :: i, itemCount, k
       type(ESMF_Field)                :: field
       real(ESMF_KIND_R8), pointer     :: fptr(:)
-
+      integer                         :: ungriddedLBound(1), ungriddedUBound(1)
+      type(ESMF_TypeKind_Flag)        :: typekind
+ 
       if (present(rc)) rc = ESMF_SUCCESS
       
       itemCount=size(spec)
@@ -752,19 +763,35 @@ contains
             file=__FILE__)) &
             return  ! bail out
        if (NUOPC_IsConnected(state, fieldName=name)) then
-          ! create a Field
-          field = NUOPC_FieldCreateFromSpec(spec(i),rc=rc)
-          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=__LINE__, &
-            file=__FILE__)) &
-            return  ! bail out
-          ! realize the connected Field using the just created Field
-          call NUOPC_Realize(state, field=field, rc=rc)
-          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=__LINE__, &
-            file=__FILE__)) &
-            return  ! bail out
-          ! print *, 'ADVCORE Realize field ', name
+          ! Check if the field is a shared field 
+          if (name(1:5) .eq. "TRADV") then
+            call NUOPC_Realize(state, grid=grid, fieldName = name, & 
+	          selection="realize_connected+provide_remove_others", rc=rc)
+            if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+              line=__LINE__, &
+              file=__FILE__)) &
+              return  ! bail out
+          else 
+            ! create a Field
+  	    field = NUOPC_FieldCreateFromSpec(spec(i),rc=rc)
+            if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+              line=__LINE__, &
+              file=__FILE__)) &
+              return  ! bail out
+            ! realize the connected Field using the just created Field
+            ! print the field dimension and name
+            call ESMF_FieldGet(FIELD, ungriddedLBound=ungriddedLBound, &
+                ungriddedUBound=ungriddedUBound, typekind=typekind, &
+                rc=rc)
+            if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+                line=__LINE__, file=__FILE__)) return  ! bail out
+            call NUOPC_Realize(state, field=field, rc=rc)
+            if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+               line=__LINE__, &
+               file=__FILE__)) &
+               return  ! bail out
+            ! print *, 'ADVCORE Realize field ', name
+          endif
         else
           ! remove a not connected Field from State
           call ESMF_StateRemove(state, (/name/), rc=rc)
@@ -921,7 +948,7 @@ contains
       VERIFY_(STATUS)
       call ESMF_ConfigGetAttribute(CF, LM, label='LM:',  RC=STATUS )
       VERIFY_(STATUS)
-
+      JM = JM/6
 
 ! Get parameters from generic state.
 !-----------------------------------
@@ -964,7 +991,6 @@ contains
 
          is = lbound(PLE0,1); ie = ubound(PLE0,1)
          js = lbound(PLE0,2); je = ubound(PLE0,2)
-      	 print *, "ADVCORE: PLE0", PLE0(is,js,1), PLE0(ie,je,1)
 
       ! The quantities to be advected come as friendlies in a bundle
       !  in the import state.
@@ -1016,6 +1042,8 @@ contains
                TRACERS(:,:,:,N) = advTracers(N)%content
             end if
          end do
+         TMASS0=0.0
+         TMASS1=0.0
          if (chk_mass) then
         ! Check Mass conservation
             if (firstRun .and. AdvCore_Advection>0) then
@@ -1027,8 +1055,8 @@ contains
                call global_integral(TMASS0, TRACERS, PLE1, IM,JM,LM,NQ)
                if (MASS0 /= 0.0) TMASS0=TMASS0/MASS0
             endif
+            firstrun = .false.
          endif
-         firstRun=.false.
 
          call ESMF_ClockGet ( clock, CurrTime=currTime, rc=status )
          VERIFY_(STATUS)
@@ -1099,6 +1127,7 @@ contains
             else
                advTracers(N)%content    = TRACERS(:,:,:,N)
             end if
+
 ! Fill Export States
             write(myTracer, "('TEST_TRACER',i1.1)") N-1
             call MAPL_GetPointer(EXPORT, temp3D, TRIM(myTracer), rc=status)
@@ -1127,7 +1156,7 @@ contains
 
 !WMP  end if ! AdvCore_Advection
 #endif
-
+      steps = steps+1
       RETURN_(ESMF_SUCCESS)
 
       end subroutine modelAdvance

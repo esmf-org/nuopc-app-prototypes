@@ -2,7 +2,7 @@
 !=============================================================================
 !            NASA/GSFC, Software System Support Office, Code 610.3           !
 !=============================================================================
-!BOPe
+!BOP
 !
 ! !MODULE: PTRACER
 !
@@ -444,7 +444,8 @@ contains
            file=__FILE__)) &
            return  ! bail out
         call NUOPC_Advertise(EXPORT, &
-           StandardName=long_name, name=short_name, units=units, rc=rc) 
+           StandardName=long_name, name=short_name, units=units, &
+           SharePolicyField="share", rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
@@ -594,6 +595,7 @@ contains
       integer                         :: i, itemCount, k
       type(ESMF_Field)                :: field
       real(ESMF_KIND_R8), pointer     :: fptr(:)
+      type(ESMF_Index_Flag)           :: indexflag
 
       if (present(rc)) rc = ESMF_SUCCESS
       
@@ -664,8 +666,10 @@ contains
       real(REAL8) :: dz, ztop, height, pressure
       real(REAL8) :: LONc,LATc
       real(REAL8) :: eta, eta_top, rot_ang, ptop, pint
-      real(ESMF_KIND_R8), pointer  :: LONS   (:,:)
-      real(ESMF_KIND_R8), pointer  :: LATS   (:,:)
+      real(ESMF_KIND_R8), pointer  :: LONSR8   (:,:)
+      real(ESMF_KIND_R8), pointer  :: LATSR8   (:,:)
+      real(ESMF_KIND_R4), pointer  :: LONS   (:,:)
+      real(ESMF_KIND_R4), pointer  :: LATS   (:,:)
       type (mystates_WRAP)             :: mystates_ptr
       type (MAPL_VarSpec), pointer        :: internalSpec(:)
       type (T_pTracers_STATE), pointer :: pTracers_STATE 
@@ -723,17 +727,21 @@ contains
            return  ! bail out
 
       ! Get the coordinates of the local grid      
-      call ESMF_GridGetCoord(esmfGrid, 1, farrayPtr=LONS, rc=rc) 
+      call ESMF_GridGetCoord(esmfGrid, 1, farrayPtr=LONSR8, rc=rc) 
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
            return  ! bail out
-      call ESMF_GridGetCoord(esmfGrid, 2, farrayPtr=LATS, rc=rc) 
+      call ESMF_GridGetCoord(esmfGrid, 2, farrayPtr=LATSR8, rc=rc) 
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
            line=__LINE__, &
            file=__FILE__)) &
            return  ! bail out
-      
+      allocate(LONS(size(LONSR8,1),size(LONSR8,2)))
+      allocate(LATS(size(LATSR8,1),size(LATSR8,2)))
+      LONS = LONSR8
+      LATS = LATSR8
+
       !  Associate the Internal State fields with our legacy state 
       !  ---------------------------------------------------------
       ! call MAPL_Get ( ggSTATE, INTERNALSPEC=InternalSpec, &
@@ -855,6 +863,7 @@ contains
       end do
 
       if (do_AdvColdStart) DEALLOCATE(AK, BK)
+      deallocate(LONS, LATS)
 
       km = size(pTracers_STATE%tr(1)%pArray3D, 3)
 
@@ -1022,14 +1031,10 @@ contains
                                         S  = AGCM_S, rc=status )
          VERIFY_(STATUS)
 
+         
          if ( MAPL_am_I_root() ) then
-
          write(6,1000) AGCM_YY,AGCM_MM,AGCM_DD,AGCM_H,AGCM_M,AGCM_S
     1000 format(1x,'AGCM Date: ',i4.4,'/',i2.2,'/',i2.2,2x,'Time: ',i2.2,':',i2.2,':',i2.2)
-
-         is = lbound(PLE,1); ie = ubound(PLE,1)
-         js = lbound(PLE,2); je = ubound(PLE,2)
-      	 print *, "PTRACER: PLE", PLE(is,js,1), PLE(ie,je,1)
 
             PRINT*, "------------------------------------------------"
             PRINT*, "------  Compute the mass of each tracer  ------"
@@ -1260,7 +1265,7 @@ contains
       VERIFY_(STATUS)
 
       IF (MAPL_AM_I_ROOT()) then
-         PRINT *, TRIM(tracerName),totMass
+         PRINT *, TRIM(tracerName), totMass
       ENDIF
 
       deallocate(qsum, dp)
