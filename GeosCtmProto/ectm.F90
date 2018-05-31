@@ -550,6 +550,7 @@
            line=__LINE__, &
            file=__FILE__)) &
            return  ! bail out
+        ! use long_name for both StandardName and name as a workaround
         call NUOPC_Advertise(exportState, &
            StandardName=long_name, name=short_name, Units=units, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -995,9 +996,6 @@
 
       is = lbound(PLE,1); ie = ubound(PLE,1)
       js = lbound(PLE,2); je = ubound(PLE,2)
-      if (MAPL_Am_I_Root()) then
-      	 print *, "ECTM: PLE", PLE(is,js,1), PLE(ie,je,1)
-      endif
 
       LM = size  (PLE,3) - 1
       nc = (ie-is+1)*(je-js+1)
@@ -1015,7 +1013,7 @@
 
       call calcCourantNumberMassFlux(UCr8, VCr8, PLEr8, &
                                 MFXr8, MFYr8, CXr8, CYr8, DT)
-    
+
       DEALLOCATE(UCr8, VCr8, PLEr8)
 
       IF (.NOT. enable_pTracers) THEN
