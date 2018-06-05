@@ -1,6 +1,6 @@
-How to compile and run GeosCtmProto using Peggy's BASELIB and GEOSctm_lite
+How to compile and run GeosCtmProto using Peggy's BASELIB and GEOSctm_lite on discover
 
-Peggy Li, 4/10/2018
+Peggy Li, 6/5/2018
 
 1. Load the following modules
 
@@ -17,7 +17,9 @@ module load other/cmake
 setenv BASEDIR /gpfsm/dnb31/pli/ESMA-Baselibs-5.0.5/x86_64-unknown-linux-gnu/ifort_17.0.4.196-intelmpi_18.0.0.128
 setenv ESMADIR /gpfsm/dnb31/pli/GEOSctm_lite
 
-3.  Untar GeosCtmProto.tar and compile
+3.  Get GeosCtmProto using
+  % svn co https://svn.code.sf.net/p/esmfcontrib/svn/NUOPC/trunk/GeosCtmProto
+    and compile it in the GeosCtmProto directory by %gmake
 
 4.  Run it using %mpirun -np 6 ./ctmApp
 
