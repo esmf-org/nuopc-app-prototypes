@@ -70,8 +70,10 @@ program esmApp
   ! set driver verbosity
   verbosity = 0 ! reset
   verbosity = ibset(verbosity,0)  ! log basic intro/extro and indentation
-  verbosity = ibset(verbosity,11) ! log info about data dependency loop
-  verbosity = ibset(verbosity,12) ! log info about run time-loop
+!  verbosity = ibset(verbosity,11) ! log info about data dependency loop
+!  verbosity = ibset(verbosity,12) ! log info about run time-loop
+  verbosity = ibset(verbosity,13) ! log creation of components
+!  verbosity = ibset(verbosity,14) ! log creation of states
   write(vString,"(I10)") verbosity
   call NUOPC_CompAttributeSet(atmComp, name="Verbosity", value=vString, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
