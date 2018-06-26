@@ -87,8 +87,8 @@ module ATM
       return  ! bail out
     verbosity = 0 ! reset
     verbosity = ibset(verbosity,0)  ! log basic intro/extro and indentation
-    verbosity = ibset(verbosity,11) ! log info about data dependency loop
-    verbosity = ibset(verbosity,12) ! log info about run time-loop
+!    verbosity = ibset(verbosity,11) ! log info about data dependency loop
+!    verbosity = ibset(verbosity,12) ! log info about run time-loop
     write(vString,"(I10)") verbosity
     call NUOPC_CompAttributeSet(child, name="Verbosity", value=vString, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -104,8 +104,8 @@ module ATM
       return  ! bail out
     verbosity = 0 ! reset
     verbosity = ibset(verbosity,0)  ! log basic intro/extro and indentation
-    verbosity = ibset(verbosity,11) ! log info about data dependency loop
-    verbosity = ibset(verbosity,12) ! log info about run time-loop
+!    verbosity = ibset(verbosity,11) ! log info about data dependency loop
+!    verbosity = ibset(verbosity,12) ! log info about run time-loop
     write(vString,"(I10)") verbosity
     call NUOPC_CompAttributeSet(child, name="Verbosity", value=vString, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -122,9 +122,9 @@ module ATM
       return  ! bail out
     verbosity = 0 ! reset
     verbosity = ibset(verbosity,0)  ! log basic intro/extro and indentation
-    verbosity = ibset(verbosity,8)  ! log transferPolicy info
-    verbosity = ibset(verbosity,10) ! log cplList construction
-    verbosity = ibset(verbosity,12) ! log RH computation
+!    verbosity = ibset(verbosity,8)  ! log transferPolicy info
+!    verbosity = ibset(verbosity,10) ! log cplList construction
+!    verbosity = ibset(verbosity,12) ! log RH computation
     write(vString,"(I10)") verbosity
     call NUOPC_CompAttributeSet(conn, name="Verbosity", value=vString, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
