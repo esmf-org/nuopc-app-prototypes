@@ -15,6 +15,7 @@ program esmApp
   !-----------------------------------------------------------------------------
 
   use ESMF
+  use NUOPC
   use ATM, only: atmSS => SetServices
 
   implicit none
@@ -25,6 +26,8 @@ program esmApp
   type(ESMF_Time)         :: stopTime
   type(ESMF_TimeInterval) :: timeStep
   type(ESMF_Clock)        :: clock
+  integer                 :: verbosity
+  character(len=10)       :: vString
 
   ! Initialize ESMF
   call ESMF_Initialize(logkindflag=ESMF_LOGKIND_MULTI, &
@@ -64,6 +67,18 @@ program esmApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
   
+  ! set driver verbosity
+  verbosity = 0 ! reset
+  verbosity = ibset(verbosity,0)  ! log basic intro/extro and indentation
+  verbosity = ibset(verbosity,11) ! log info about data dependency loop
+  verbosity = ibset(verbosity,12) ! log info about run time-loop
+  write(vString,"(I10)") verbosity
+  call NUOPC_CompAttributeSet(atmComp, name="Verbosity", value=vString, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
   ! Create the application Clock, startTime, stopTime, timeStep
   call ESMF_TimeIntervalSet(timeStep, m=15, rc=rc) ! 15 minute steps
   if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
