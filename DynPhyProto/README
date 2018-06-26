@@ -22,9 +22,12 @@ Description:
   
   The DYN component uses the default TransferOfferField setting of 
   "will provide" during Advertise (by not specifying it). The PHY component
-  explicitly sets TransferOfferField="can provide". Since both DYN and PHY 
-  components run on the same petList, the Connector is able to set the 
-  ShareStatusField="share" on both sides, and set TransferActionField="provide"
+  explicitly sets TransferOfferField="can provide".
+  
+  Since both DYN and PHY components inidcate their willingness to share the
+  Field allocation via SharePolicyField="share", _and_ both components run on
+  the same petList, the Connector is able to set the ShareStatusField="shared"
+  (on both sides). Further, the Connector sets TransferActionField="provide"
   on the DYN side (which indicated "will provide"), and 
   TransferActionField="accept" on the PHY side (which indicated just 
   "can provide").
