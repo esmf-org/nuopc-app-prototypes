@@ -107,6 +107,8 @@ program esmApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
+  write(*, *) 'esmApp FINISHED'
+
   ! Finalize ESMF
   call ESMF_Finalize()
   
