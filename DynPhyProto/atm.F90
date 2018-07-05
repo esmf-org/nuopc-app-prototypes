@@ -67,8 +67,8 @@ module ATM
     ! local variables
     type(ESMF_GridComp)           :: child
     type(ESMF_CplComp)            :: conn
-    integer                       :: verbosity
-    character(len=10)             :: vString
+    integer                       :: verbosity, diagnostic
+    character(len=10)             :: attrStr
 
     rc = ESMF_SUCCESS
     
@@ -89,8 +89,13 @@ module ATM
     verbosity = ibset(verbosity,0)  ! log basic intro/extro and indentation
 !    verbosity = ibset(verbosity,11) ! log info about data dependency loop
 !    verbosity = ibset(verbosity,12) ! log info about run time-loop
-    write(vString,"(I10)") verbosity
-    call NUOPC_CompAttributeSet(child, name="Verbosity", value=vString, rc=rc)
+    write(attrStr,"(I10)") verbosity
+    call NUOPC_CompAttributeSet(child, name="Verbosity", value=attrStr, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompAttributeSet(child, name="Diagnostic", value="max", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -106,8 +111,13 @@ module ATM
     verbosity = ibset(verbosity,0)  ! log basic intro/extro and indentation
 !    verbosity = ibset(verbosity,11) ! log info about data dependency loop
 !    verbosity = ibset(verbosity,12) ! log info about run time-loop
-    write(vString,"(I10)") verbosity
-    call NUOPC_CompAttributeSet(child, name="Verbosity", value=vString, rc=rc)
+    write(attrStr,"(I10)") verbosity
+    call NUOPC_CompAttributeSet(child, name="Verbosity", value=attrStr, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompAttributeSet(child, name="Diagnostic", value="max", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -125,8 +135,27 @@ module ATM
 !    verbosity = ibset(verbosity,8)  ! log transferPolicy info
 !    verbosity = ibset(verbosity,10) ! log cplList construction
 !    verbosity = ibset(verbosity,12) ! log RH computation
-    write(vString,"(I10)") verbosity
-    call NUOPC_CompAttributeSet(conn, name="Verbosity", value=vString, rc=rc)
+    write(attrStr,"(I10)") verbosity
+    call NUOPC_CompAttributeSet(conn, name="Verbosity", value=attrStr, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    diagnostic = 0 ! reset
+    diagnostic = ibset(diagnostic,0)  ! dump import fields when entering Init.
+    diagnostic = ibset(diagnostic,1)  ! dump export fields when entering Init.
+    diagnostic = ibset(diagnostic,2)  ! dump import fields when exiting Init.
+    diagnostic = ibset(diagnostic,3)  ! dump export fields when exiting Init.
+    diagnostic = ibset(diagnostic,4)  ! dump import fields when entering Run
+    diagnostic = ibset(diagnostic,5)  ! dump export fields when entering Run
+    diagnostic = ibset(diagnostic,6)  ! dump import fields when exiting Run
+    diagnostic = ibset(diagnostic,7)  ! dump export fields when exiting Run
+    diagnostic = ibset(diagnostic,8)  ! dump import fields when entering Final.
+    diagnostic = ibset(diagnostic,9)  ! dump export fields when entering Final.
+    diagnostic = ibset(diagnostic,10) ! dump import fields when exiting Final.
+    diagnostic = ibset(diagnostic,11) ! dump export fields when exiting Final.
+    write(attrStr,"(I10)") diagnostic
+    call NUOPC_CompAttributeSet(conn, name="Diagnostic", value=attrStr, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
