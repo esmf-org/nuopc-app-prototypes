@@ -80,6 +80,11 @@ program esmApp
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  call NUOPC_CompAttributeSet(atmComp, name="Diagnostic", value="max", rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
   ! Create the application Clock, startTime, stopTime, timeStep
   call ESMF_TimeIntervalSet(timeStep, m=15, rc=rc) ! 15 minute steps
