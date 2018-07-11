@@ -36,7 +36,7 @@ Description:
   convenience, with selection="realize_connected_remove_others". The PHY
   component on the other hand must consider the TransferActionField="accept"
   setting. Fields that have TransferActionField="accept" are realized 
-  automatically by the Connector using the data allocation sepcified by the
+  automatically by the Connector using the data allocation specified by the
   provider side (here DYN component). Fields can still be modified if needed,
   but in most cases are fine the way they are. To simplify different treatment
   depending on the TransferActionField setting, the NUOPC_Realize() provides
