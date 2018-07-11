@@ -159,7 +159,7 @@ module DYN
       return  ! bail out
     ! importable field: PHYEX
     call NUOPC_Advertise(importState, StandardName="PHYEX", &
-      SharePolicyField="share", rc=rc)
+      name="phyex_field", SharePolicyField="share", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -242,7 +242,7 @@ module DYN
       return  ! bail out
     ! importable field: PHYEX
     call NUOPC_Realize(importState, grid=gridIn, &
-      fieldName="PHYEX", &
+      fieldName="phyex_field", &
       selection="realize_connected_remove_others", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
