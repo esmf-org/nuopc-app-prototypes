@@ -94,7 +94,8 @@ module ESM
       return  ! bail out
     
     ! split up the PETs between ATM and OCN
-    petCountOCN = min(2,petCount/2) ! don't give OCN more than 2 PETs
+!    petCountOCN = min(2,petCount/2) ! don't give OCN more than 2 PETs
+    petCountOCN = min(1,petCount/2) ! don't give OCN more than 1 PETs
     petCountATM = petCount - petCountOCN
 
      ! SetServices for ATM with petList on first half of PETs
