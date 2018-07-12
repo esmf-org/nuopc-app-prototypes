@@ -123,8 +123,23 @@ module ATM
     type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
     
+    ! local variables
+    character(*), parameter   :: rName="InitializeP1"
+    character(ESMF_MAXSTR)    :: name
+    integer                   :: verbosity
+
     rc = ESMF_SUCCESS
     
+    ! query the component for info
+    call NUOPC_CompGet(model, name=name, verbosity=verbosity, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+    
+    ! intro
+    call NUOPC_LogIntro(name, rName, verbosity, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+
     ! importable field: sea_surface_temperature
     ! -> marked as "can provide"
     call NUOPC_Advertise(importState, &
@@ -156,6 +171,11 @@ module ATM
       return  ! bail out
 #endif
 
+    ! extro
+    call NUOPC_LogExtro(name, rName, verbosity, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+
   end subroutine
   
   !-----------------------------------------------------------------------------
@@ -172,8 +192,21 @@ module ATM
     integer                           :: i, j
     real(kind=ESMF_KIND_R8),  pointer :: lonPtr(:,:), latPtr(:,:)
     character(ESMF_MAXSTR)            :: transferAction
-    
+    character(*), parameter   :: rName="InitializeP3"
+    character(ESMF_MAXSTR)    :: name
+    integer                   :: verbosity
+
     rc = ESMF_SUCCESS
+    
+    ! query the component for info
+    call NUOPC_CompGet(model, name=name, verbosity=verbosity, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+    
+    ! intro
+    call NUOPC_LogIntro(name, rName, verbosity, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
     
     ! create Grid objects for Fields
     gridIn = ESMF_GridCreate1PeriDim(minIndex=(/1,1/), maxIndex=(/200,100/), &
@@ -269,6 +302,11 @@ module ATM
       return  ! bail out
 #endif
 
+    ! extro
+    call NUOPC_LogExtro(name, rName, verbosity, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+
   end subroutine
   
   !-----------------------------------------------------------------------------
@@ -293,12 +331,21 @@ module ATM
     integer                       :: i, j
     integer                       :: connectionCount
     type(ESMF_DistGridConnection), allocatable :: connectionList(:)
-    
-    integer                       :: numOwnedElements
-    real(ESMF_KIND_R8), pointer   :: coordPtrR8D1(:)
-
+    character(*), parameter   :: rName="InitializeP4"
+    character(ESMF_MAXSTR)    :: name
+    integer                   :: verbosity
 
     rc = ESMF_SUCCESS
+    
+    ! query the component for info
+    call NUOPC_CompGet(model, name=name, verbosity=verbosity, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+    
+    ! intro
+    call NUOPC_LogIntro(name, rName, verbosity, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
     
     !NOTE: The air_pressure_at_sea_level (pmsl) Field should now have the
     !NOTE: accepted Mesh available. It is still an empty Field, but with Mesh.
@@ -321,41 +368,27 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
       
-    ! get distgrid
-    call ESMF_MeshGet(mesh, elementDistgrid=distgrid, rc=rc)
+#if 0
+    ! cannot write Mesh here, because it does not contain coordinates yet
+    call ESMF_MeshWrite(mesh, filename="Atm-Mesh", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-
-#if 0
-call ESMF_MeshGet(mesh, spatialDim=dimCount, &
-  numOwnedElements=numOwnedElements, rc=rc)
-if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-  line=__LINE__, &
-  file=__FILE__)) &
-  return  ! bail out
-allocate(coordPtrR8D1(dimCount*numOwnedElements))
-call ESMF_MeshGet(mesh, ownedElemCoords=coordPtrR8D1, rc=rc)
-if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-  line=__LINE__, &
-  file=__FILE__)) &
-  return  ! bail out
-#endif
-
-#if 0
-    call ESMF_MeshWrite(mesh, filename="Atm-Mesh_centers", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call ESMF_LogWrite("Done writing ATM-MeshIn_centers VTK", &
+    call ESMF_LogWrite("Done writing ATM-Mesh VTK", &
       ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 #endif
+
+    ! get distgrid
+    call ESMF_MeshGet(mesh, elementDistgrid=distgrid, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 
     ! get delayout
     call ESMF_DistGridGet(distgrid, delayout=delayout, rc=rc)
@@ -371,7 +404,8 @@ if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       file=__FILE__)) &
       return  ! bail out
 
-    write (msgString,*) "ATM - InitializeP4: localDeCount = ", localDeCount
+    write (msgString,"(A,I3)") &
+      "ATM - InitializeP4: localDeCount = ", localDeCount
     call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -403,7 +437,7 @@ if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       file=__FILE__)) &
       return  ! bail out
 
-#if 0
+#if 1
     ! report on the connections    
     print *, "connectionCount=", connectionCount
     do i=1, connectionCount
@@ -430,11 +464,15 @@ if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#if 0
+! typically would set the new mesh here in the field, but for now leave
+! unchanged, just to test with the original Mesh and DGs
     call ESMF_FieldEmptySet(field, mesh=mesh, rc=rc)    
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 
     ! Also must swap the Mesh for the "sst" Field in the importState
     
@@ -444,11 +482,16 @@ if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+      
+#if 0
+! typically would set the new mesh here in the field, but for now leave
+! unchanged, just to test with the original Mesh and DGs
     call ESMF_FieldEmptySet(field, mesh=mesh, rc=rc)    
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 
     ! get delayout
     call ESMF_DistGridGet(distgrid, delayout=delayout, rc=rc)
@@ -464,14 +507,19 @@ if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       file=__FILE__)) &
       return  ! bail out
     
-    write (msgString,*) "ATM - InitializeP4: final Mesh localDeCount = ", &
-      localDeCount
+    write (msgString,"(A,I3)") &
+      "ATM - InitializeP4: final Mesh localDeCount = ", localDeCount
     call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
+    ! extro
+    call NUOPC_LogExtro(name, rName, verbosity, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+
   end subroutine
     
   !-----------------------------------------------------------------------------
@@ -488,8 +536,22 @@ if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
 
     type(ESMF_Mesh)               :: mesh
 
-    rc = ESMF_SUCCESS
+    character(*), parameter   :: rName="InitializeP5"
+    character(ESMF_MAXSTR)    :: name
+    integer                   :: verbosity
 
+    rc = ESMF_SUCCESS
+    
+    ! query the component for info
+    call NUOPC_CompGet(model, name=name, verbosity=verbosity, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+    
+    ! intro
+    call NUOPC_LogIntro(name, rName, verbosity, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+    
     ! access the "sst" field in the importState
     call ESMF_StateGet(importState, field=field, itemName="sst", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -551,6 +613,11 @@ if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       return  ! bail out
 #endif
 
+    ! extro
+    call NUOPC_LogExtro(name, rName, verbosity, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+
   end subroutine
     
   !-----------------------------------------------------------------------------
@@ -583,7 +650,8 @@ if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       return  ! bail out
     ! initialize data
     
-#if 1
+!!!!!!!- why crashing with this set to 1 ????????????!!!!!
+#if 0 
     call ESMF_FieldFill(field, dataFillScheme="sincos", member=2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
