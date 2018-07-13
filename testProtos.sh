@@ -183,6 +183,7 @@ echo ---------------------------------------------------------------------------
 echo
 }
 
+TestProto AtmOcnCplSetProto                 esmApp
 TestProto AsyncIOBlockingProto              asyncIOApp
 TestProto AsyncIONonblockingProto           asyncIOApp
 TestProto AtmOcnConProto                    esmApp
