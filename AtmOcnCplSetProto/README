@@ -1,0 +1,49 @@
+README for ATM-OCN NUOPC prototype with CplSet connections
+----------------------------------------------------------
+
+A simple two model system with multiple sets of coupled states.
+
+Description
+
+  A two-way coupled system with a single driver (ESM) and two model components
+  (ATM, OCN).
+
+  Three nested states are added to the import state and the export state of the
+  ATM component.  The nested states are labeled Nest1, Nest2, and Nest3.
+  The same set of fieldNames are added to each nested state.
+
+  Two nested states are added to the import state and the export state of the
+  OCN component.  The nested states are labeled Nest2 and Nest3.
+  The same set of fieldNames are added to each nested state.
+
+  The ATM-TO-OCN connector couples ATM:Nest2 to OCN:Nest2 and ATM:Nest3 to
+  OCN:Nest3. ATM:Nest1 is not connected.
+
+  The OCN-TO-ATM connector couples OCN:Nest2 to ATM:Nest2 and OCN:Nest3 to
+  ATM:Nest3. ATM:Nest1 is not connected.
+
+Dependencies:
+  - ESMF v7.1.0r or later. CplSet connections were first added in
+    ESMF_7_1_0_beta_snapshot_40
+  
+Build:
+  - Set environment variable ESMFMKFILE to point to the esmf.mk of your ESMF
+    installation.
+  - gmake
+  
+Execution:
+  - Optionally set environment variable ESMF_RUNTIME_COMPLIANCECHECK to ON.
+  - mpirun -np X ./esmApp (where X is the total number of PETs)
+    X should not exceed 4 or the domain decomposition for Nest1 will fail.
+  
+Output:
+  - PET*.Log files containing compliance checker output if turned on.
+  - The prototype outputs time stepping information to stdout.
+
+Code structure:
+  - Makefile    - Makefile that is based on the standard esmf.mk mechanism.
+  - atm.F90     - The ATM component, specializing generic NUOPC_Model.
+  - ocn.F90     - The OCN component, specializing generic NUOPC_Model.
+  - esm.F90     - The Earth System Model (ESM) component, specializing generic
+                  NUOPC_Driver.
+  - esmApp.F90  - ESM application.
