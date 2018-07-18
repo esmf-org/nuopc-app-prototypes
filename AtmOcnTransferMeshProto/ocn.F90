@@ -148,10 +148,6 @@ module OCN
     type(ESMF_Grid)                   :: gridIn
     type(ESMF_Mesh)                   :: meshIn, meshOut
     
-!!!!
-    type(ESMF_DistGrid) :: elementDG, nodalDG
-!!!!    
-    
     integer                       :: dimCount, numOwnedElements, numOwnedNodes
     real(ESMF_KIND_R8), pointer   :: coordPtrR8D1(:)
 
@@ -170,7 +166,6 @@ module OCN
     call NUOPC_LogIntro(name, rName, verbosity, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
-
     
     ! create Grid object
     gridIn = ESMF_GridCreate1PeriDimUfrm(maxIndex=(/10, 15/), &
@@ -220,8 +215,8 @@ module OCN
       return  ! bail out
 
 #define USE_DIRECT_MESH_CREATION_off
-#ifdef USE_DIRECT_MESH_CREATION
-  ! Test with a direct Mesh creation    
+#ifdef USE_DIRECT_MESH_CREATION_on
+    ! Alternatively test with a direct Mesh creation    
     call createTestMesh1(meshIn, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -257,35 +252,7 @@ module OCN
 #endif
 
     ! for now out same as in
-!    meshOut = meshIn
-!!!!!!!!
-
-    call ESMF_MeshGet(meshIn, elementDistGrid=elementDG, nodalDistGrid=nodalDG, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    meshOut = ESMF_MeshCreate(meshIn, nodalDistGrid=nodalDG, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    call ESMF_MeshWrite(meshOut, filename="OCN-MeshOutAfterRecreate", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call ESMF_LogWrite("Done writing OCN-MeshOutAfterRecreate VTK", &
-      ESMF_LOGMSG_INFO, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-!!!!!!!!
-
-!meshIn = meshOut
+    meshOut = meshIn
 
     ! importable field: air_pressure_at_sea_level
     call NUOPC_Realize(importState, meshIn, fieldName="pmsl", &
