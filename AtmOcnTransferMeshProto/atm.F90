@@ -323,7 +323,7 @@ module ATM
     integer                       :: localDeCount
     character(160)                :: msgString
 
-    type(ESMF_DistGrid)           :: distgrid
+    type(ESMF_DistGrid)           :: elementDG, nodeDG, distgrid
     type(ESMF_DELayout)           :: delayout
     integer                       :: dimCount, tileCount, petCount
     integer                       :: deCountPTile, extraDEs
@@ -368,36 +368,25 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
       
-#if 0
+    ! NOTE:
     ! cannot write Mesh here, because it does not contain coordinates yet
-    call ESMF_MeshWrite(mesh, filename="Atm-Mesh", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call ESMF_LogWrite("Done writing ATM-Mesh VTK", &
-      ESMF_LOGMSG_INFO, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-#endif
 
-    ! get distgrid
-    call ESMF_MeshGet(mesh, elementDistgrid=distgrid, rc=rc)
+    ! get distgrids out of mesh
+    call ESMF_MeshGet(mesh, elementDistgrid=elementDG, nodalDistgrid=nodeDG, &
+      rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 
     ! get delayout
-    call ESMF_DistGridGet(distgrid, delayout=delayout, rc=rc)
+    call ESMF_DistGridGet(elementDG, delayout=delayout, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
-    ! access localDeCount to show this is a real Mesh
+    ! access localDeCount to show some info
     call ESMF_DELayoutGet(delayout, localDeCount=localDeCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -417,7 +406,7 @@ module ATM
     ! that leads to 1DE/PET (as long as there are more PETs than tiles).
     
     ! get dimCount and tileCount
-    call ESMF_DistGridGet(distgrid, dimCount=dimCount, tileCount=tileCount, &
+    call ESMF_DistGridGet(elementDG, dimCount=dimCount, tileCount=tileCount, &
       connectionCount=connectionCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -430,7 +419,7 @@ module ATM
     allocate(connectionList(connectionCount))
     
     ! get minIndex and maxIndex arrays
-    call ESMF_DistGridGet(distgrid, minIndexPTile=minIndexPTile, &
+    call ESMF_DistGridGet(elementDG, minIndexPTile=minIndexPTile, &
       maxIndexPTile=maxIndexPTile, connectionList=connectionList, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -459,20 +448,17 @@ module ATM
     deallocate(minIndexPTile, maxIndexPTile, connectionList)
 
     ! Create a new Mesh on the new DistGrid and swap it in the Field
-    mesh = ESMF_MeshCreate(distgrid=distgrid, rc=rc)
+    !TODO: THE FOLLOWING IS AN INTERNAL METHOD. MUST BE REPLACED BY PUBLIC ONE!
+    mesh = ESMF_MeshCreate(distgrid=distgrid, rc=rc) 
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-#if 0
-! typically would set the new mesh here in the field, but for now leave
-! unchanged, just to test with the original Mesh and DGs
     call ESMF_FieldEmptySet(field, mesh=mesh, rc=rc)    
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-#endif
 
     ! Also must swap the Mesh for the "sst" Field in the importState
     
@@ -482,39 +468,12 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
-#if 0
-! typically would set the new mesh here in the field, but for now leave
-! unchanged, just to test with the original Mesh and DGs
     call ESMF_FieldEmptySet(field, mesh=mesh, rc=rc)    
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-#endif
 
-    ! get delayout
-    call ESMF_DistGridGet(distgrid, delayout=delayout, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
-    ! access localDeCount of the final Mesh
-    call ESMF_DELayoutGet(delayout, localDeCount=localDeCount, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
-    write (msgString,"(A,I3)") &
-      "ATM - InitializeP4: final Mesh localDeCount = ", localDeCount
-    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
     ! extro
     call NUOPC_LogExtro(name, rName, verbosity, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
