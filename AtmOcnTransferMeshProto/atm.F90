@@ -160,17 +160,6 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
     
-#if 0
-    ! exportable field: surface_net_downward_shortwave_flux
-    ! -> use default, i.e. marked as "will provide"
-    call NUOPC_Advertise(exportState, &
-      StandardName="surface_net_downward_shortwave_flux", name="rsns", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-#endif
-
     ! extro
     call NUOPC_LogExtro(name, rName, verbosity, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -286,21 +275,6 @@ module ATM
     !NOTE: The air_pressure_at_sea_level (pmsl) Field is not realized here
     !NOTE: because it was marked with TransferOfferGeomObject="cannot provide".
     !NOTE: It is expected that the Connector will fill in a Grid object for it.
-
-#if 0
-    ! exportable field: surface_net_downward_shortwave_flux
-    field = ESMF_FieldCreate(name="rsns", grid=gridOut, &
-      typekind=ESMF_TYPEKIND_R8, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_Realize(exportState, field=field, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-#endif
 
     ! extro
     call NUOPC_LogExtro(name, rName, verbosity, rc=rc)
@@ -610,7 +584,7 @@ module ATM
     ! initialize data
     
 !!!!!!!- why crashing with this set to 1 ????????????!!!!!
-#if 0 
+#if 0
     call ESMF_FieldFill(field, dataFillScheme="sincos", member=2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -648,45 +622,6 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-#if 0
-    ! surface_net_downward_shortwave_flux
-    call ESMF_StateGet(exportState, field=field, itemName="rsns", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    ! initialize data
-    call ESMF_FieldGet(field, localDeCount=localDeCount, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    do localDe=0, localDeCount-1
-      call ESMF_FieldGet(field, localDe=localDe, farrayPtr=dataPtr, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-      do j=lbound(dataPtr,2),ubound(dataPtr,2)
-      do i=lbound(dataPtr,1),ubound(dataPtr,1)
-        dataPtr(i,j) = sin(real(i))*cos(real(j))  ! "random" initialization
-      enddo
-      enddo
-    enddo
-    ! output to file
-    call NUOPC_Write(field, fileName="field_rsns_init.nc", &
-      status=ESMF_FILESTATUS_REPLACE, relaxedflag=.true., rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    ! set "Updated"
-    call NUOPC_SetAttribute(field, name="Updated", value="true", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-#endif
  
     ! indicate that data initialization is complete (breaking out of init-loop)
     call NUOPC_CompAttributeSet(model, &
