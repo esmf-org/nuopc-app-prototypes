@@ -109,17 +109,6 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
 
-#if 0
-    ! importable field: surface_net_downward_shortwave_flux
-    ! -> use default, i.e. marked as "will provide"
-    call NUOPC_Advertise(importState, &
-      StandardName="surface_net_downward_shortwave_flux", name="rsns", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-#endif
-
     ! exportable field: sea_surface_temperature
     ! -> use default, i.e. marked as "will provide"
     call NUOPC_Advertise(exportState, &
@@ -228,7 +217,6 @@ module OCN
       return  ! bail out
 #endif
 
-
 #if 1
     ! analyze the Mesh and print some info
     call ESMF_MeshGet(meshIn, spatialDim=dimCount, &
@@ -246,24 +234,13 @@ module OCN
 
     ! importable field: air_pressure_at_sea_level
     call NUOPC_Realize(importState, meshIn, fieldName="pmsl", &
-      typekind=ESMF_TYPEKIND_R8, selection="realize_connected_remove_others", &
-      rc=rc)
+      typekind=ESMF_TYPEKIND_R8, meshloc=ESMF_MESHLOC_ELEMENT, &
+      selection="realize_connected_remove_others", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
-#if 0    
-    ! importable field: surface_net_downward_shortwave_flux
-    call NUOPC_Realize(importState, meshIn, fieldName="rsns", &
-      typekind=ESMF_TYPEKIND_R8, selection="realize_connected_remove_others", &
-      rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-#endif
-
     ! exportable field: sea_surface_temperature
     call NUOPC_Realize(exportState, meshOut, fieldName="sst", &
       typekind=ESMF_TYPEKIND_R8, selection="realize_connected_remove_others", &
