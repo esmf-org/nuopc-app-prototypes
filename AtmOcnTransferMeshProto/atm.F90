@@ -581,33 +581,13 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
     ! initialize data
-    
-!!!!!!!- why crashing with this set to 1 ????????????!!!!!
-#if 0
     call ESMF_FieldFill(field, dataFillScheme="sincos", member=2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
-#else
-    call ESMF_FieldGet(field, localDeCount=localDeCount, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    do localDe=0, localDeCount-1
-      call ESMF_FieldGet(field, localDe=localDe, farrayPtr=dataPtr, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-      do i=lbound(dataPtr,1),ubound(dataPtr,1)
-        dataPtr(i) = sin(real(i))  ! "random" initialization
-      enddo
-    enddo
-#endif
 
     ! output to file
     call NUOPC_Write(field, fileName="field_pmsl_init.nc", &
@@ -616,13 +596,14 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
     ! set "Updated"
     call NUOPC_SetAttribute(field, name="Updated", value="true", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
- 
+
     ! indicate that data initialization is complete (breaking out of init-loop)
     call NUOPC_CompAttributeSet(model, &
       name="InitializeDataComplete", value="true", rc=rc)
