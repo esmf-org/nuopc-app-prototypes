@@ -207,6 +207,7 @@ TestSelectProto           AtmOcnSelectProto            esmApp
 TestProto AtmOcnSimpleImplicitProto         esmApp
 TestProto AtmOcnTransferGridProto           esmApp
 TestProto AtmOcnTransferLocStreamProto      esmApp
+TestProto AtmOcnTransferMeshProto           esmApp
 TestProto DriverInDriverProto               mainApp
 TestProto DriverInDriverProtoIPDv02         mainApp
 TestProto DynPhyProto                       esmApp
