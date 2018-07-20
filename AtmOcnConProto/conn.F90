@@ -113,22 +113,31 @@ module CON
 
 #ifdef WITHSTATEUSE_on
     ! replicate dstFields FieldBundle in order to provide intermediate Fields
+    ! - query number of fields in the FieldBundle
     call ESMF_FieldBundleGet(dstFields, fieldCount=fieldCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    ! - pull out fields in list form
+    ! - !!!! MUST specify itemorderflag=ESMF_ITEMORDER_ADDORDER in order to
+    !   !!!! preserve the same order as the original FieldBundle, or else the
+    !   !!!! FieldBundle communication methods will incorrectly map from 
+    !   !!!! src -> dst!
     allocate(fields(fieldCount))
-    call ESMF_FieldBundleGet(dstFields, fieldList=fields, rc=rc)
+    call ESMF_FieldBundleGet(dstFields, fieldList=fields, &
+      itemorderflag=ESMF_ITEMORDER_ADDORDER, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    ! - create the intermediate FieldBundle
     interDstFields = ESMF_FieldBundleCreate(name="interDstFields", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    ! - access fields one-by-one, create intermediaries, and add to new bundle
     do i=1, fieldCount
       call ESMF_FieldGet(fields(i), grid=grid, typekind=typekind, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -146,6 +155,7 @@ module CON
         file=__FILE__)) &
         return  ! bail out
     enddo
+    deallocate(fields)
     ! add interDstFields to the state member
     call ESMF_StateAdd(state, (/interDstFields/), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
