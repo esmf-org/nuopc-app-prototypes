@@ -1,7 +1,8 @@
 README for ATM-OCN NUOPC prototype
 ----------------------------------
 
-A simple two model system.
+A simple two model system, where the application driver (esmApp.F90) sets 
+ESMF_LOGKIND_NONE, turning off all logging.
 
 Description:
 
