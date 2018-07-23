@@ -225,3 +225,7 @@ do
 echo ${testResult[i]}: ${testList[i]}
 ((i++))
 done
+
+echo
+echo ---------------------------------------------------------------------------
+grep ERROR */PET*.ESMF_LogFile
