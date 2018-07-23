@@ -65,7 +65,7 @@ program asyncIOApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
   
-  call NUOPC_CompAttributeSet(driver, name="Verbosity", value="max", rc=rc)
+  call NUOPC_CompAttributeSet(driver, name="Verbosity", value="1", rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
