@@ -99,7 +99,7 @@ module driverParentComp
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(child, name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(child, name="Verbosity", value="1", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -112,7 +112,7 @@ module driverParentComp
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(child, name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(child, name="Verbosity", value="1", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -131,8 +131,7 @@ module driverParentComp
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", &
-      rc=rc)
+    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="1", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -146,8 +145,7 @@ module driverParentComp
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", &
-      rc=rc)
+    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="1", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
