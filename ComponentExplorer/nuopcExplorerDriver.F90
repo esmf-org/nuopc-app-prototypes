@@ -289,7 +289,7 @@ contains
             file=__FILE__)) &
             return  ! bail out
 #endif
-        call NUOPC_CompAttributeSet(child, name="Verbosity", value="high", rc=rc)
+        call NUOPC_CompAttributeSet(child, name="Verbosity", value="1", rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
@@ -315,7 +315,7 @@ contains
                 file=__FILE__)) &
                 return  ! bail out
             call NUOPC_CompAttributeSet(drv2comp, name="Verbosity", &
-                value="high", rc=rc)
+                value="1", rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                 line=__LINE__, &
                 file=__FILE__)) &
@@ -329,7 +329,7 @@ contains
                 file=__FILE__)) &
                 return  ! bail out
             call NUOPC_CompAttributeSet(comp2drv, name="Verbosity", &
-                value="high", rc=rc)
+                value="1", rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                 line=__LINE__, &
                 file=__FILE__)) &

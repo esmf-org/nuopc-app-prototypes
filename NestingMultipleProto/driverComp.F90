@@ -105,7 +105,7 @@ module driverComp
       file=__FILE__)) &
       return  ! bail out
     ! Set verbosity
-    call NUOPC_CompAttributeSet(model, name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(model, name="Verbosity", value="1", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -137,7 +137,7 @@ module driverComp
       return  ! bail out
     deallocate(petList)
     ! Set verbosity
-    call NUOPC_CompAttributeSet(model, name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(model, name="Verbosity", value="1", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -169,7 +169,7 @@ module driverComp
       return  ! bail out
     deallocate(petList)
     ! Set verbosity
-    call NUOPC_CompAttributeSet(model, name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(model, name="Verbosity", value="1", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -197,8 +197,7 @@ module driverComp
       file=__FILE__)) &
       return  ! bail out
     ! Set verbosity
-    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", &
-      rc=rc)
+    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="1", rc=rc)
 
     ! SetServices for connector: parent->nestling1
     call NUOPC_DriverAddComp(driver, srcCompLabel="advectDiff_Parent", &
@@ -209,8 +208,7 @@ module driverComp
       file=__FILE__)) &
       return  ! bail out
     ! Set verbosity
-    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", &
-      rc=rc)
+    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="1", rc=rc)
 
     ! set the model clock
     call ESMF_TimeSet(startTime, s = 0, rc=rc)
