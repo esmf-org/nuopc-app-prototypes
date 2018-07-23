@@ -441,7 +441,7 @@ module MED
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-      call NUOPC_UpdateTimestamp(exportState, invalidTime, rc=rc)
+      call NUOPC_SetTimestamp(exportState, invalidTime, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, file=trim(name)//":"//__FILE__)) &
         return  ! bail out
@@ -453,7 +453,7 @@ module MED
         file=__FILE__)) &
         return  ! bail out
       ! update timestamp on the ATM nestedState
-      call NUOPC_UpdateTimestamp(state, currTime, rc=rc)
+      call NUOPC_SetTimestamp(state, currTime, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, file=trim(name)//":"//__FILE__)) &
         return  ! bail out
@@ -462,7 +462,7 @@ module MED
       ! other times send valid fields to ALL components
 
       ! update timestamp on full exportState
-      call NUOPC_UpdateTimestamp(exportState, currTime, rc=rc)
+      call NUOPC_SetTimestamp(exportState, currTime, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, file=trim(name)//":"//__FILE__)) &
         return  ! bail out
