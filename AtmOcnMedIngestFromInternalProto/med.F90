@@ -24,11 +24,6 @@ module MED
   
   public SetServices
   
-  interface NUOPCplus_UpdateTimestamp
-    module procedure NUOPCplus_UpdateTimestampS
-    module procedure NUOPCplus_UpdateTimestampF
-  end interface
-  
   !-----------------------------------------------------------------------------
   contains
   !-----------------------------------------------------------------------------
@@ -446,7 +441,7 @@ module MED
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-      call NUOPCplus_UpdateTimestamp(exportState, invalidTime, rc=rc)
+      call NUOPC_UpdateTimestamp(exportState, invalidTime, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, file=trim(name)//":"//__FILE__)) &
         return  ! bail out
@@ -458,7 +453,7 @@ module MED
         file=__FILE__)) &
         return  ! bail out
       ! update timestamp on the ATM nestedState
-      call NUOPCplus_UpdateTimestamp(state, currTime, rc=rc)
+      call NUOPC_UpdateTimestamp(state, currTime, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, file=trim(name)//":"//__FILE__)) &
         return  ! bail out
@@ -467,74 +462,13 @@ module MED
       ! other times send valid fields to ALL components
 
       ! update timestamp on full exportState
-      call NUOPCplus_UpdateTimestamp(exportState, currTime, rc=rc)
+      call NUOPC_UpdateTimestamp(exportState, currTime, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, file=trim(name)//":"//__FILE__)) &
         return  ! bail out
       
     endif
     
-  end subroutine
-
-  !-----------------------------------------------------------------------------
-
-  subroutine NUOPCplus_UpdateTimestampS(state, time, rc)
-    type(ESMF_State)      :: state
-    type(ESMF_Time)       :: time
-    integer, intent(out)  :: rc
-
-    ! local variables
-    integer               :: i
-    type(ESMF_Field),       pointer       :: fieldList(:)
-
-    rc = ESMF_SUCCESS
-    
-    nullify(fieldList)
-    call NUOPC_GetStateMemberLists(state, fieldList=fieldList, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    if (associated(fieldList)) then
-      do i=1, size(fieldList)
-        call NUOPCplus_UpdateTimestamp(fieldList(i), time, rc=rc)
-        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=__LINE__, &
-          file=__FILE__)) &
-          return  ! bail out
-      enddo
-    endif
-    
-  end subroutine
-
-  !-----------------------------------------------------------------------------
-
-  subroutine NUOPCplus_UpdateTimestampF(field, time, rc)
-    type(ESMF_Field)      :: field
-    type(ESMF_Time)       :: time
-    integer, intent(out)  :: rc
-
-    ! local variables
-    integer               :: yy, mm, dd, h, m, s, ms, us, ns
-
-    rc = ESMF_SUCCESS
-    
-    call ESMF_TimeGet(time, yy=yy, mm=mm, dd=dd, h=h, m=m, s=s, ms=ms, us=us, &
-      ns=ns, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call ESMF_AttributeSet(field, &
-      name="TimeStamp", valueList=(/yy,mm,dd,h,m,s,ms,us,ns/), &
-      convention="NUOPC", purpose="Instance", &
-      attnestflag=ESMF_ATTNEST_ON, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
   end subroutine
 
   !-----------------------------------------------------------------------------

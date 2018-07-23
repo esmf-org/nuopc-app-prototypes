@@ -80,12 +80,14 @@ module ESM
     type(ESMF_TimeInterval)       :: timeStep
     type(ESMF_Clock)              :: internalClock
     type(NUOPC_FreeFormat)        :: attrFF
+    integer                       :: verbosity
+    character(len=10)             :: attrStr
     
     rc = ESMF_SUCCESS
     
     ! set up free format driver attributes
     attrFF = NUOPC_FreeFormatCreate(stringList=(/ &
-      "Verbosity = 0",    &
+      "Verbosity = 1",    &
       "Profiling = 0" /), &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -112,7 +114,7 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     ! set default ATM attributes
-    call NUOPC_CompAttributeSet(child, name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(child, name="Verbosity", value="1", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -125,7 +127,7 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     ! set default OCN attributes
-    call NUOPC_CompAttributeSet(child, name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(child, name="Verbosity", value="1", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -138,13 +140,18 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     ! set default MED attributes
-    call NUOPC_CompAttributeSet(child, name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(child, name="Verbosity", value="1", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 
 #ifndef TESTAUTOADDCONNECTORS
+    verbosity = 0 ! reset
+    verbosity = ibset(verbosity,0)  ! log basic intro/extro and indentation
+    verbosity = ibset(verbosity,12)  ! log GeomObject transfer
+    write(attrStr,"(I10)") verbosity
+
     ! SetServices for atm2med
     call NUOPC_DriverAddComp(driver, srcCompLabel="ATM", dstCompLabel="MED", &
       compSetServicesRoutine=cplSS, comp=connector, rc=rc)
@@ -152,7 +159,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", &
+    call NUOPC_CompAttributeSet(connector, name="Verbosity", value=attrStr, &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -166,7 +173,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", &
+    call NUOPC_CompAttributeSet(connector, name="Verbosity", value=attrStr, &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -180,7 +187,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", &
+    call NUOPC_CompAttributeSet(connector, name="Verbosity", value=attrStr, &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -194,7 +201,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", &
+    call NUOPC_CompAttributeSet(connector, name="Verbosity", value=attrStr, &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
