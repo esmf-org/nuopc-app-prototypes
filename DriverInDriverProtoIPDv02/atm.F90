@@ -349,7 +349,7 @@ if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       return  ! bail out
     
     ! must explicitly set time stamp on all export fields
-    call NUOPC_UpdateTimestamp(exportState, clock, rc=rc)
+    call NUOPC_SetTimestamp(exportState, clock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
