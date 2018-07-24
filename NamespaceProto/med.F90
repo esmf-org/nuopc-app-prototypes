@@ -314,7 +314,7 @@ module MED
       return  ! bail out
 
     ! update timestamp on export Fields
-    call NUOPC_UpdateTimestamp(exportState, clock, rc=rc)
+    call NUOPC_SetTimestamp(exportState, clock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
