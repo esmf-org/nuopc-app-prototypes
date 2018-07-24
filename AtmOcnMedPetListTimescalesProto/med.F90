@@ -298,7 +298,7 @@ module MED
     ! the Fields in the importState, indicating to the first Run method that
     ! all is good.
     
-    call NUOPC_UpdateTimestamp(importState, clock=clock, rc=rc) 
+    call NUOPC_SetTimestamp(importState, clock=clock, rc=rc) 
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -529,7 +529,7 @@ module MED
       return  ! bail out
 
     ! update timestamp on export Fields
-    call NUOPC_UpdateTimestamp(exportState, clock, rc=rc)
+    call NUOPC_SetTimestamp(exportState, clock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
