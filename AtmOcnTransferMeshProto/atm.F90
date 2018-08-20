@@ -303,8 +303,6 @@ module ATM
     integer                       :: deCountPTile, extraDEs
     integer, allocatable          :: minIndexPTile(:,:), maxIndexPTile(:,:)
     integer                       :: i, j
-    integer                       :: connectionCount
-    type(ESMF_DistGridConnection), allocatable :: connectionList(:)
     character(*), parameter   :: rName="InitializeP4"
     character(ESMF_MAXSTR)    :: name
     integer                   :: verbosity
@@ -343,7 +341,8 @@ module ATM
       return  ! bail out
       
     ! NOTE:
-    ! cannot write Mesh here, because it does not contain coordinates yet
+    ! cannot write the transferred Mesh here, because it does NOT contain
+    ! coordinates yet
 
     ! get distgrids out of mesh
     call ESMF_MeshGet(mesh, elementDistgrid=elementDG, nodalDistgrid=nodeDG, &
@@ -381,7 +380,7 @@ module ATM
     
     ! get dimCount and tileCount
     call ESMF_DistGridGet(elementDG, dimCount=dimCount, tileCount=tileCount, &
-      connectionCount=connectionCount, rc=rc)
+      rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -390,40 +389,30 @@ module ATM
     ! allocate minIndexPTile and maxIndexPTile accord. to dimCount and tileCount
     allocate(minIndexPTile(dimCount, tileCount), &
       maxIndexPTile(dimCount, tileCount))
-    allocate(connectionList(connectionCount))
     
     ! get minIndex and maxIndex arrays
     call ESMF_DistGridGet(elementDG, minIndexPTile=minIndexPTile, &
-      maxIndexPTile=maxIndexPTile, connectionList=connectionList, rc=rc)
+      maxIndexPTile=maxIndexPTile, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-
-#if 1
-    ! report on the connections    
-    print *, "connectionCount=", connectionCount
-    do i=1, connectionCount
-      call ESMF_DistGridConnectionPrint(connectionList(i))
-    enddo
-#endif
 
     ! create the new DistGrid with the same minIndexPTile and maxIndexPTile,
     ! but use default multi-tile regDecomp
-    ! If the default regDecomp is not suitable, a custome one could be set
+    ! If the default regDecomp is not suitable, a custom one could be set
     ! up here and used.
     distgrid = ESMF_DistGridCreate(minIndexPTile=minIndexPTile, &
-      maxIndexPTile=maxIndexPTile, connectionList=connectionList, rc=rc)
+      maxIndexPTile=maxIndexPTile, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 
-    deallocate(minIndexPTile, maxIndexPTile, connectionList)
+    deallocate(minIndexPTile, maxIndexPTile)
 
     ! Create a new Mesh on the new DistGrid and swap it in the Field
-    !TODO: THE FOLLOWING IS AN INTERNAL METHOD. MUST BE REPLACED BY PUBLIC ONE!
-    mesh = ESMF_MeshCreate(distgrid=distgrid, rc=rc) 
+    mesh = ESMF_MeshEmptyCreate(elementDistGrid=distgrid, rc=rc) 
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -435,8 +424,6 @@ module ATM
       return  ! bail out
 
     ! Also must swap the Mesh for the "sst" Field in the importState
-    
-    ! access the "sst" field in the importState and set the Mesh
     call ESMF_StateGet(importState, field=field, itemName="sst", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
