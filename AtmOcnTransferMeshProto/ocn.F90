@@ -134,12 +134,10 @@ module OCN
     integer, intent(out) :: rc
     
     ! local variables    
-    type(ESMF_Grid)                   :: gridIn
-    type(ESMF_Mesh)                   :: meshIn, meshOut
-    
-    integer                       :: dimCount, numOwnedElements, numOwnedNodes
-    real(ESMF_KIND_R8), pointer   :: coordPtrR8D1(:)
-
+    type(ESMF_Grid)           :: gridIn
+    type(ESMF_Mesh)           :: meshIn, meshOut
+    character(160)            :: msgString
+    integer                   :: dimCount, numOwnedElements, numOwnedNodes
     character(*), parameter   :: rName="InitializeRealize"
     character(ESMF_MAXSTR)    :: name
     integer                   :: verbosity
@@ -218,15 +216,20 @@ module OCN
 #endif
 
 #if 1
-    ! analyze the Mesh and print some info
+    ! analyze the Mesh and log some info
     call ESMF_MeshGet(meshIn, spatialDim=dimCount, &
       numOwnedElements=numOwnedElements, numOwnedNodes=numOwnedNodes, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    print *, "OCN:   numOwnedElements=", numOwnedElements, &
+    write(msgString,*) "OCN:   numOwnedElements=", numOwnedElements, &
       "numOwnedNodes=", numOwnedNodes, "dimCount=", dimCount
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 #endif
 
     ! for now out same as in
