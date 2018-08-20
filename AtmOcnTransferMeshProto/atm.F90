@@ -292,17 +292,17 @@ module ATM
     integer, intent(out) :: rc
     
     ! local variables
-    type(ESMF_Field)              :: field
-    type(ESMF_Mesh)               :: mesh
-    integer                       :: localDeCount
-    character(160)                :: msgString
-
-    type(ESMF_DistGrid)           :: elementDG, nodeDG, distgrid
-    type(ESMF_DELayout)           :: delayout
-    integer                       :: dimCount, tileCount, petCount
-    integer                       :: deCountPTile, extraDEs
-    integer, allocatable          :: minIndexPTile(:,:), maxIndexPTile(:,:)
-    integer                       :: i, j
+    type(ESMF_Field)          :: field
+    type(ESMF_Mesh)           :: mesh
+    integer                   :: localDeCount
+    character(160)            :: msgString
+    type(ESMF_DistGrid)       :: elementDG, nodalDG
+    type(ESMF_DistGrid)       :: newElementDG, newNodalDG
+    type(ESMF_DELayout)       :: delayout
+    integer                   :: dimCount, tileCount, petCount
+    integer                   :: deCountPTile, extraDEs
+    integer, allocatable      :: minIndexPTile(:,:), maxIndexPTile(:,:)
+    integer                   :: i, j
     character(*), parameter   :: rName="InitializeP4"
     character(ESMF_MAXSTR)    :: name
     integer                   :: verbosity
@@ -345,39 +345,107 @@ module ATM
     ! coordinates yet
 
     ! get distgrids out of mesh
-    call ESMF_MeshGet(mesh, elementDistgrid=elementDG, nodalDistgrid=nodeDG, &
+    call ESMF_MeshGet(mesh, nodalDistgrid=nodalDG, elementDistgrid=elementDG, &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    
+    ! The acceptor side can either use the nodal DistGrid, or the element
+    ! DistGrid, or both to define its own decomposition and distribution of
+    ! the transferred Mesh. Use the following two macros to define which 
+    ! DistGrid to use for defining the acceptor side decomposition.
+    
+#define USE_NODAL_DG_off
+#define USE_ELEMENT_DG
 
+#ifdef USE_NODAL_DG
+    ! Create a custom DistGrid, based on the minIndex, maxIndex of the 
+    ! accepted DistGrid, but with a default regDecomp for the current VM
+    ! that leads to 1DE/PET (as long as there are more PETs than tiles).
+    
     ! get delayout
-    call ESMF_DistGridGet(elementDG, delayout=delayout, rc=rc)
+    call ESMF_DistGridGet(nodalDG, delayout=delayout, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
     ! access localDeCount to show some info
     call ESMF_DELayoutGet(delayout, localDeCount=localDeCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-
+    ! report localDeCount to log
     write (msgString,"(A,I3)") &
-      "ATM - InitializeP4: localDeCount = ", localDeCount
+      "ATM - InitializeP4: nodal DistGrid localDeCount = ", localDeCount
     call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+    ! get dimCount and tileCount
+    call ESMF_DistGridGet(nodalDG, dimCount=dimCount, tileCount=tileCount, &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
     
+    ! allocate minIndexPTile and maxIndexPTile accord. to dimCount and tileCount
+    allocate(minIndexPTile(dimCount, tileCount), &
+      maxIndexPTile(dimCount, tileCount))
+    
+    ! get minIndex and maxIndex arrays
+    call ESMF_DistGridGet(nodalDG, minIndexPTile=minIndexPTile, &
+      maxIndexPTile=maxIndexPTile, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! create the new DistGrid with the same minIndexPTile and maxIndexPTile,
+    ! but use default multi-tile regDecomp
+    ! If the default regDecomp is not suitable, a custom one could be set
+    ! up here and used.
+    newNodalDG = ESMF_DistGridCreate(minIndexPTile=minIndexPTile, &
+      maxIndexPTile=maxIndexPTile, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    deallocate(minIndexPTile, maxIndexPTile)
+#endif
+
+#ifdef USE_ELEMENT_DG
     ! Create a custom DistGrid, based on the minIndex, maxIndex of the 
     ! accepted DistGrid, but with a default regDecomp for the current VM
     ! that leads to 1DE/PET (as long as there are more PETs than tiles).
     
+    ! get delayout
+    call ESMF_DistGridGet(elementDG, delayout=delayout, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! access localDeCount to show some info
+    call ESMF_DELayoutGet(delayout, localDeCount=localDeCount, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! report localDeCount to log
+    write (msgString,"(A,I3)") &
+      "ATM - InitializeP4: element DistGrid localDeCount = ", localDeCount
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! get dimCount and tileCount
     call ESMF_DistGridGet(elementDG, dimCount=dimCount, tileCount=tileCount, &
       rc=rc)
@@ -402,7 +470,7 @@ module ATM
     ! but use default multi-tile regDecomp
     ! If the default regDecomp is not suitable, a custom one could be set
     ! up here and used.
-    distgrid = ESMF_DistGridCreate(minIndexPTile=minIndexPTile, &
+    newElementDG = ESMF_DistGridCreate(minIndexPTile=minIndexPTile, &
       maxIndexPTile=maxIndexPTile, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -410,20 +478,40 @@ module ATM
       return  ! bail out
 
     deallocate(minIndexPTile, maxIndexPTile)
+#endif
 
-    ! Create a new Mesh on the new DistGrid and swap it in the Field
-    mesh = ESMF_MeshEmptyCreate(elementDistGrid=distgrid, rc=rc) 
+#if (defined USE_NODAL_DG && defined USE_ELEMENT_DG)
+    ! Create a new Mesh on both new DistGrid
+    mesh = ESMF_MeshEmptyCreate(nodalDistGrid=newNodalDG, &
+      elementDistGrid=newElementDG, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#elif (defined USE_NODAL_DG)
+    ! Create a new Mesh on new nodal DistGrid
+    mesh = ESMF_MeshEmptyCreate(nodalDistGrid=newNodalDG, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#elif (defined USE_ELEMENT_DG)
+    ! Create a new Mesh on new element DistGrid
+    mesh = ESMF_MeshEmptyCreate(elementDistGrid=newElementDG, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+    
+    ! Swap Mesh in the "pmsl" field
     call ESMF_FieldEmptySet(field, mesh=mesh, rc=rc)    
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 
-    ! Also must swap the Mesh for the "sst" Field in the importState
+    ! Also swap the Mesh for the "sst" Field in the importState
     call ESMF_StateGet(importState, field=field, itemName="sst", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
