@@ -56,27 +56,6 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     
-    ! add an entry to the default NUOPC field dictionary
-    if (.not.NUOPC_FieldDictionaryHasEntry( &
-      "sea_surf_temp")) then
-      call NUOPC_FieldDictionaryAddEntry( &
-        standardName="sea_surf_temp", &
-        canonicalUnits="K", rc=rc);
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-    endif
-    
-    ! set synonym in the NUOPC field dictionary
-    call NUOPC_FieldDictionarySetSyno(standardNames=(/ &
-      "sea_surface_temperature", &
-      "sea_surf_temp          "/), rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
   end subroutine
 
   !-----------------------------------------------------------------------------
