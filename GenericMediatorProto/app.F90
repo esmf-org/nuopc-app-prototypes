@@ -15,6 +15,7 @@ program esmApp
   !-----------------------------------------------------------------------------
 
   use ESMF
+  use NUOPC
   use Driver, only: driverSS => SetServices
 
   implicit none
@@ -35,6 +36,17 @@ program esmApp
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+  !-----------------------------------------------------------------------------
+
+  ! need to add "PINT" to the NUOPC Field Dictionary
+  call NUOPC_FieldDictionaryAddEntry(standardName="PINT", canonicalUnits="Pa", rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    return  ! bail out
+
+  !-----------------------------------------------------------------------------
 
   ! Create the earth system Component
   esmComp = ESMF_GridCompCreate(name="esm", rc=rc)
