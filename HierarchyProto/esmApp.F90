@@ -15,6 +15,7 @@ program esmApp
   !-----------------------------------------------------------------------------
 
   use ESMF
+  use NUOPC
   use ESM, only: esmSS => SetServices
 
   implicit none
@@ -42,6 +43,18 @@ program esmApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
+  !-----------------------------------------------------------------------------
+
+  ! need to add "PHYEX" to the NUOPC Field Dictionary
+  call NUOPC_FieldDictionaryAddEntry("PHYEX", canonicalUnits="1", rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    return  ! bail out
+
+  !-----------------------------------------------------------------------------
+
+  ! need to add "density" to the NUOPC Field Dictionary
   ! Create the earth system Component
   esmComp = ESMF_GridCompCreate(name="esm", rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &

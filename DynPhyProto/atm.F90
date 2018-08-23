@@ -161,13 +161,6 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
-    ! The ATM subcomponents use fields with new standardNames
-    call NUOPC_FieldDictionaryAddEntry("PHYEX", canonicalUnits="1", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
   end subroutine
 
   !-----------------------------------------------------------------------------

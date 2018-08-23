@@ -208,13 +208,6 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
       
-    ! Use an internal NUOPC Layer call to allow AutoAdd field dictionary entries
-    call NUOPC_FieldDictionarySetAutoAdd(.true., rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
   end subroutine
 
   !-----------------------------------------------------------------------------
