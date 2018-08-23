@@ -15,12 +15,14 @@ program esmApp
   !-----------------------------------------------------------------------------
 
   use ESMF
+  use NUOPC
   use ESM, only: esmSS => SetServices
 
   implicit none
 
   integer                 :: rc, urc
   type(ESMF_GridComp)     :: esmComp
+  type(NUOPC_FreeFormat)        :: freeFormat
   
   ! Initialize ESMF
   call ESMF_Initialize(logkindflag=ESMF_LOGKIND_MULTI, rc=rc)
@@ -34,7 +36,47 @@ program esmApp
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
+  
+  !-----------------------------------------------------------------------------
+  ! Setting up and/or modifying the NUOPC field dictionary to be done on the
+  ! application level!
+  !
+  ! here add an entry to the default NUOPC field dictionary
+  if (.not.NUOPC_FieldDictionaryHasEntry( &
+    "sea_surf_temp")) then
+    call NUOPC_FieldDictionaryAddEntry( &
+      standardName="sea_surf_temp", &
+      canonicalUnits="K", rc=rc);
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+  endif
+  
+  ! set synonym in the NUOPC field dictionary
+  call NUOPC_FieldDictionarySetSyno(standardNames=(/ &
+    "sea_surface_temperature", &
+    "sea_surf_temp          "/), rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    return  ! bail out
+  
+  ! egest the NUOPC field dictionary as FreeFormat
+  call NUOPC_FieldDictionaryEgest(freeFormat, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    return  ! bail out
+  
+  ! output the NUOPC field dictionary in FreeFormat to Log
+  call NUOPC_FreeFormatLog(freeFormat, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    return  ! bail out
+  !-----------------------------------------------------------------------------
+  
   ! Create the earth system Component
   esmComp = ESMF_GridCompCreate(name="esm", rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
