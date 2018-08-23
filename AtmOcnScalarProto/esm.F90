@@ -70,13 +70,6 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
 
-    ! the child components use a field with standardName not in the default dict
-    call NUOPC_FieldDictionaryAddEntry("scalar_test", canonicalUnits="1", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
   end subroutine
 
   !-----------------------------------------------------------------------------

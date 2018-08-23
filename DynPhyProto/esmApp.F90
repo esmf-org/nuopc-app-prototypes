@@ -43,6 +43,17 @@ program esmApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
+  !-----------------------------------------------------------------------------
+  
+  ! need to add "PHYEX" to the NUOPC Field Dictionary
+  call NUOPC_FieldDictionaryAddEntry("PHYEX", canonicalUnits="1", rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    return  ! bail out
+
+  !-----------------------------------------------------------------------------
+
   call ESMF_LogWrite("esmApp STARTING", ESMF_LOGMSG_INFO, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &

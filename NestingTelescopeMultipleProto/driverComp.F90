@@ -70,13 +70,6 @@ module driverComp
       file=__FILE__)) &
       return  ! bail out
 
-    ! need to add "density" to the NUOPC Field Dictionary
-    call NUOPC_FieldDictionaryAddEntry("density", "molec/cm3", rc=rc);
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-      
   end subroutine
 
   !-----------------------------------------------------------------------------

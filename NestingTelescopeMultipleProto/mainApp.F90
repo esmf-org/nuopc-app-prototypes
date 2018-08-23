@@ -15,7 +15,8 @@ program mainApp
   !-----------------------------------------------------------------------------
 
   use ESMF
-
+  use NUOPC
+  
   use driverComp, only: &
     driver_SS => SetServices
 
@@ -36,9 +37,18 @@ program mainApp
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    
+
   !-----------------------------------------------------------------------------
-  
+
+  ! need to add "density" to the NUOPC Field Dictionary
+  call NUOPC_FieldDictionaryAddEntry("density", "molec/cm3", rc=rc);
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    return  ! bail out
+
+  !-----------------------------------------------------------------------------
+
   ! -> CREATE THE DRIVER
   driver = ESMF_GridCompCreate(name="advection diffusion driver", rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &

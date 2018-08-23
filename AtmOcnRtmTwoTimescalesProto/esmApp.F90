@@ -15,6 +15,7 @@ program esmApp
   !-----------------------------------------------------------------------------
 
   use ESMF
+  use NUOPC
   use ESM, only: esmSS => SetServices
 
   implicit none
@@ -34,6 +35,22 @@ program esmApp
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+  !-----------------------------------------------------------------------------
+
+  ! extend the NUOPC Field Dictionary to cover new "silly" Fields to/from RTM
+  call NUOPC_FieldDictionaryAddEntry("field_to_rtm", "sillyUnit", rc=rc);
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    return  ! bail out
+  call NUOPC_FieldDictionaryAddEntry("field_from_rtm", "sillyUnit2", rc=rc);
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    return  ! bail out
+
+  !-----------------------------------------------------------------------------
 
   ! Create the earth system Component
   esmComp = ESMF_GridCompCreate(name="esm", rc=rc)

@@ -64,18 +64,6 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     
-    ! extend the NUOPC Field Dictionary to cover new "silly" Fields to/from RTM
-    call NUOPC_FieldDictionaryAddEntry("field_to_rtm", "sillyUnit", rc=rc);
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_FieldDictionaryAddEntry("field_from_rtm", "sillyUnit2", rc=rc);
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-      
   end subroutine
 
   !-----------------------------------------------------------------------------
