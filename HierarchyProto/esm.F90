@@ -82,6 +82,7 @@ module ESM
     ! set driver verbosity
     verbosity = 0 ! reset
     verbosity = ibset(verbosity,0)  ! log basic intro/extro and indentation
+    verbosity = ibset(verbosity,9)  ! log info run phase
     verbosity = ibset(verbosity,11) ! log info about data dependency loop
     verbosity = ibset(verbosity,12) ! log info about run time-loop
     write(vString,"(I10)") verbosity
@@ -116,6 +117,7 @@ module ESM
     deallocate(petList)
     verbosity = 0 ! reset
     verbosity = ibset(verbosity,0)  ! log basic intro/extro and indentation
+    verbosity = ibset(verbosity,9)  ! log info run phase
     verbosity = ibset(verbosity,11) ! log info about data dependency loop
     verbosity = ibset(verbosity,12) ! log info about run time-loop
     write(vString,"(I10)") verbosity
@@ -137,7 +139,11 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     deallocate(petList)
-    call NUOPC_CompAttributeSet(comp, name="Verbosity", value="1", rc=rc)
+    verbosity = 0 ! reset
+    verbosity = ibset(verbosity,0)  ! log basic intro/extro and indentation
+    verbosity = ibset(verbosity,9)  ! log info run phase
+    write(vString,"(I10)") verbosity
+    call NUOPC_CompAttributeSet(comp, name="Verbosity", value=vString, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

@@ -20,7 +20,8 @@ module ATM
   use NUOPC
   use NUOPC_Driver, &
     driver_routine_SS             => SetServices, &
-    driver_label_SetModelServices => label_SetModelServices
+    driver_label_SetModelServices => label_SetModelServices, &
+    driver_label_SetRunSequence   => label_SetRunSequence
   
   use DYN, only: dynSS => SetServices
   use PHY, only: phySS => SetServices
@@ -59,7 +60,7 @@ module ATM
       return  ! bail out
     
 #ifdef CUSTOMRUNSEQUENCE_on
-    call NUOPC_CompSpecialize(driver, specLabel=label_SetRunSequence, &
+    call NUOPC_CompSpecialize(driver, specLabel=driver_label_SetRunSequence, &
       specRoutine=SetRunSequence, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
