@@ -14,9 +14,7 @@ runSeq::
         OCN
         @300          # 5min test cycle that does not do anything
         @
-      @
-      @1800           # 30min sub cycle driving LND to show it is parsed ok
-        LND
+        LND           # in the 30min sub cycle
       @
     @
 ::
@@ -24,8 +22,8 @@ runSeq::
 # Attributes for components
 
 driverAttributes::
-  Verbosity = 0
-  Profiling = 1
+  Verbosity = 4609
+  Profiling = 0
 ::
 
 ocnAttributes::
