@@ -290,7 +290,7 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
 
-    call ESMF_TimeSet(stopTime, yy=2010, mm=6, dd=1, h=3, m=0, rc=rc)
+    call ESMF_TimeSet(stopTime, yy=2010, mm=6, dd=1, h=1, m=0, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -338,7 +338,7 @@ module ESM
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
       
 #if 1
-    call NUOPC_FreeFormatPrint(runSeqFF, rc=rc)
+    call NUOPC_FreeFormatLog(runSeqFF, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
 #endif
@@ -352,7 +352,7 @@ module ESM
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
 
-#if 0
+#if 1
     ! Diagnostic output
     call NUOPC_DriverPrint(driver, orderflag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &

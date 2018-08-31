@@ -2,9 +2,8 @@
 ####  esmApp Run-Time Configuration File  #####
 ###############################################
 
-# A concurrent run sequence
 runSeq::
-    @1800             # 30min time step 
+    @50:400   # First loop running for 400s @ 50s
       MED
       MED -> ATM
       MED -> OCN
@@ -12,7 +11,45 @@ runSeq::
       OCN
       ATM -> MED
       OCN -> MED
+    @
+    MED -> ATM
+    @50:500   # Second loop running for 500s @ 50s
       MED
+      MED -> ATM
+      MED -> OCN
+      ATM
+      OCN
+      ATM -> MED
+      OCN -> MED
+    @
+::
+
+#runSeq::
+    @1800:5400
+      MED
+      MED -> ATM
+      MED -> OCN
+      @1800
+        ATM
+        OCN
+      @
+      @900
+        ATM -> MED
+      @
+      OCN -> MED
+    @
+::
+
+# A concurrent run sequence
+#runSeq::
+    @900:1800
+      MED
+      MED -> ATM
+      MED -> OCN
+      ATM
+      OCN
+      ATM -> MED
+      OCN -> MED
     @
 ::
 
@@ -35,6 +72,6 @@ runSeq::
 # Attributes for components
 
 driverAttributes::
-  Verbosity = 0
+  Verbosity = 4609
   Profiling = 0
 ::
