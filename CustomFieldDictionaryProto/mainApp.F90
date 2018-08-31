@@ -54,7 +54,7 @@ program mainApp
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
-      return  ! bail out
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
   ! (b) YAML
   call FieldDictionaryLog("default-YAML", iofmt=ESMF_IOFMT_YAML, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -64,7 +64,7 @@ program mainApp
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
-      return  ! bail out
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
   ! Define the following macro if you would like to read in a 
   ! custom NUOPC Field dictionary from a YAML file.
@@ -79,7 +79,7 @@ program mainApp
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
-      return  ! bail out
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
   ! Dump content of Field dictionary to ESMF log files as:
   ! (a) FreeFormat default

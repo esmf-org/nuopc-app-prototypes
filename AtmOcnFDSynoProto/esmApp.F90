@@ -50,7 +50,7 @@ program esmApp
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
-      return  ! bail out
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
   endif
   
   ! set synonym in the NUOPC field dictionary
@@ -60,21 +60,21 @@ program esmApp
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
-    return  ! bail out
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
   
   ! egest the NUOPC field dictionary as FreeFormat
   call NUOPC_FieldDictionaryEgest(freeFormat, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
-    return  ! bail out
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
   
   ! output the NUOPC field dictionary in FreeFormat to Log
   call NUOPC_FreeFormatLog(freeFormat, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
-    return  ! bail out
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
   !-----------------------------------------------------------------------------
   
   ! Create the earth system Component
