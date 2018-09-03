@@ -2,8 +2,34 @@
 ####  esmApp Run-Time Configuration File  #####
 ###############################################
 
+#-------------------------------------------------------------------------------
+# This run sequence shows multiple time loops on the upper level. Some lines 
+# call Connectors outside an explicit time loop. The consequence of either of
+# these features is that a Driver level time loop will be added around the
+# entire sequence. This Driver time loop will use timeStep and runDuration as
+# defined by the Driver itself (e.g. in its SetModelServices specialization,
+# of from its parent component). In this prototype the Driver sets a timeStep
+# of 900s. Therefore, each iteration of the runSeq:: must step forward exactly
+# 900s.
+# 
 runSeq::
-    @50:400   # First loop running for 400s @ 50s
+    @100:200   # First loop running for 200s @ 100s
+      MED
+      MED -> OCN
+      MED -> ATM
+      ATM
+      OCN
+      @50:0   # zero runDuration leads to skipping this loop and all inside
+        MED   # This call to MED would fail with incompat. times, but not exec.
+        @50:50  # skipped because outside loop is skipped
+          MED # again would fail, but not executed
+        @
+      @
+      OCN -> MED
+      ATM -> MED
+    @
+    MED -> ATM  # A pretty useless connector call, just to show it works
+    @100:700   # Second loop running for 700s @ 100s
       MED
       MED -> ATM
       MED -> OCN
@@ -12,18 +38,15 @@ runSeq::
       ATM -> MED
       OCN -> MED
     @
-    MED -> ATM
-    @50:500   # Second loop running for 500s @ 50s
-      MED
-      MED -> ATM
-      MED -> OCN
-      ATM
-      OCN
-      ATM -> MED
-      OCN -> MED
-    @
+    MED -> OCN  # A pretty useless connector call, just to show it works
 ::
+#-------------------------------------------------------------------------------
 
+#-------------------------------------------------------------------------------
+# This run sequence provides a single outer time loop. Therefor it becomes
+# identical to the Driver time loop. The timeStep and runDuration specified
+# here overwrite what the Driver might set in ModelSetServices.
+#
 #runSeq::
     @1800:5400
       MED
@@ -39,7 +62,9 @@ runSeq::
       OCN -> MED
     @
 ::
+#-------------------------------------------------------------------------------
 
+#-------------------------------------------------------------------------------
 # A concurrent run sequence
 #runSeq::
     @900:1800
@@ -52,7 +77,9 @@ runSeq::
       OCN -> MED
     @
 ::
+#-------------------------------------------------------------------------------
 
+#-------------------------------------------------------------------------------
 # A sequential run sequence
 #runSeq::
     @1800             # 30min time step 
@@ -68,10 +95,12 @@ runSeq::
       MED
     @
 ::
+#-------------------------------------------------------------------------------
 
+#-------------------------------------------------------------------------------
 # Attributes for components
-
 driverAttributes::
   Verbosity = 4609
   Profiling = 0
 ::
+#-------------------------------------------------------------------------------

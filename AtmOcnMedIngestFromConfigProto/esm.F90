@@ -290,7 +290,7 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
 
-    call ESMF_TimeSet(stopTime, yy=2010, mm=6, dd=1, h=1, m=0, rc=rc)
+    call ESMF_TimeSet(stopTime, yy=2010, mm=6, dd=1, h=0, m=30, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
