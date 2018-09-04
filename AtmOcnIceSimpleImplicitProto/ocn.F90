@@ -347,9 +347,9 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     if (.not.neededCurrent) then
-      if (btest(verbosity,1)) then
+      if (btest(verbosity,0)) then
         call ESMF_LogWrite("OCN - Initialize-Data-Dependency NOT YET SATISFIED!!!", &
           ESMF_LOGMSG_INFO, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -358,7 +358,7 @@ module OCN
           return  ! bail out
       endif
     else
-      if (btest(verbosity,1)) then
+      if (btest(verbosity,0)) then
         call ESMF_LogWrite("OCN - Initialize-Data-Dependency SATISFIED!!!", &
           ESMF_LOGMSG_INFO, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
