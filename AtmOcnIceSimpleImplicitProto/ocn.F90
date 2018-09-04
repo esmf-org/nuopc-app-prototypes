@@ -8,6 +8,9 @@
 ! Licensed under the University of Illinois-NCSA License.
 !==============================================================================
 
+! This setting must match the setting in atm.F90
+#define WITHCOMPLEXDATADEPENDENCY_on
+
 module OCN
 
   !-----------------------------------------------------------------------------
@@ -298,7 +301,7 @@ module OCN
     type(ESMF_State)              :: importState, exportState
     type(ESMF_Time)               :: time
     type(ESMF_Field)              :: field
-    logical                       :: neededCurrent
+    logical                       :: isUpdated
     character(len=20)             :: valueString
     integer                       :: verbosity
 
@@ -342,13 +345,13 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    neededCurrent = NUOPC_IsAtTime(field, time, rc=rc)
+    isUpdated = NUOPC_IsAtTime(field, time, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 
-    if (.not.neededCurrent) then
+    if (.not.isUpdated) then
       if (btest(verbosity,0)) then
         call ESMF_LogWrite("OCN - Initialize-Data-Dependency NOT YET SATISFIED!!!", &
           ESMF_LOGMSG_INFO, rc=rc)
@@ -381,6 +384,30 @@ module OCN
         file=__FILE__)) &
         return  ! bail out
         
+#ifdef WITHCOMPLEXDATADEPENDENCY_on
+      ! check that the "rsns" field from the ATM is not yet updated
+      ! if it is, then something is wrong
+      call ESMF_StateGet(importState, field=field, itemName="rsns", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      isUpdated = NUOPC_IsAtTime(field, time, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      if (isUpdated) then
+        call ESMF_LogSetError(ESMF_RC_INTNRL_INCONS, &
+          msg="The 'rsns' field is found Updated, which is inconsistent "//&
+          "with the test setup.", &
+          line=__LINE__, &
+          file=__FILE__, &
+          rcToReturn=rc)
+        return  ! bail out
+      endif
+#endif
+
       ! Since setting the "sst" field was the only thing to be done on the OCN
       ! side, the component needs to indicate that it is fully done with 
       ! initializing its data:
