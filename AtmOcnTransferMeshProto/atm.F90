@@ -299,10 +299,6 @@ module ATM
     type(ESMF_DistGrid)       :: elementDG, nodalDG
     type(ESMF_DistGrid)       :: newElementDG, newNodalDG
     type(ESMF_DELayout)       :: delayout
-    integer                   :: dimCount, tileCount, petCount
-    integer                   :: deCountPTile, extraDEs
-    integer, allocatable      :: minIndexPTile(:,:), maxIndexPTile(:,:)
-    integer                   :: i, j
     character(*), parameter   :: rName="InitializeP4"
     character(ESMF_MAXSTR)    :: name
     integer                   :: verbosity
@@ -365,7 +361,8 @@ module ATM
     ! accepted DistGrid, but with a default regDecomp for the current VM
     ! that leads to 1DE/PET (as long as there are more PETs than tiles).
     
-    ! get delayout
+#if 1
+    ! inspect the transferred nodalDG
     call ESMF_DistGridGet(nodalDG, delayout=delayout, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -385,39 +382,14 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 
-    ! get dimCount and tileCount
-    call ESMF_DistGridGet(nodalDG, dimCount=dimCount, tileCount=tileCount, &
-      rc=rc)
+    ! Use an ESMF method to create a balanced DistGrid with 1DE/PET
+    newNodalDG = ESMF_DistGridCreate(nodalDG, balanceFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
-    ! allocate minIndexPTile and maxIndexPTile accord. to dimCount and tileCount
-    allocate(minIndexPTile(dimCount, tileCount), &
-      maxIndexPTile(dimCount, tileCount))
-    
-    ! get minIndex and maxIndex arrays
-    call ESMF_DistGridGet(nodalDG, minIndexPTile=minIndexPTile, &
-      maxIndexPTile=maxIndexPTile, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    ! create the new DistGrid with the same minIndexPTile and maxIndexPTile,
-    ! but use default multi-tile regDecomp
-    ! If the default regDecomp is not suitable, a custom one could be set
-    ! up here and used.
-    newNodalDG = ESMF_DistGridCreate(minIndexPTile=minIndexPTile, &
-      maxIndexPTile=maxIndexPTile, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    deallocate(minIndexPTile, maxIndexPTile)
 #endif
 
 #ifdef USE_ELEMENT_DG
@@ -425,7 +397,8 @@ module ATM
     ! accepted DistGrid, but with a default regDecomp for the current VM
     ! that leads to 1DE/PET (as long as there are more PETs than tiles).
     
-    ! get delayout
+#if 1
+    ! inspect the transferred elementDG
     call ESMF_DistGridGet(elementDG, delayout=delayout, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -445,39 +418,14 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 
-    ! get dimCount and tileCount
-    call ESMF_DistGridGet(elementDG, dimCount=dimCount, tileCount=tileCount, &
-      rc=rc)
+    ! Use an ESMF method to create a balanced DistGrid with 1DE/PET
+    newElementDG = ESMF_DistGridCreate(elementDG, balanceFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
-    ! allocate minIndexPTile and maxIndexPTile accord. to dimCount and tileCount
-    allocate(minIndexPTile(dimCount, tileCount), &
-      maxIndexPTile(dimCount, tileCount))
-    
-    ! get minIndex and maxIndex arrays
-    call ESMF_DistGridGet(elementDG, minIndexPTile=minIndexPTile, &
-      maxIndexPTile=maxIndexPTile, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    ! create the new DistGrid with the same minIndexPTile and maxIndexPTile,
-    ! but use default multi-tile regDecomp
-    ! If the default regDecomp is not suitable, a custom one could be set
-    ! up here and used.
-    newElementDG = ESMF_DistGridCreate(minIndexPTile=minIndexPTile, &
-      maxIndexPTile=maxIndexPTile, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    deallocate(minIndexPTile, maxIndexPTile)
 #endif
 
 #if (defined USE_NODAL_DG && defined USE_ELEMENT_DG)
