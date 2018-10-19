@@ -157,8 +157,8 @@ module OCN
     ! --- IMPORT -------------------------------------------------------------
     ! create Grid object for import
     gridIn = ESMF_GridCreate1PeriDimUfrm(maxIndex=(/10, 15/), &
-      minCornerCoord=(/0._ESMF_KIND_R8, -60._ESMF_KIND_R8/), &
-      maxCornerCoord=(/360._ESMF_KIND_R8, 80._ESMF_KIND_R8/), &
+      minCornerCoord=(/2.5_ESMF_KIND_R8, -59._ESMF_KIND_R8/), &
+      maxCornerCoord=(/362.5_ESMF_KIND_R8, 81._ESMF_KIND_R8/), &
       staggerLocList=(/ESMF_STAGGERLOC_CENTER, ESMF_STAGGERLOC_CORNER/), &
       name="OCN-GridIn", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
