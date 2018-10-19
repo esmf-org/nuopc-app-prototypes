@@ -134,7 +134,7 @@ module OCN
     integer, intent(out) :: rc
     
     ! local variables    
-    type(ESMF_Grid)           :: gridIn
+    type(ESMF_Grid)           :: gridIn, gridOut
     type(ESMF_Mesh)           :: meshIn, meshOut
     character(160)            :: msgString
     integer                   :: dimCount, numOwnedElements, numOwnedNodes
@@ -154,7 +154,8 @@ module OCN
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
     
-    ! create Grid object
+    ! --- IMPORT -------------------------------------------------------------
+    ! create Grid object for import
     gridIn = ESMF_GridCreate1PeriDimUfrm(maxIndex=(/10, 15/), &
       minCornerCoord=(/0._ESMF_KIND_R8, -60._ESMF_KIND_R8/), &
       maxCornerCoord=(/360._ESMF_KIND_R8, 80._ESMF_KIND_R8/), &
@@ -223,7 +224,7 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    write(msgString,*) "OCN:   numOwnedElements=", numOwnedElements, &
+    write(msgString,*) "OCN meshIn:   numOwnedElements=", numOwnedElements, &
       "numOwnedNodes=", numOwnedNodes, "dimCount=", dimCount
     call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -231,9 +232,6 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
 #endif
-
-    ! for now out same as in
-    meshOut = meshIn
 
     ! importable field: air_pressure_at_sea_level
     call NUOPC_Realize(importState, meshIn, fieldName="pmsl", &
@@ -244,6 +242,85 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
     
+    ! --- EXPORT -------------------------------------------------------------
+    ! create Grid object for export
+    gridOut = ESMF_GridCreate1PeriDimUfrm(maxIndex=(/20, 30/), &
+      minCornerCoord=(/0._ESMF_KIND_R8, -60._ESMF_KIND_R8/), &
+      maxCornerCoord=(/360._ESMF_KIND_R8, 80._ESMF_KIND_R8/), &
+      staggerLocList=(/ESMF_STAGGERLOC_CENTER, ESMF_STAGGERLOC_CORNER/), &
+      name="OCN-GridOut", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#if 1
+    ! write out the Grid into VTK file for inspection
+    ! centers
+    call ESMF_GridWriteVTK(gridOut, staggerloc=ESMF_STAGGERLOC_CENTER, &
+      filename="OCN-GridOut_centers", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LogWrite("Done writing OCN-GridOut_centers VTK", &
+      ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! corners
+    call ESMF_GridWriteVTK(gridOut, staggerloc=ESMF_STAGGERLOC_CORNER, &
+      filename="OCN-GridOut_corners", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LogWrite("Done writing OCN-GridOut_corners VTK", &
+      ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
+    ! convert the Grid into a Mesh
+    meshOut = ESMF_MeshCreate(grid=gridOut, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+#if 1
+    call ESMF_MeshWrite(meshOut, filename="OCN-MeshOut", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LogWrite("Done writing OCN-MeshOut VTK", &
+      ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
+#if 1
+    ! analyze the Mesh and log some info
+    call ESMF_MeshGet(meshOut, spatialDim=dimCount, &
+      numOwnedElements=numOwnedElements, numOwnedNodes=numOwnedNodes, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    write(msgString,*) "OCN meshOut:   numOwnedElements=", numOwnedElements, &
+      "numOwnedNodes=", numOwnedNodes, "dimCount=", dimCount
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
     ! exportable field: sea_surface_temperature
     call NUOPC_Realize(exportState, meshOut, fieldName="sst", &
       typekind=ESMF_TYPEKIND_R8, selection="realize_connected_remove_others", &
