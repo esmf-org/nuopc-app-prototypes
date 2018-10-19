@@ -55,25 +55,29 @@ module ATM
       return  ! bail out
 
     call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv03p1"/), userRoutine=InitializeP1, rc=rc)
+      phaseLabelList=(/"IPDv03p1"/), &
+      userRoutine=InitializeAdvertise, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv03p3"/), userRoutine=InitializeP3, rc=rc)
+      phaseLabelList=(/"IPDv03p3"/), &
+      userRoutine=InitializeRealizeForProvide, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv03p4"/), userRoutine=InitializeP4, rc=rc)
+      phaseLabelList=(/"IPDv03p4"/), &
+      userRoutine=InitializeAcceptChangeDistGrid, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv03p5"/), userRoutine=InitializeP5, rc=rc)
+      phaseLabelList=(/"IPDv03p5"/), &
+      userRoutine=InitializeAcceptMeshAndRealize, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -117,14 +121,14 @@ module ATM
   
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP1(model, importState, exportState, clock, rc)
+  subroutine InitializeAdvertise(model, importState, exportState, clock, rc)
     type(ESMF_GridComp)  :: model
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
     
     ! local variables
-    character(*), parameter   :: rName="InitializeP1"
+    character(*), parameter   :: rName="InitializeAdvertise"
     character(ESMF_MAXSTR)    :: name
     integer                   :: verbosity
 
@@ -169,7 +173,7 @@ module ATM
   
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP3(model, importState, exportState, clock, rc)
+  subroutine InitializeRealizeForProvide(model, importState, exportState, clock, rc)
     type(ESMF_GridComp)  :: model
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
@@ -181,7 +185,7 @@ module ATM
     integer                           :: i, j
     real(kind=ESMF_KIND_R8),  pointer :: lonPtr(:,:), latPtr(:,:)
     character(ESMF_MAXSTR)            :: transferAction
-    character(*), parameter   :: rName="InitializeP3"
+    character(*), parameter   :: rName="InitializeRealizeForProvide"
     character(ESMF_MAXSTR)    :: name
     integer                   :: verbosity
 
@@ -263,8 +267,8 @@ module ATM
         file=__FILE__)) &
         return  ! bail out
     else  ! transferAction=="accept"
-      ! the Connector instructed the ATM to accept the Grid from OCN for "sst"
-      call ESMF_LogWrite("ATM is accepting Grid for Field 'sst'.", &
+      ! the Connector instructed the ATM to accept the Mesh from OCN for "sst"
+      call ESMF_LogWrite("ATM is accepting Mesh for Field 'sst'.", &
         ESMF_LOGMSG_INFO, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
@@ -285,7 +289,7 @@ module ATM
   
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP4(model, importState, exportState, clock, rc)
+  subroutine InitializeAcceptChangeDistGrid(model, importState, exportState, clock, rc)
     type(ESMF_GridComp)  :: model
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
@@ -299,7 +303,7 @@ module ATM
     type(ESMF_DistGrid)       :: elementDG, nodalDG
     type(ESMF_DistGrid)       :: newElementDG, newNodalDG
     type(ESMF_DELayout)       :: delayout
-    character(*), parameter   :: rName="InitializeP4"
+    character(*), parameter   :: rName="InitializeAcceptChangeDistGrid"
     character(ESMF_MAXSTR)    :: name
     integer                   :: verbosity
 
@@ -376,7 +380,8 @@ module ATM
       return  ! bail out
     ! report localDeCount to log
     write (msgString,"(A,I3)") &
-      "ATM - InitializeP4: nodal DistGrid localDeCount = ", localDeCount
+      "ATM - InitializeAcceptChangeDistGrid: nodal DistGrid "// &
+      "localDeCount = ", localDeCount
     call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -412,7 +417,8 @@ module ATM
       return  ! bail out
     ! report localDeCount to log
     write (msgString,"(A,I3)") &
-      "ATM - InitializeP4: element DistGrid localDeCount = ", localDeCount
+      "ATM - InitializeAcceptChangeDistGrid: element DistGrid "// &
+      "localDeCount = ", localDeCount
     call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -459,12 +465,141 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
-    ! Also swap the Mesh for the "sst" Field in the importState
+    ! access the "sst" field in the importState
     call ESMF_StateGet(importState, field=field, itemName="sst", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    
+    ! while this is still an empty field, it does now hold a Mesh with DistGrid
+    call ESMF_FieldGet(field, mesh=mesh, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+    ! NOTE:
+    ! cannot write the transferred Mesh here, because it does NOT contain
+    ! coordinates yet
+
+    ! get distgrids out of mesh
+    call ESMF_MeshGet(mesh, nodalDistgrid=nodalDG, elementDistgrid=elementDG, &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    ! The acceptor side can either use the nodal DistGrid, or the element
+    ! DistGrid, or both to define its own decomposition and distribution of
+    ! the transferred Mesh. Use the following two macros to define which 
+    ! DistGrid to use for defining the acceptor side decomposition.
+    
+#undef USE_NODAL_DG
+#undef USE_ELEMENT_DG
+#define USE_NODAL_DG_off
+#define USE_ELEMENT_DG
+
+#ifdef USE_NODAL_DG
+    ! Create a custom DistGrid, based on the minIndex, maxIndex of the 
+    ! accepted DistGrid, but with a default regDecomp for the current VM
+    ! that leads to 1DE/PET (as long as there are more PETs than tiles).
+    
+#if 1
+    ! inspect the transferred nodalDG
+    call ESMF_DistGridGet(nodalDG, delayout=delayout, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! access localDeCount to show some info
+    call ESMF_DELayoutGet(delayout, localDeCount=localDeCount, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! report localDeCount to log
+    write (msgString,"(A,I3)") &
+      "ATM - InitializeAcceptChangeDistGrid: nodal DistGrid "// &
+      "localDeCount = ", localDeCount
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
+    ! Use an ESMF method to create a balanced DistGrid with 1DE/PET
+    newNodalDG = ESMF_DistGridCreate(nodalDG, balanceFlag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
+#ifdef USE_ELEMENT_DG
+    ! Create a custom DistGrid, based on the minIndex, maxIndex of the 
+    ! accepted DistGrid, but with a default regDecomp for the current VM
+    ! that leads to 1DE/PET (as long as there are more PETs than tiles).
+    
+#if 1
+    ! inspect the transferred elementDG
+    call ESMF_DistGridGet(elementDG, delayout=delayout, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! access localDeCount to show some info
+    call ESMF_DELayoutGet(delayout, localDeCount=localDeCount, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! report localDeCount to log
+    write (msgString,"(A,I3)") &
+      "ATM - InitializeAcceptChangeDistGrid: element DistGrid "// &
+      "localDeCount = ", localDeCount
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
+    ! Use an ESMF method to create a balanced DistGrid with 1DE/PET
+    newElementDG = ESMF_DistGridCreate(elementDG, balanceFlag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
+#if (defined USE_NODAL_DG && defined USE_ELEMENT_DG)
+    ! Create a new Mesh on both new DistGrid
+    mesh = ESMF_MeshEmptyCreate(nodalDistGrid=newNodalDG, &
+      elementDistGrid=newElementDG, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#elif (defined USE_NODAL_DG)
+    ! Create a new Mesh on new nodal DistGrid
+    mesh = ESMF_MeshEmptyCreate(nodalDistGrid=newNodalDG, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#elif (defined USE_ELEMENT_DG)
+    ! Create a new Mesh on new element DistGrid
+    mesh = ESMF_MeshEmptyCreate(elementDistGrid=newElementDG, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+    
+    ! Swap Mesh in the "sst" field
     call ESMF_FieldEmptySet(field, mesh=mesh, rc=rc)    
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -480,7 +615,9 @@ module ATM
     
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP5(model, importState, exportState, clock, rc)
+#define TEST_REGRID
+
+  subroutine InitializeAcceptMeshAndRealize(model, importState, exportState, clock, rc)
     type(ESMF_GridComp)  :: model
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
@@ -489,10 +626,14 @@ module ATM
     ! local variables
     type(ESMF_Field)              :: field
     character(160)                :: msgString
+#ifdef TEST_REGRID
+    type(ESMF_Field)              :: fieldIn, fieldOut
+    type(ESMF_RouteHandle)        :: rh
+#endif
 
     type(ESMF_Mesh)               :: mesh
 
-    character(*), parameter   :: rName="InitializeP5"
+    character(*), parameter   :: rName="InitializeAcceptMeshAndRealize"
     character(ESMF_MAXSTR)    :: name
     integer                   :: verbosity
 
@@ -508,27 +649,6 @@ module ATM
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
     
-    ! access the "sst" field in the importState
-    call ESMF_StateGet(importState, field=field, itemName="sst", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
-    ! the transferred Mesh is already set, allocate memory for data by complete
-    call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
-    call ESMF_LogWrite("ATM - Just completed the 'sst' Field", &
-      ESMF_LOGMSG_INFO, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
     ! access the "pmsl" field in the exportState
     call ESMF_StateGet(exportState, field=field, itemName="pmsl", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -543,6 +663,29 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
    
+#if 1
+    call ESMF_FieldGet(field, mesh=mesh, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_MeshWrite(mesh, filename="Atm-MeshOut_corners", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LogWrite("Done writing ATM-MeshOut_corners VTK", &
+      ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
+#ifdef TEST_REGRID
+    fieldOut = field ! keep field for RegridStore() test
+#endif
+    
     call ESMF_LogWrite("ATM - Just completed the 'pmsl' Field", &
       ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -550,19 +693,52 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
+    ! access the "sst" field in the importState
+    call ESMF_StateGet(importState, field=field, itemName="sst", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    ! the transferred Mesh is already set, allocate memory for data by complete
+    call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
 #if 1
     call ESMF_FieldGet(field, mesh=mesh, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call ESMF_MeshWrite(mesh, filename="Atm-Mesh_corners", rc=rc)
+    call ESMF_MeshWrite(mesh, filename="Atm-MeshIn_corners", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call ESMF_LogWrite("Done writing ATM-Mesh_corners VTK", &
+    call ESMF_LogWrite("Done writing ATM-MeshIn_corners VTK", &
       ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
+#ifdef TEST_REGRID
+    fieldIn = field ! keep field for RegridStore() test
+#endif
+
+    call ESMF_LogWrite("ATM - Just completed the 'sst' Field", &
+      ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+#ifdef TEST_REGRID
+    call ESMF_FieldRegridStore(fieldIn, fieldOut, routehandle=rh, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
