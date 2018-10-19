@@ -155,6 +155,16 @@ module OCN
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
     
     ! --- IMPORT -------------------------------------------------------------
+#define READ_MESHIN_FROM_FILE
+#ifdef READ_MESHIN_FROM_FILE
+    ! create from file
+    meshIn = ESMF_MeshCreate("./gx3v7_unstructured.nc", &
+      fileformat=ESMF_FILEFORMAT_ESMFMESH, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#else
     ! create Grid object for import
     gridIn = ESMF_GridCreate1PeriDimUfrm(maxIndex=(/10, 15/), &
       minCornerCoord=(/2.5_ESMF_KIND_R8, -59._ESMF_KIND_R8/), &
@@ -201,6 +211,7 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 
 #if 1
     call ESMF_MeshWrite(meshIn, filename="OCN-MeshIn", rc=rc)
@@ -243,6 +254,16 @@ module OCN
       return  ! bail out
     
     ! --- EXPORT -------------------------------------------------------------
+#define READ_MESHOUT_FROM_FILE
+#ifdef READ_MESHOUT_FROM_FILE
+    ! create from file
+    meshOut = ESMF_MeshCreate("./fv1.9x2.5_unstructured.nc", &
+      fileformat=ESMF_FILEFORMAT_ESMFMESH, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#else
     ! create Grid object for export
     gridOut = ESMF_GridCreate1PeriDimUfrm(maxIndex=(/20, 30/), &
       minCornerCoord=(/0._ESMF_KIND_R8, -60._ESMF_KIND_R8/), &
@@ -289,6 +310,7 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 
 #if 1
     call ESMF_MeshWrite(meshOut, filename="OCN-MeshOut", rc=rc)
