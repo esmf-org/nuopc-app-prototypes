@@ -54,7 +54,7 @@ driverComp.o: advectDiffComp.o
 # -----------------------------------------------------------------------------
 .PHONY: dust clean distclean info edit
 dust:
-	rm -f PET*.ESMF_LogFile *.nc
+	rm -f PET*.ESMF_LogFile *.nc *.stdout
 clean:
 	rm -f mainApp *.o *.mod
 distclean: dust clean

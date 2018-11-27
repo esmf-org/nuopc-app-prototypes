@@ -54,7 +54,7 @@ driver.o: mediator.o modelA.o modelB.o
 # -----------------------------------------------------------------------------
 .PHONY: dust clean distclean info edit
 dust:
-	rm -f PET*.ESMF_LogFile *.nc
+	rm -f PET*.ESMF_LogFile *.nc *.stdout
 clean:
 	rm -f app *.o *.mod
 distclean: dust clean

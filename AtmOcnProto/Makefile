@@ -54,7 +54,7 @@ esm.o: atm.o ocn.o
 # -----------------------------------------------------------------------------
 .PHONY: dust clean distclean info edit
 dust:
-	rm -rf PET*.ESMF_LogFile traceout
+	rm -rf PET*.ESMF_LogFile traceout *.nc *.stdout
 clean:
 	rm -f esmApp *.o *.mod
 distclean: dust clean
