@@ -218,6 +218,7 @@ TestProto NestingMultipleProto              mainApp
 TestProto NestingSingleProto                mainApp
 TestProto NestingTelescopeMultipleProto     mainApp
 TestProto SingleModelProto                  mainApp
+TestProto SingleModelOpenMPProto            mainApp
 
 i=1
 while [[ $i -le $count ]]
