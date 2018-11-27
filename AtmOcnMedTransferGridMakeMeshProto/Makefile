@@ -54,7 +54,7 @@ esm.o: atm.o ocn.o med.o
 # -----------------------------------------------------------------------------
 .PHONY: dust clean distclean info edit
 dust:
-	rm -f PET*.ESMF_LogFile *.nc *.vtk
+	rm -f PET*.ESMF_LogFile *.nc *.vtk *.stdout
 clean:
 	rm -f esmApp *.o *.mod
 shred:

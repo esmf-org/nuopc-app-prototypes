@@ -54,7 +54,7 @@ asyncIODriver.o: model.o io.o conn.o
 # -----------------------------------------------------------------------------
 .PHONY: dust clean distclean info edit
 dust:
-	rm -f PET*.ESMF_LogFile *nc
+	rm -f PET*.ESMF_LogFile *.nc *.stdout
 clean:
 	rm -f asyncIOApp *.o *.mod
 distclean: dust clean
