@@ -75,12 +75,25 @@ module driver
     type(ESMF_Time)               :: stopTime
     type(ESMF_TimeInterval)       :: timeStep
     type(ESMF_Clock)              :: internalClock
+    type(ESMF_GridComp)           :: info !TODO: this should be type(ESMF_Info)!
 
     rc = ESMF_SUCCESS
+
+    ! Create and set the info object that is used to pass hints into methods
+    info = ESMF_GridCompCreate(rc=rc) ! long run will be ESMF_InfoCreate()
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_AttributeSet(info, name="maxPeCountPerPet", value=2, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
     
     ! SetServices for MODEL component
-    call NUOPC_DriverAddComp(driver, "MODEL", modelSS, modelSVM, comp=child, &
-      rc=rc)
+    call NUOPC_DriverAddComp(driver, "MODEL", modelSS, modelSVM, info=info, &
+      comp=child, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -90,7 +103,7 @@ module driver
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     ! set the driver clock
     call ESMF_TimeSet(startTime, s = 0, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &

@@ -17,6 +17,7 @@ module MODEL
   use ESMF
   use NUOPC
   use NUOPC_Model, only: &
+    SetVM, &
     model_routine_SS    => SetServices, &
     model_label_Advance => label_Advance
   
@@ -24,48 +25,12 @@ module MODEL
   
   private
   
-  public SetServices, SetVM
+  public SetVM, SetServices
   
   !-----------------------------------------------------------------------------
   contains
   !-----------------------------------------------------------------------------
   
-  subroutine SetVM(model, rc)
-    type(ESMF_GridComp)  :: model
-    integer, intent(out) :: rc
-    
-    ! local variables
-    type(ESMF_VM) :: vm
-    logical       :: pthreadsEnabled
-
-    rc = ESMF_SUCCESS
-
-    ! The following call will give each PET up to 2 PEs. This allows 
-    ! OpenMP user-level threading within the component methods.
-
-    ! ESMF-pthreading support is required to use any of the SetVM methods
-    call ESMF_VMGetCurrent(vm, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call ESMF_VMGet(vm, pthreadsEnabledFlag=pthreadsEnabled, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    if (pthreadsEnabled) then
-      call ESMF_GridCompSetVMMaxPEs(model, maxPeCountPerPet=2, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-    endif
-    
-  end subroutine
-
-  !-----------------------------------------------------------------------------
-
   subroutine SetServices(model, rc)
     type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
