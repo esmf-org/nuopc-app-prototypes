@@ -8,11 +8,13 @@ Description:
 
   A single model component driven by a single driver component.
   
-  Thhe model component provides a SetVM() method that is called back by the 
-  Driver during the NUOPC_DriverAddComp() call.
+  The model component make the generic NUOPC_Model SetVM() method public.
   
-  In the SetVM() routine the model component requests to have its VM configured
-  so that each PET has access to 2 PEs (i.e. CPU cores).
+  The driver specifies the model component SetVM() method during 
+  NUOPC_DriverAddComp() when adding the model component.
+  
+  The driver sets up an info object with the "maxPeCountPerPet" hint and passes
+  it into NUOPC_DriverAddComp() when adding the model component.
   
   If compiled with OpenMP support, the model component will use the 2 PEs per
   PET to utilize OpenMP threading.
