@@ -21,8 +21,8 @@ module ESM
     driver_label_SetModelServices => label_SetModelServices, &
     driver_label_ModifyCplLists   => label_ModifyCplLists
   
-  use ATM, only: atmSS => SetServices
-  use OCN, only: ocnSS => SetServices
+  use ATM, only: atmSVM => SetVM, atmSS => SetServices
+  use OCN, only: ocnSVM => SetVM, ocnSS => SetServices
   
   use NUOPC_Connector, only: cplSS => SetServices
   
@@ -40,6 +40,10 @@ module ESM
     type(ESMF_GridComp)  :: driver
     integer, intent(out) :: rc
     
+    ! local variables
+    integer                       :: verbosity
+    character(len=10)             :: attrStr
+
     rc = ESMF_SUCCESS
     
     ! NUOPC_Driver registers the generic methods
@@ -63,6 +67,17 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     
+    ! set verbosity on driver
+    verbosity = 0 ! reset
+    verbosity = ibset(verbosity,0)  ! log basic intro/extro and indentation
+    verbosity = ibset(verbosity,13) ! log basic intro/extro and indentation
+    write(attrStr,"(I10)") verbosity
+    call NUOPC_CompAttributeSet(driver, name="Verbosity", value=attrStr, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
   end subroutine
 
   !-----------------------------------------------------------------------------
@@ -79,10 +94,29 @@ module ESM
     integer                       :: petCount, i
     integer                       :: petCountATM, petCountOCN
     integer, allocatable          :: petList(:)
+    type(ESMF_GridComp)           :: child
     type(ESMF_CplComp)            :: conn
+    type(ESMF_GridComp)           :: info !TODO: this should be type(ESMF_Info)!
 
     rc = ESMF_SUCCESS
     
+    ! Create and set the info object that is used to pass hints into methods
+    info = ESMF_GridCompCreate(rc=rc) ! long run will be ESMF_InfoCreate()
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#ifdef HIGH_PE_COUNT_PER_PET_WORKING
+!TODO: fix this to work with GeomObject transfer -> currently hanging!!!
+    call ESMF_AttributeSet(info, name="maxPeCountPerPet", value=2, rc=rc)
+#else
+    call ESMF_AttributeSet(info, name="maxPeCountPerPet", value=1, rc=rc)
+#endif
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! get the petCount
     call ESMF_GridCompGet(driver, petCount=petCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -99,24 +133,36 @@ module ESM
     do i=1, petCountATM
       petList(i) = i-1 ! PET labeling goes from 0 to petCount-1
     enddo
-    call NUOPC_DriverAddComp(driver, "ATM", atmSS, petList=petList, rc=rc)
+    call NUOPC_DriverAddComp(driver, "ATM", atmSS, atmSVM, info=info, &
+      petList=petList, comp=child, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     deallocate(petList)
+    call NUOPC_CompAttributeSet(child, name="Verbosity", value="9", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
     
     ! SetServices for OCN with petList on second half of PETs
     allocate(petList(petCountOCN))
     do i=1, petCountOCN
       petList(i) = petCountATM + i-1 ! PET labeling goes from 0 to petCount-1
     enddo
-    call NUOPC_DriverAddComp(driver, "OCN", ocnSS, petList=petList, rc=rc)
+    call NUOPC_DriverAddComp(driver, "OCN", ocnSS, ocnSVM, info=info, &
+      petList=petList, comp=child, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     deallocate(petList)
+    call NUOPC_CompAttributeSet(child, name="Verbosity", value="9", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 
     ! SetServices for atm2ocn
     call NUOPC_DriverAddComp(driver, srcCompLabel="ATM", dstCompLabel="OCN", &
@@ -125,7 +171,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="1", rc=rc)
+    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="high", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -138,7 +184,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="1", rc=rc)
+    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="high", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

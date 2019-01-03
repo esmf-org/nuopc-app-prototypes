@@ -30,7 +30,7 @@ module OCN
   
   private
   
-  public SetServices
+  public SetVM, SetServices
   
   !-----------------------------------------------------------------------------
   contains
