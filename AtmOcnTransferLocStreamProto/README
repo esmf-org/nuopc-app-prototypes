@@ -18,7 +18,7 @@ Description:
   
   The connector components are explicitly added by the driver.
   
-  The ESMF driver modifies the CplList attribute on the connectors after they
+  The ESM driver modifies the CplList attribute on the connectors after they
   have been auto-generated in order to specify custom regridding options.
   
   The OCN component uses a simple two-phase initialization, consisting of 
