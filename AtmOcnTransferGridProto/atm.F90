@@ -29,7 +29,7 @@ module ATM
   
   private
   
-  public SetServices
+  public SetVM, SetServices
   
   !-----------------------------------------------------------------------------
   contains
