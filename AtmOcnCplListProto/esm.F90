@@ -197,8 +197,9 @@ module ESM
     integer, intent(out) :: rc
     
     ! local variables
-    character(len=160)              :: msg    
+    character(len=160)              :: msg
     type(ESMF_CplComp), pointer     :: connectorList(:)
+    character(len=160)              :: connectorName
     integer                         :: i, j, cplListSize
     character(len=160), allocatable :: cplList(:)
     character(len=160)              :: tempString
@@ -227,7 +228,13 @@ module ESM
       return  ! bail out
       
     do i=1, size(connectorList)
-      ! query the cplList for connector i
+      ! query connector i for its name
+      call NUOPC_CompGet(connectorList(i), name=connectorName, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      ! query connector i for its cplList
       call NUOPC_CompAttributeGet(connectorList(i), name="CplList", &
         itemCount=cplListSize, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -244,11 +251,27 @@ module ESM
           return  ! bail out
         ! go through all of the entries in the cplList and add options
         do j=1, cplListSize
-          print *, cplList(j)
-          tempString = trim(cplList(j))//":REMAPMETHOD=bilinear"//&
-          ":SrcTermProcessing=1:DUMPWEIGHTS=true:TermOrder=SrcSeq"
+          write (msg,*) "Modifying cplList Attribute on "//&
+            trim(connectorName)//": "//trim(cplList(j))
+          call ESMF_LogWrite(msg, ESMF_LOGMSG_INFO, rc=rc)
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+          if (trim(cplList(j))=="surface_net_downward_shortwave_flux" &
+            .or. trim(cplList(j))=="air_pressure_at_sea_level") then
+            tempString = trim(cplList(j))//":REMAPMETHOD=redist"
+          else
+            tempString = trim(cplList(j))//":REMAPMETHOD=bilinear"//&
+            ":SrcTermProcessing=1:DUMPWEIGHTS=true:TermOrder=SrcSeq"
+          endif
           cplList(j) = trim(tempString)
-          print *, cplList(j)
+          write (msg,*) "Modified: "//trim(cplList(j))
+          call ESMF_LogWrite(msg, ESMF_LOGMSG_INFO, rc=rc)
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
         enddo
         ! store the modified cplList in CplList attribute of connector i
         call NUOPC_CompAttributeSet(connectorList(i), &
