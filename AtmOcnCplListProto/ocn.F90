@@ -94,7 +94,23 @@ module OCN
     
     ! importable field: surface_net_downward_shortwave_flux
     call NUOPC_Advertise(importState, &
+      StandardName="surface_net_downward_longwave_flux", name="rsnl", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! importable field: surface_net_downward_shortwave_flux
+    call NUOPC_Advertise(importState, &
       StandardName="surface_net_downward_shortwave_flux", name="rsns", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! importable field: surface_downward_heat_flux_in_air
+    call NUOPC_Advertise(importState, &
+      StandardName="surface_downward_heat_flux_in_air", name="sdhf", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -128,9 +144,9 @@ module OCN
     rc = ESMF_SUCCESS
     
     ! create a Grid object for Fields
-    gridIn = ESMF_GridCreate1PeriDimUfrm(maxIndex=(/80, 30/), &
-      minCornerCoord=(/0._ESMF_KIND_R8, -80._ESMF_KIND_R8/), &
-      maxCornerCoord=(/360._ESMF_KIND_R8, 60._ESMF_KIND_R8/), &
+    gridIn = ESMF_GridCreate1PeriDimUfrm(maxIndex=(/100, 50/), &
+      minCornerCoord=(/0._ESMF_KIND_R8, -60._ESMF_KIND_R8/), &
+      maxCornerCoord=(/360._ESMF_KIND_R8, 80._ESMF_KIND_R8/), &
       staggerLocList=(/ESMF_STAGGERLOC_CENTER/), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -151,8 +167,34 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
     
+    ! importable field: surface_net_downward_longwave_flux
+    field = ESMF_FieldCreate(name="rsnl", grid=gridIn, &
+      typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_Realize(importState, field=field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! importable field: surface_net_downward_shortwave_flux
     field = ESMF_FieldCreate(name="rsns", grid=gridIn, &
+      typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_Realize(importState, field=field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! importable field: surface_downward_heat_flux_in_air
+    field = ESMF_FieldCreate(name="sdhf", grid=gridIn, &
       typekind=ESMF_TYPEKIND_R8, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &

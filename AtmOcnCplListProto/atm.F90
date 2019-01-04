@@ -95,7 +95,23 @@ module ATM
     
     ! exportable field: surface_net_downward_shortwave_flux
     call NUOPC_Advertise(exportState, &
+      StandardName="surface_net_downward_longwave_flux", name="rsnl", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! exportable field: surface_net_downward_shortwave_flux
+    call NUOPC_Advertise(exportState, &
       StandardName="surface_net_downward_shortwave_flux", name="rsns", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! exportable field: surface_downward_heat_flux_in_air
+    call NUOPC_Advertise(exportState, &
+      StandardName="surface_downward_heat_flux_in_air", name="sdhf", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -179,8 +195,8 @@ module ATM
     enddo
     enddo
 
-    ! exportable field: surface_net_downward_shortwave_flux
-    field = ESMF_FieldCreate(name="rsns", grid=gridOut, &
+    ! exportable field: surface_net_downward_longwave_flux
+    field = ESMF_FieldCreate(name="rsnl", grid=gridOut, &
       typekind=ESMF_TYPEKIND_R8, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -204,6 +220,55 @@ module ATM
     enddo
     enddo
 
+    ! exportable field: surface_net_downward_shortwave_flux
+    field = ESMF_FieldCreate(name="rsns", grid=gridOut, &
+      typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_Realize(exportState, field=field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! fill export with some data
+    call ESMF_FieldGet(field, farrayPtr=dataPtr, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    do j=lbound(dataPtr,2),ubound(dataPtr,2)
+    do i=lbound(dataPtr,1),ubound(dataPtr,1)
+      dataPtr(i,j) = sin(3.1416*lonPtr(i)/180.) * cos(3*3.1416*latPtr(j)/180.)
+    enddo
+    enddo
+
+    ! exportable field: surface_downward_heat_flux_in_air
+    field = ESMF_FieldCreate(name="sdhf", grid=gridOut, &
+      typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_Realize(exportState, field=field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! fill export with some data
+    call ESMF_FieldGet(field, farrayPtr=dataPtr, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    do j=lbound(dataPtr,2),ubound(dataPtr,2)
+    do i=lbound(dataPtr,1),ubound(dataPtr,1)
+      dataPtr(i,j) = sin(2*3.1416*lonPtr(i)/180.) * cos(2*3.1416*latPtr(j)/180.)
+    enddo
+    enddo
 
   end subroutine
   
