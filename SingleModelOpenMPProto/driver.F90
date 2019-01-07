@@ -75,12 +75,12 @@ module driver
     type(ESMF_Time)               :: stopTime
     type(ESMF_TimeInterval)       :: timeStep
     type(ESMF_Clock)              :: internalClock
-    type(ESMF_GridComp)           :: info !TODO: this should be type(ESMF_Info)!
+    type(ESMF_Info)               :: info
 
     rc = ESMF_SUCCESS
 
     ! Create and set the info object that is used to pass hints into methods
-    info = ESMF_GridCompCreate(rc=rc) ! long run will be ESMF_InfoCreate()
+    info = ESMF_InfoCreate(rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
