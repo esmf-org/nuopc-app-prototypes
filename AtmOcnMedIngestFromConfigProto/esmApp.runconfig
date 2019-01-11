@@ -15,7 +15,7 @@
 runSeq::
     @100:200   # First loop running for 200s @ 100s
       MED
-      MED -> OCN
+      MED -> OCN :remapMethod=patch:srcTermProcessing=1
       MED -> ATM
       ATM
       OCN
@@ -26,7 +26,7 @@ runSeq::
         @
       @
       OCN -> MED
-      ATM -> MED
+      ATM -> MED :remapMethod=bilinear
     @
     MED -> ATM  # A pretty useless connector call, just to show it works
     @100:700   # Second loop running for 700s @ 100s
