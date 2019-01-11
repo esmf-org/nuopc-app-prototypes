@@ -103,4 +103,9 @@ driverAttributes::
   Verbosity = 4609
   Profiling = 0
 ::
+# Another way of specifying the ConnectionOptions Attribute for a Connector is
+# to explicitly set the Attribute here:
+MED-TO-ATM-Attributes::
+  ConnectionOptions = :remapMethod=nearest_stod
+::
 #-------------------------------------------------------------------------------
