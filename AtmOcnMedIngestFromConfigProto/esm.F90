@@ -93,7 +93,6 @@ module ESM
     
     ! local variables
     type(ESMF_GridComp)           :: child
-    type(ESMF_CplComp)            :: connector
     type(ESMF_Time)               :: startTime
     type(ESMF_Time)               :: stopTime
     type(ESMF_TimeInterval)       :: timeStep
@@ -226,12 +225,7 @@ module ESM
 #ifndef TESTAUTOADDCONNECTORS
     ! SetServices for atm2med
     call NUOPC_DriverAddComp(driver, srcCompLabel="ATM", dstCompLabel="MED", &
-      compSetServicesRoutine=cplSS, comp=connector, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="1", rc=rc)
+      compSetServicesRoutine=cplSS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -239,12 +233,7 @@ module ESM
     
     ! SetServices for ocn2med
     call NUOPC_DriverAddComp(driver, srcCompLabel="OCN", dstCompLabel="MED", &
-      compSetServicesRoutine=cplSS, comp=connector, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="1", rc=rc)
+      compSetServicesRoutine=cplSS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -252,12 +241,7 @@ module ESM
     
     ! SetServices for med2atm
     call NUOPC_DriverAddComp(driver, srcCompLabel="MED", dstCompLabel="ATM", &
-      compSetServicesRoutine=cplSS, comp=connector, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="1", rc=rc)
+      compSetServicesRoutine=cplSS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -265,12 +249,7 @@ module ESM
 
     ! SetServices for med2ocn
     call NUOPC_DriverAddComp(driver, srcCompLabel="MED", dstCompLabel="OCN", &
-      compSetServicesRoutine=cplSS, comp=connector, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="1", rc=rc)
+      compSetServicesRoutine=cplSS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -318,9 +297,11 @@ module ESM
     integer, intent(out) :: rc
     
     ! local variables
-    character(ESMF_MAXSTR)              :: name
-    type(ESMF_Config)                   :: config
-    type(NUOPC_FreeFormat)              :: runSeqFF
+    character(ESMF_MAXSTR)        :: name
+    type(ESMF_Config)             :: config
+    type(NUOPC_FreeFormat)        :: runSeqFF
+    type(ESMF_CplComp), pointer   :: connectorList(:)
+    integer                       :: i
 
     rc = ESMF_SUCCESS
     
@@ -364,6 +345,22 @@ module ESM
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
       
+    ! set Verbosity on Connectors no matter how they were added
+    nullify(connectorList)
+    call NUOPC_DriverGetComp(driver, connectorList, rc=rc)    
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    do i=1, size(connectorList)
+      call NUOPC_CompAttributeSet(connectorList(i), name="Verbosity", &
+        value="4097", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    enddo
+
   end subroutine
 
   !-----------------------------------------------------------------------------
