@@ -297,9 +297,9 @@ module ESM
     integer, intent(out) :: rc
     
     ! local variables
-    character(ESMF_MAXSTR)        :: name
+    character(ESMF_MAXSTR)        :: name, connName
     type(ESMF_Config)             :: config
-    type(NUOPC_FreeFormat)        :: runSeqFF
+    type(NUOPC_FreeFormat)        :: ff
     type(ESMF_CplComp), pointer   :: connectorList(:)
     integer                       :: i
 
@@ -314,18 +314,18 @@ module ESM
     call ESMF_GridCompGet(driver, config=config, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
-    runSeqFF = NUOPC_FreeFormatCreate(config, label="runSeq::", rc=rc)
+    ff = NUOPC_FreeFormatCreate(config, label="runSeq::", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
       
 #if 1
-    call NUOPC_FreeFormatLog(runSeqFF, rc=rc)
+    call NUOPC_FreeFormatLog(ff, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
 #endif
 
     ! ingest FreeFormat run sequence
-    call NUOPC_DriverIngestRunSequence(driver, runSeqFF, &
+    call NUOPC_DriverIngestRunSequence(driver, ff, &
 #ifdef TESTAUTOADDCONNECTORS
       autoAddConnectors=.true., &
 #endif
@@ -341,11 +341,12 @@ module ESM
 #endif
 
     ! clean-up
-    call NUOPC_FreeFormatDestroy(runSeqFF, rc=rc)
+    call NUOPC_FreeFormatDestroy(ff, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
       
     ! set Verbosity on Connectors no matter how they were added
+    ! also read in potential connector attributes from config
     nullify(connectorList)
     call NUOPC_DriverGetComp(driver, connectorList, rc=rc)    
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -353,14 +354,50 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     do i=1, size(connectorList)
+      ! default Verbosity, may be overridden from config below
       call NUOPC_CompAttributeSet(connectorList(i), name="Verbosity", &
         value="4097", rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
+      ! read connector Attributes from config
+      call NUOPC_CompGet(connectorList(i), name=connName, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      call ESMF_LogWrite("Reading Attributes for Connector: "//trim(connName), &
+        ESMF_LOGMSG_INFO, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      ff = NUOPC_FreeFormatCreate(config, relaxedflag=.true., &
+        label=trim(connName)//"-Attributes::", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+#if 1
+      call NUOPC_FreeFormatLog(ff, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+#endif
+      ! ingest FreeFormat driver attributes
+      call NUOPC_CompAttributeIngest(connectorList(i), ff, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      ! clean-up
+      call NUOPC_FreeFormatDestroy(ff, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
     enddo
-
+    
   end subroutine
 
   !-----------------------------------------------------------------------------
