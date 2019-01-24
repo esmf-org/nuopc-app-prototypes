@@ -612,8 +612,7 @@ module Mediator
             ! for data by complete
             nullify(ugLBound, ugUBound, gridToFieldMap)
             ! deal with gridToFieldMap
-            call ESMF_AttributeGet(field, name="GridToFieldMap", &
-              convention="NUOPC", purpose="Instance", &
+            call NUOPC_GetAttribute(field, name="GridToFieldMap", &
               itemCount=itemCount, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
               line=__LINE__, &
@@ -630,8 +629,7 @@ module Mediator
                 return  ! bail out
             endif
             ! deal with ungriddedLBound
-            call ESMF_AttributeGet(field, name="UngriddedLBound", &
-              convention="NUOPC", purpose="Instance", &
+            call NUOPC_GetAttribute(field, name="UngriddedLBound", &
               itemCount=itemCount, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
               line=__LINE__, &
@@ -648,8 +646,7 @@ module Mediator
                 return  ! bail out
             endif
             ! deal with ungriddedUBound
-            call ESMF_AttributeGet(field, name="UngriddedUBound", &
-              convention="NUOPC", purpose="Instance", &
+            call NUOPC_GetAttribute(field, name="UngriddedUBound", &
               itemCount=itemCount, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
               line=__LINE__, &
