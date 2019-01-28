@@ -152,6 +152,9 @@ module ATM
 #endif
 
     ! exportable field: air_pressure_at_sea_level
+#ifdef CREATE_AND_REALIZE
+    ! This branch shows the standard procedure of creating a complete field
+    ! with Grid and memory allocation, and then calling Realize() for it.
     field = ESMF_FieldCreate(name="pmsl", grid=gridOut, &
       typekind=ESMF_TYPEKIND_R8, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -163,6 +166,37 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#else
+    ! This branch shows the alternative way of "realizing" an advertised field.
+    ! It accesses the empty field that was created during advertise, and
+    ! finishes it, setting a Grid on it, and then calling FieldEmptyComplete().
+    ! No formal Realize() is then needed.
+    call ESMF_StateGet(exportState, field=field, itemName="pmsl", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_FieldEmptySet(field, grid=gridOut, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#define WITH_FORMAL_REALIZE
+#ifdef WITH_FORMAL_REALIZE
+    ! There is not need to formally call Realize() when completing the 
+    ! adverised field directly. However, calling Realize() also works.
+    call NUOPC_Realize(exportState, field=field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+#endif
 
     ! exportable field: surface_net_downward_shortwave_flux
     field = ESMF_FieldCreate(name="rsns", grid=gridOut, &
