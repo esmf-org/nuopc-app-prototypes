@@ -182,6 +182,7 @@ module OCN
     integer(ESMF_KIND_I4),pointer :: factorIndexList(:,:)
     type(ESMF_DistGridConnection), allocatable :: connectionList(:)
     type(ESMF_Array)      :: array
+    type(ESMF_Field)      :: field
     integer               :: dimCount, rank
     integer               :: coordDimMap(2,2)
     character(160)        :: msgString
@@ -435,6 +436,8 @@ module OCN
 #endif
 
     ! importable field: air_pressure_at_sea_level
+#ifdef CREATE_AND_REALIZE
+    ! This branch shows the standard procedure of calling Realize().
     call NUOPC_Realize(importState, gridIn, fieldName="pmsl", &
       typekind=ESMF_TYPEKIND_R8, selection="realize_connected_remove_others", &
       dataFillScheme="sincos", rc=rc)
@@ -442,6 +445,37 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#else
+    ! This branch shows the alternative way of "realizing" an advertised field.
+    ! It accesses the empty field that was created during advertise, and
+    ! finishes it, setting a Grid on it, and then calling FieldEmptyComplete().
+    ! No formal Realize() is then needed.
+    call ESMF_StateGet(importState, field=field, itemName="pmsl", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_FieldEmptySet(field, grid=gridIn, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#define WITH_FORMAL_REALIZE
+#ifdef WITH_FORMAL_REALIZE
+    ! There is not need to formally call Realize() when completing the 
+    ! adverised field directly. However, calling Realize() also works.
+    call NUOPC_Realize(importState, field=field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+#endif
     
     ! importable field: surface_net_downward_shortwave_flux
     call NUOPC_Realize(importState, gridIn, fieldName="rsns", &
