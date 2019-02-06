@@ -106,7 +106,7 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
 
-   ! get the petCount
+    ! get the petCount
     call ESMF_GridCompGet(driver, petCount=petCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -153,6 +153,11 @@ module ESM
 #endif
       
     ! SetServices for OCN with petList on second half of PETs
+    call ESMF_AttributeSet(info, name="maxPeCountPerPet", value=4, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
     allocate(petList(petCount/2))
     do i=1, petCount/2
       petList(i) = petCount/2 + i-1 ! PET labeling goes from 0 to petCount-1
