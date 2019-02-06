@@ -226,6 +226,7 @@ module OCN
   !-----------------------------------------------------------------------------
 
   subroutine ModelAdvance(model, rc)
+!$  use omp_lib
     type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
     
@@ -234,6 +235,9 @@ module OCN
     type(ESMF_State)              :: importState, exportState
     type(ESMF_Time)               :: currTime
     type(ESMF_TimeInterval)       :: timeStep
+    type(ESMF_VM)                 :: vm
+    integer                       :: localPet, localPeCount
+    character(len=160)            :: msg
 
     rc = ESMF_SUCCESS
     
@@ -244,6 +248,37 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+    ! Query the VM of the component for the localPeCount and set OpenMP 
+    ! num_threads accordingly.
+    call ESMF_GridCompGet(model, vm=vm, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_VMGet(vm, localPet=localPet, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_VMGet(vm, pet=localPet, peCount=localPeCount, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+!$  call omp_set_num_threads(localPeCount)
+
+    ! Now can use OpenMP for fine grained parallelism...
+    ! Here just write info about the PET-local OpenMP threads to Log.
+!$omp parallel private(msg)
+!$omp critical
+!$    write(msg,'(A,I4,A,I4,A,I4,A,I4)') "thread_num=", omp_get_thread_num(), &
+!$      "   num_threads=", omp_get_num_threads(), &
+!$      "   max_threads=", omp_get_max_threads(), &
+!$      "   num_procs=", omp_get_num_procs()
+!$    call ESMF_LogWrite(msg, ESMF_LOGMSG_INFO, rc=rc)
+!$omp end critical
+!$omp end parallel
 
     ! HERE THE MODEL ADVANCES: currTime -> currTime + timeStep
     
