@@ -47,27 +47,27 @@ module MED
   contains
   !-----------------------------------------------------------------------------
   
-  subroutine SetServices(gcomp, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine SetServices(mediator, rc)
+    type(ESMF_GridComp)  :: mediator
     integer, intent(out) :: rc
     
     rc = ESMF_SUCCESS
     
     ! the NUOPC model component will register the generic methods
-    call NUOPC_CompDerive(gcomp, mediator_routine_SS, rc=rc)
+    call NUOPC_CompDerive(mediator, mediator_routine_SS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
     ! set entry point for methods that require specific implementation
-    call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
+    call NUOPC_CompSetEntryPoint(mediator, ESMF_METHOD_INITIALIZE, &
       phaseLabelList=(/"IPDv00p1"/), userRoutine=InitializeP1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
+    call NUOPC_CompSetEntryPoint(mediator, ESMF_METHOD_INITIALIZE, &
       phaseLabelList=(/"IPDv00p2"/), userRoutine=InitializeP2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -75,13 +75,13 @@ module MED
       return  ! bail out
     
     ! slow Mediation phase with OCN (use the default "RunPhase1" for slow)
-    call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_SetRunClock, &
+    call NUOPC_CompSpecialize(mediator, specLabel=mediator_label_SetRunClock, &
       specPhaseLabel="RunPhase1", specRoutine=SetRunClock_slow, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_Advance, &
+    call NUOPC_CompSpecialize(mediator, specLabel=mediator_label_Advance, &
       specPhaseLabel="RunPhase1", specRoutine=MediatorAdvance_slow, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -89,35 +89,35 @@ module MED
       return  ! bail out
     
     ! fast Mediation phase with ATM: before
-    call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_RUN, &
+    call NUOPC_CompSetEntryPoint(mediator, ESMF_METHOD_RUN, &
       phaseLabelList=(/"RunPhaseFastBefore"/), &
       userRoutine=mediator_routine_Run, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_SetRunClock, &
+    call NUOPC_CompSpecialize(mediator, specLabel=mediator_label_SetRunClock, &
       specPhaseLabel="RunPhaseFastBefore", &
       specRoutine=SetRunClock_fast_before, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_CheckImport, &
+    call NUOPC_CompSpecialize(mediator, specLabel=mediator_label_CheckImport, &
       specPhaseLabel="RunPhaseFastBefore", &
       specRoutine=CheckImport_fast_before, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_TimestampExport, &
+    call NUOPC_CompSpecialize(mediator, specLabel=mediator_label_TimestampExport, &
       specPhaseLabel="RunPhaseFastBefore", &
       specRoutine=TimestampExport_fast_before, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_Advance, &
+    call NUOPC_CompSpecialize(mediator, specLabel=mediator_label_Advance, &
       specPhaseLabel="RunPhaseFastBefore", &
       specRoutine=MediatorAdvance_fast_before, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -126,35 +126,35 @@ module MED
       return  ! bail out
     
     ! fast Mediation phase with ATM: after
-    call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_RUN, &
+    call NUOPC_CompSetEntryPoint(mediator, ESMF_METHOD_RUN, &
       phaseLabelList=(/"RunPhaseFastAfter"/), &
       userRoutine=mediator_routine_Run, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_SetRunClock, &
+    call NUOPC_CompSpecialize(mediator, specLabel=mediator_label_SetRunClock, &
       specPhaseLabel="RunPhaseFastAfter", &
       specRoutine=SetRunClock_fast_after, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_CheckImport, &
+    call NUOPC_CompSpecialize(mediator, specLabel=mediator_label_CheckImport, &
       specPhaseLabel="RunPhaseFastAfter", &
       specRoutine=CheckImport_fast_after, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_TimestampExport, &
+    call NUOPC_CompSpecialize(mediator, specLabel=mediator_label_TimestampExport, &
       specPhaseLabel="RunPhaseFastAfter", &
       specRoutine=TimestampExport_fast_after, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_Advance, &
+    call NUOPC_CompSpecialize(mediator, specLabel=mediator_label_Advance, &
       specPhaseLabel="RunPhaseFastAfter", &
       specRoutine=MediatorAdvance_fast_after, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -166,8 +166,8 @@ module MED
   
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP1(gcomp, importState, exportState, clock, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine InitializeP1(mediator, importState, exportState, clock, rc)
+    type(ESMF_GridComp)  :: mediator
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
@@ -226,8 +226,8 @@ module MED
   
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP2(gcomp, importState, exportState, clock, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine InitializeP2(mediator, importState, exportState, clock, rc)
+    type(ESMF_GridComp)  :: mediator
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
@@ -352,7 +352,7 @@ module MED
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call ESMF_GridCompSetInternalState(gcomp, is, rc)
+    call ESMF_GridCompSetInternalState(mediator, is, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -396,8 +396,8 @@ module MED
   
   !-----------------------------------------------------------------------------
 
-  subroutine SetRunClock_slow(gcomp, rc)
-    type(ESMF_GridComp)   :: gcomp
+  subroutine SetRunClock_slow(mediator, rc)
+    type(ESMF_GridComp)   :: mediator
     integer, intent(out)  :: rc
     
     ! local variables
@@ -408,28 +408,28 @@ module MED
     
     ! query component for its internal state
     nullify(is%wrap)
-    call ESMF_GridCompGetInternalState(gcomp, is, rc)
+    call ESMF_GridCompGetInternalState(mediator, is, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 
     ! set clockSlow to be the component clock
-    call ESMF_GridCompSet(gcomp, clock=is%wrap%clockSlow, rc=rc)
+    call ESMF_GridCompSet(mediator, clock=is%wrap%clockSlow, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
     ! query component for the driver Clock
-    call NUOPC_MediatorGet(gcomp, driverClock=driverClock, rc=rc)
+    call NUOPC_MediatorGet(mediator, driverClock=driverClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
     ! check and set the component clock against the driver clock
-    call NUOPC_CompCheckSetClock(gcomp, driverClock, rc=rc)
+    call NUOPC_CompCheckSetClock(mediator, driverClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, &
       msg="NUOPC INCOMPATIBILITY DETECTED: between model and driver clocks", &
       line=__LINE__, &
@@ -440,8 +440,8 @@ module MED
 
   !-----------------------------------------------------------------------------
   
-  subroutine SetRunClock_fast_before(gcomp, rc)
-    type(ESMF_GridComp)   :: gcomp
+  subroutine SetRunClock_fast_before(mediator, rc)
+    type(ESMF_GridComp)   :: mediator
     integer, intent(out)  :: rc
     
     ! local variables
@@ -452,28 +452,28 @@ module MED
     
     ! query component for its internal state
     nullify(is%wrap)
-    call ESMF_GridCompGetInternalState(gcomp, is, rc)
+    call ESMF_GridCompGetInternalState(mediator, is, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 
     ! set clockFast to be the component clock
-    call ESMF_GridCompSet(gcomp, clock=is%wrap%clockFast, rc=rc)
+    call ESMF_GridCompSet(mediator, clock=is%wrap%clockFast, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
     ! query component for the driver Clock
-    call NUOPC_MediatorGet(gcomp, driverClock=driverClock, rc=rc)
+    call NUOPC_MediatorGet(mediator, driverClock=driverClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
     ! check and set the component clock against the driver clock
-    call NUOPC_CompCheckSetClock(gcomp, driverClock, rc=rc)
+    call NUOPC_CompCheckSetClock(mediator, driverClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, &
       msg="NUOPC INCOMPATIBILITY DETECTED: between model and driver clocks", &
       line=__LINE__, &
@@ -484,8 +484,8 @@ module MED
 
   !-----------------------------------------------------------------------------
 
-  subroutine SetRunClock_fast_after(gcomp, rc)
-    type(ESMF_GridComp)   :: gcomp
+  subroutine SetRunClock_fast_after(mediator, rc)
+    type(ESMF_GridComp)   :: mediator
     integer, intent(out)  :: rc
     
     ! local variables
@@ -496,28 +496,28 @@ module MED
     
     ! query component for its internal state
     nullify(is%wrap)
-    call ESMF_GridCompGetInternalState(gcomp, is, rc)
+    call ESMF_GridCompGetInternalState(mediator, is, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 
     ! set clockFast to be the component clock
-    call ESMF_GridCompSet(gcomp, clock=is%wrap%clockFast, rc=rc)
+    call ESMF_GridCompSet(mediator, clock=is%wrap%clockFast, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
     ! query component for the driver Clock
-    call NUOPC_MediatorGet(gcomp, driverClock=driverClock, rc=rc)
+    call NUOPC_MediatorGet(mediator, driverClock=driverClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
     ! check and set the component clock against the driver clock
-    call NUOPC_CompCheckSetClock(gcomp, driverClock, rc=rc)
+    call NUOPC_CompCheckSetClock(mediator, driverClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, &
       msg="NUOPC INCOMPATIBILITY DETECTED: between model and driver clocks", &
       line=__LINE__, &
@@ -528,8 +528,8 @@ module MED
 
   !-----------------------------------------------------------------------------
 
-  subroutine CheckImport_fast_before(gcomp, rc)
-    type(ESMF_GridComp)   :: gcomp
+  subroutine CheckImport_fast_before(mediator, rc)
+    type(ESMF_GridComp)   :: mediator
     integer, intent(out)  :: rc
     
     ! This is the routine that ensures that the import Fields come in with
@@ -549,14 +549,14 @@ module MED
     rc = ESMF_SUCCESS
     
     ! query the Component for its importState
-    call ESMF_GridCompGet(gcomp, importState=importState, rc=rc)
+    call ESMF_GridCompGet(mediator, importState=importState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
     ! query the Component for its driverClock
-    call NUOPC_MediatorGet(gcomp, driverClock=clock, rc=rc)
+    call NUOPC_MediatorGet(mediator, driverClock=clock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -596,8 +596,8 @@ module MED
 
   !-----------------------------------------------------------------------------
   
-  subroutine CheckImport_fast_after(gcomp, rc)
-    type(ESMF_GridComp)   :: gcomp
+  subroutine CheckImport_fast_after(mediator, rc)
+    type(ESMF_GridComp)   :: mediator
     integer, intent(out)  :: rc
     
     ! This is the routine that ensures that the import Fields come in with
@@ -617,7 +617,7 @@ module MED
     rc = ESMF_SUCCESS
     
     ! query the Component for its Clock and importState
-    call ESMF_GridCompGet(gcomp, clock=clock, importState=importState, rc=rc)
+    call ESMF_GridCompGet(mediator, clock=clock, importState=importState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -657,8 +657,8 @@ module MED
 
   !-----------------------------------------------------------------------------
   
-  subroutine TimestampExport_fast_before(gcomp, rc)
-    type(ESMF_GridComp)   :: gcomp
+  subroutine TimestampExport_fast_before(mediator, rc)
+    type(ESMF_GridComp)   :: mediator
     integer, intent(out)  :: rc
     
     ! This is the routine that executes _after_ the "fast_before" mediator 
@@ -673,7 +673,7 @@ module MED
     rc = ESMF_SUCCESS
 
     ! query the Component for info
-    call ESMF_GridCompGet(gcomp, clock=clock, rc=rc)
+    call ESMF_GridCompGet(mediator, clock=clock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -697,8 +697,8 @@ module MED
 
   !-----------------------------------------------------------------------------
 
-  subroutine TimestampExport_fast_after(gcomp, rc)
-    type(ESMF_GridComp)   :: gcomp
+  subroutine TimestampExport_fast_after(mediator, rc)
+    type(ESMF_GridComp)   :: mediator
     integer, intent(out)  :: rc
     
     ! This is the routine that applies the time stamp on the export Fields
@@ -715,7 +715,7 @@ module MED
     rc = ESMF_SUCCESS
 
     ! query the Component for info
-    call ESMF_GridCompGet(gcomp, clock=clock, exportState=exportState, rc=rc)
+    call ESMF_GridCompGet(mediator, clock=clock, exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -732,18 +732,19 @@ module MED
 
   !-----------------------------------------------------------------------------
 
-  subroutine MediatorAdvance_slow(gcomp, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine MediatorAdvance_slow(mediator, rc)
+    type(ESMF_GridComp)  :: mediator
     integer, intent(out) :: rc
     
     ! local variables
-    type(ESMF_Clock)              :: clock
-    type(ESMF_State)              :: importState, exportState
+    type(ESMF_Clock)            :: clock
+    type(ESMF_State)            :: importState, exportState
+    character(len=160)          :: msgString
 
     rc = ESMF_SUCCESS
     
     ! query the Component for its clock, importState and exportState
-    call ESMF_GridCompGet(gcomp, clock=clock, importState=importState, &
+    call ESMF_GridCompGet(mediator, clock=clock, importState=importState, &
       exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -758,42 +759,53 @@ module MED
     ! held by Fields in the exportState.
     
     ! After this routine returns the generic Mediator will correctly
-    ! timestamp the export Fields and update the Mediator Clock to:
+    ! timestamp the export Fields at currTime, and update the Mediator Clock to:
     !
     !       currTime -> currTime + timeStep
     !
     ! Where the timeStep is equal to the parent timeStep.
     
     call ESMF_ClockPrint(clock, options="currTime", &
-      preString="-------->MED Advance_slow() mediating for: ", rc=rc)
+      preString="------>Advancing MED slow() from: ", unit=msgString, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
     call ESMF_ClockPrint(clock, options="stopTime", &
-      preString="----------------> model time step to: ", rc=rc)
+      preString="----------------------------> to: ", unit=msgString, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-     
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
   end subroutine
 
   !-----------------------------------------------------------------------------
 
-  subroutine MediatorAdvance_fast_before(gcomp, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine MediatorAdvance_fast_before(mediator, rc)
+    type(ESMF_GridComp)  :: mediator
     integer, intent(out) :: rc
     
     ! local variables
-    type(ESMF_Clock)              :: clock
-    type(ESMF_State)              :: importState, exportState
+    type(ESMF_Clock)            :: clock
+    type(ESMF_State)            :: importState, exportState
+    character(len=160)          :: msgString
 
     rc = ESMF_SUCCESS
     
     ! query the Component for its clock, importState and exportState
-    call ESMF_GridCompGet(gcomp, clock=clock, importState=importState, &
+    call ESMF_GridCompGet(mediator, clock=clock, importState=importState, &
       exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -808,21 +820,33 @@ module MED
     ! held by Fields in the exportState.
     
     ! After this routine returns the generic Mediator will correctly
-    ! timestamp the export Fields and update the Mediator Clock to:
+    ! timestamp the export Fields at currTime, and update the Mediator Clock to:
     !
     !       currTime -> currTime + timeStep
     !
     ! Where the timeStep is equal to the parent timeStep.
     
     call ESMF_ClockPrint(clock, options="currTime", &
-      preString="-------->MED Advance_fast_before() mediating for: ", rc=rc)
+      preString="------>Advancing MED fast_before() from: ", unit=msgString, &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
     call ESMF_ClockPrint(clock, options="stopTime", &
-      preString="----------------> model time step to: ", rc=rc)
+      preString="-----------------------------------> to: ", unit=msgString, &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -832,18 +856,19 @@ module MED
 
   !-----------------------------------------------------------------------------
 
-  subroutine MediatorAdvance_fast_after(gcomp, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine MediatorAdvance_fast_after(mediator, rc)
+    type(ESMF_GridComp)  :: mediator
     integer, intent(out) :: rc
     
     ! local variables
-    type(ESMF_Clock)              :: clock
-    type(ESMF_State)              :: importState, exportState
+    type(ESMF_Clock)            :: clock
+    type(ESMF_State)            :: importState, exportState
+    character(len=160)          :: msgString
 
     rc = ESMF_SUCCESS
     
     ! query the Component for its clock, importState and exportState
-    call ESMF_GridCompGet(gcomp, clock=clock, importState=importState, &
+    call ESMF_GridCompGet(mediator, clock=clock, importState=importState, &
       exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -858,28 +883,40 @@ module MED
     ! held by Fields in the exportState.
     
     ! After this routine returns the generic Mediator will correctly
-    ! timestamp the export Fields and update the Mediator Clock to:
+    ! timestamp the export Fields at currTime, and update the Mediator Clock to:
     !
     !       currTime -> currTime + timeStep
     !
     ! Where the timeStep is equal to the parent timeStep.
     
     call ESMF_ClockPrint(clock, options="currTime", &
-      preString="-------->MED Advance_fast_after() mediating for: ", rc=rc)
+      preString="------>Advancing MED fast_after() from: ", unit=msgString, &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
     call ESMF_ClockPrint(clock, options="stopTime", &
-      preString="----------------> model time step to: ", rc=rc)
+      preString="----------------------------------> to: ", unit=msgString, &
+      rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-     
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
   end subroutine
-  
+     
   !-----------------------------------------------------------------------------
 
 end module

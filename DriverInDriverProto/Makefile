@@ -69,3 +69,6 @@ info:
 
 edit:
 	nedit mainApp.F90 driverParentComp.F90 driverChildComp.F90 atm.F90 ocn.F90 &
+
+run:
+	mpirun -np 4 ./mainApp

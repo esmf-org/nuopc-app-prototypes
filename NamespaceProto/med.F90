@@ -324,18 +324,19 @@ module MED
 
   !-----------------------------------------------------------------------------
 
-  subroutine MediatorAdvance(gcomp, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine MediatorAdvance(mediator, rc)
+    type(ESMF_GridComp)  :: mediator
     integer, intent(out) :: rc
     
     ! local variables
-    type(ESMF_Clock)              :: clock
-    type(ESMF_State)              :: importState, exportState
+    type(ESMF_Clock)            :: clock
+    type(ESMF_State)            :: importState, exportState
+    character(len=160)          :: msgString
 
     rc = ESMF_SUCCESS
     
     ! query the Component for its clock, importState and exportState
-    call ESMF_GridCompGet(gcomp, clock=clock, importState=importState, &
+    call ESMF_GridCompGet(mediator, clock=clock, importState=importState, &
       exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -350,26 +351,36 @@ module MED
     ! held by Fields in the exportState.
     
     ! After this routine returns the generic Mediator will correctly
-    ! timestamp the export Fields and update the Mediator Clock to:
+    ! timestamp the export Fields at currTime, and update the Mediator Clock to:
     !
     !       currTime -> currTime + timeStep
     !
     ! Where the timeStep is equal to the parent timeStep.
     
     call ESMF_ClockPrint(clock, options="currTime", &
-      preString="-------->MED Advance() mediating for: ", rc=rc)
+      preString="------>Advancing MED from: ", unit=msgString, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
     call ESMF_ClockPrint(clock, options="stopTime", &
-      preString="----------------> model time step to: ", rc=rc)
+      preString="---------------------> to: ", unit=msgString, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-     
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
   end subroutine
 
 end module

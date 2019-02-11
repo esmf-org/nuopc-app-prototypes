@@ -632,6 +632,7 @@ module IOComp
     type(ESMF_StateItem_Flag)   :: itemType
     real(ESMF_KIND_R8), pointer :: dataPtr(:,:)
     integer                     :: i,j
+    character(len=160)          :: msgString
     integer, save               :: slice=1
     character(len=5)            :: sChar
 
@@ -646,28 +647,29 @@ module IOComp
       return  ! bail out
 
     ! HERE THE MODEL ADVANCES: currTime -> currTime + timeStep
-    
-#ifdef PRINT    
-    call ESMF_ClockPrint(clock, options=currTime, ESMF_ClockPrint(clock, &
-      "------>Advancing IO from: ", rc=rc)
+    call ESMF_ClockPrint(clock, options="currTime", &
+      preString="------->Advancing IO from: ", unit=msgString, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
-    call ESMF_ClockGet(clock, currTime=currTime, timeStep=timeStep, rc=rc)
+    call ESMF_ClockPrint(clock, options="stopTime", &
+      preString="---------------------> to: ", unit=msgString, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
-    call NUOPC_TimePrint(currTime + timeStep, &
-      "--------------------------------> to: ", rc=rc)
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-#endif
 
     ! write out the Fields in the importState
 #ifdef SINGLEFILE

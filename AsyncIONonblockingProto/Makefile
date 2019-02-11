@@ -68,3 +68,6 @@ info:
 
 edit:
 	nedit asyncIOApp.F90 asyncIODriver.F90 model.F90 io.F90 conn.F90 &
+        
+run:
+	mpirun -np 4 ./asyncIOApp
