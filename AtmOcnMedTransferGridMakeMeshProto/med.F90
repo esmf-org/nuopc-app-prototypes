@@ -863,9 +863,10 @@ module MED
     integer, intent(out) :: rc
     
     ! local variables
-    type(ESMF_Clock)              :: clock
-    type(ESMF_State)              :: importState, exportState
-    integer                       :: itemCount(4)
+    type(ESMF_Clock)            :: clock
+    type(ESMF_State)            :: importState, exportState
+    integer                     :: itemCount(4)
+    character(len=160)          :: msgString
 
     rc = ESMF_SUCCESS
     
@@ -880,7 +881,24 @@ module MED
     ! HERE THE MEDIATOR ADVANCES: currTime -> currTime + timeStep
     
     call ESMF_ClockPrint(clock, options="currTime", &
-      preString="------>Advancing Mediator from: ", rc=rc)
+      preString="------>Advancing MED from: ", unit=msgString, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    call ESMF_ClockPrint(clock, options="stopTime", &
+      preString="---------------------> to: ", unit=msgString, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -914,13 +932,6 @@ module MED
     print *, "item counts for: frOCN, toOCN, frATM, toATM:", &
       itemCount
     
-    call ESMF_ClockPrint(clock, options="stopTime", &
-      preString="--------------------------------> to: ", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
   end subroutine
 
   subroutine generate_xgrid(mediator, rc) 

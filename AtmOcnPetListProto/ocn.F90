@@ -231,13 +231,13 @@ module OCN
     integer, intent(out) :: rc
     
     ! local variables
-    type(ESMF_Clock)              :: clock
-    type(ESMF_State)              :: importState, exportState
-    type(ESMF_Time)               :: currTime
-    type(ESMF_TimeInterval)       :: timeStep
-    type(ESMF_VM)                 :: vm
-    integer                       :: localPet, localPeCount
-    character(len=160)            :: msg
+    type(ESMF_Clock)            :: clock
+    type(ESMF_State)            :: importState, exportState
+    type(ESMF_Time)             :: currTime
+    type(ESMF_TimeInterval)     :: timeStep
+    type(ESMF_VM)               :: vm
+    integer                     :: localPet, localPeCount
+    character(len=160)          :: msgString
 
     rc = ESMF_SUCCESS
     
@@ -270,13 +270,14 @@ module OCN
 
     ! Now can use OpenMP for fine grained parallelism...
     ! Here just write info about the PET-local OpenMP threads to Log.
-!$omp parallel private(msg)
+!$omp parallel private(msgString)
 !$omp critical
-!$    write(msg,'(A,I4,A,I4,A,I4,A,I4)') "thread_num=", omp_get_thread_num(), &
+!$    write(msgString,'(A,I4,A,I4,A,I4,A,I4)') &
+!$      "thread_num=", omp_get_thread_num(), &
 !$      "   num_threads=", omp_get_num_threads(), &
 !$      "   max_threads=", omp_get_max_threads(), &
 !$      "   num_procs=", omp_get_num_procs()
-!$    call ESMF_LogWrite(msg, ESMF_LOGMSG_INFO, rc=rc)
+!$    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
 !$omp end critical
 !$omp end parallel
 
@@ -290,7 +291,12 @@ module OCN
     ! stopTime of the internal Clock has been reached.
     
     call ESMF_ClockPrint(clock, options="currTime", &
-      preString="------>Advancing OCN from: ", rc=rc)
+      preString="------>Advancing OCN from: ", unit=msgString, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -303,7 +309,12 @@ module OCN
       return  ! bail out
     
     call ESMF_TimePrint(currTime + timeStep, &
-      preString="--------------------------------> to: ", rc=rc)
+      preString="---------------------> to: ", unit=msgString, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

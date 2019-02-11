@@ -68,3 +68,6 @@ info:
 
 edit:
 	nedit esmApp.F90 esm.F90 atm.F90 ocn.F90 med.F90 &
+
+run:
+	mpirun -np 4 ./esmApp
