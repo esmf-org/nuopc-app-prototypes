@@ -192,6 +192,7 @@ TestProto AtmOcnFDSynoProto                 esmApp
 TestProto AtmOcnIceSimpleImplicitProto      esmApp
 TestProto AtmOcnImplicitProto               esmApp
 TestProto AtmOcnLndProto                    esmApp
+TestProto AtmOcnLogNoneProto                esmApp
 TestProto AtmOcnMedIngestFromConfigProto    esmApp
 TestProto AtmOcnMedIngestFromInternalProto  esmApp
 TestProto AtmOcnMedPetListProto             esmApp
@@ -208,6 +209,7 @@ TestProto AtmOcnSimpleImplicitProto         esmApp
 TestProto AtmOcnTransferGridProto           esmApp
 TestProto AtmOcnTransferLocStreamProto      esmApp
 TestProto AtmOcnTransferMeshProto           esmApp
+TestProto CustomFieldDictionaryProto        mainApp
 TestProto DriverInDriverProto               mainApp
 TestProto DriverInDriverProtoIPDv02         mainApp
 TestProto DynPhyProto                       esmApp

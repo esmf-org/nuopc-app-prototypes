@@ -168,3 +168,6 @@ info:
 
 edit:
 	nedit esmApp.F90 esm.F90 &
+
+run:
+	mpirun -np 4 ./esmApp

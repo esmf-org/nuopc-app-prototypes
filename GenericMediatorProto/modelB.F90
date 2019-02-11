@@ -221,10 +221,11 @@ module ModelB
     integer, intent(out) :: rc
     
     ! local variables
-    type(ESMF_Clock)              :: clock
-    type(ESMF_State)              :: importState, exportState
-    type(ESMF_Time)               :: currTime
-    type(ESMF_TimeInterval)       :: timeStep
+    type(ESMF_Clock)            :: clock
+    type(ESMF_State)            :: importState, exportState
+    type(ESMF_Time)             :: currTime
+    type(ESMF_TimeInterval)     :: timeStep
+    character(len=160)          :: msgString
 
     rc = ESMF_SUCCESS
     
@@ -239,7 +240,12 @@ module ModelB
     ! HERE THE MODEL ADVANCES: currTime -> currTime + timeStep
     
     call ESMF_ClockPrint(clock, options="currTime", &
-      preString="------>Advancing ModelB from: ", rc=rc)
+      preString="------>Advancing ModelB from: ", unit=msgString, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -252,7 +258,12 @@ module ModelB
       return  ! bail out
     
     call ESMF_TimePrint(currTime + timeStep, &
-      preString="--------------------------------> to: ", rc=rc)
+      preString="------------------------> to: ", unit=msgString, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

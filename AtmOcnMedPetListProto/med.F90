@@ -241,8 +241,9 @@ module MED
     integer, intent(out) :: rc
     
     ! local variables
-    type(ESMF_Clock)              :: clock
-    type(ESMF_State)              :: importState, exportState
+    type(ESMF_Clock)            :: clock
+    type(ESMF_State)            :: importState, exportState
+    character(len=160)          :: msgString
 
     rc = ESMF_SUCCESS
     
@@ -262,26 +263,36 @@ module MED
     ! held by Fields in the exportState.
     
     ! After this routine returns the generic Mediator will correctly
-    ! timestamp the export Fields and update the Mediator Clock to:
+    ! timestamp the export Fields at currTime, and update the Mediator Clock to:
     !
     !       currTime -> currTime + timeStep
     !
     ! Where the timeStep is equal to the parent timeStep.
     
     call ESMF_ClockPrint(clock, options="currTime", &
-      preString="-------->MED Advance() mediating for: ", rc=rc)
+      preString="------>Advancing MED from: ", unit=msgString, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
     call ESMF_ClockPrint(clock, options="stopTime", &
-      preString="----------------> model time step to: ", rc=rc)
+      preString="---------------------> to: ", unit=msgString, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-     
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
   end subroutine
 
 end module

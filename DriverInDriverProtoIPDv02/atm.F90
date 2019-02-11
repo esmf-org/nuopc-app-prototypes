@@ -231,6 +231,7 @@ module ATM
     type(ESMF_Clock)            :: clock
     type(ESMF_State)            :: importState, exportState
     integer, save               :: slice=1
+    character(len=160)          :: msgString
 
     rc = ESMF_SUCCESS
     
@@ -250,14 +251,24 @@ module ATM
     ! for this call of the ModelAdvance() routine.
     
     call ESMF_ClockPrint(clock, options="currTime", &
-      preString="------>Advancing ATM from: ", rc=rc)
+      preString="------>Advancing ATM from: ", unit=msgString, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
     call ESMF_ClockPrint(clock, options="stopTime", &
-      preString="---------------------> to: ", rc=rc)
+      preString="---------------------> to: ", unit=msgString, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -289,12 +300,13 @@ module ATM
     integer, intent(out)  :: rc
     
     ! local variables
-    type(ESMF_Clock)              :: clock
-    type(ESMF_State)              :: importState, exportState
-    type(ESMF_Time)               :: time
-    type(ESMF_Field)              :: field
-    logical                       :: neededCurrent
-    
+    type(ESMF_Clock)            :: clock
+    type(ESMF_State)            :: importState, exportState
+    type(ESMF_Time)             :: time
+    type(ESMF_Field)            :: field
+    logical                     :: neededCurrent
+    character(len=160)          :: msgString
+
     rc = ESMF_SUCCESS
 
     ! query the Component for its clock, importState and exportState
@@ -323,12 +335,17 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
       
-call ESMF_TimePrint(time, &
-  preString="ATM DataInitialize time: ", rc=rc)
-if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-  line=__LINE__, &
-  file=__FILE__)) &
-  return  ! bail out
+    call ESMF_TimePrint(time, &
+      preString="ATM DataInitialize time: ", unit=msgString, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 
     if (neededCurrent) then
       ! indicate that data initialization is complete (breaking out of init-loop)

@@ -443,10 +443,11 @@ module DYN
     integer, intent(out) :: rc
     
     ! local variables
-    type(ESMF_Clock)              :: clock
-    type(ESMF_State)              :: importState, exportState
-    integer, save                 :: step=1
-    type(ESMF_FileStatus_Flag)    :: status
+    type(ESMF_Clock)            :: clock
+    type(ESMF_State)            :: importState, exportState
+    integer, save               :: step=1
+    type(ESMF_FileStatus_Flag)  :: status
+    character(len=160)          :: msgString
 
     rc = ESMF_SUCCESS
     
@@ -466,14 +467,24 @@ module DYN
     ! for this call of the ModelAdvance() routine.
     
     call ESMF_ClockPrint(clock, options="currTime", &
-      preString="------>Advancing DYN from: ", rc=rc)
+      preString="------>Advancing DYN from: ", unit=msgString, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     
     call ESMF_ClockPrint(clock, options="stopTime", &
-      preString="---------------------> to: ", rc=rc)
+      preString="---------------------> to: ", unit=msgString, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

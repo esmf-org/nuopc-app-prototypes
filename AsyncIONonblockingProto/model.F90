@@ -201,6 +201,7 @@ module ModelComp
     type(ESMF_StateItem_Flag)   :: itemType
     real(ESMF_KIND_R8), pointer :: dataPtr(:,:), lonPtr(:), latPtr(:)
     integer                     :: i,j, k
+    character(len=160)          :: msgString
     integer, save               :: slice=1
     integer, parameter          :: kWaste=40
 
@@ -215,21 +216,17 @@ module ModelComp
       return  ! bail out
 
     ! HERE THE MODEL ADVANCES: currTime -> currTime + timeStep
-#ifdef PRINT    
-    call ESMF_ClockPrint(clock, options=currTime, ESMF_ClockPrint(clock, &
-      "------>Advancing Model from: ", rc=rc)
+    call ESMF_ClockPrint(clock, options="currTime", &
+      preString="---->Advancing Model from: ", unit=msgString, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
-    call ESMF_ClockPrint(clock, options=stopTime, &
-      "--------------------------------> to: ", rc=rc)
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-#endif
 
     ! update the "pmsl" field
     call ESMF_StateGet(exportState, itemName="pmsl", itemType=itemType, rc=rc)
