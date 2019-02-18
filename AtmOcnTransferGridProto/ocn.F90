@@ -186,6 +186,9 @@ module OCN
     integer               :: dimCount, rank
     integer               :: coordDimMap(2,2)
     character(160)        :: msgString
+#ifdef TEST_MULTI_TILE_GRID
+    type(ESMF_GridComp)   :: ioComp
+#endif
 
     rc = ESMF_SUCCESS
     
@@ -753,7 +756,33 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
 
-#ifndef TEST_MULTI_TILE_GRID
+#ifdef TEST_MULTI_TILE_GRID
+    ioComp = ESMFIO_Create(gridOut, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_StateGet(exportState, itemName="ssh", field=field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMFIO_Write(ioComp, "fields_ocn_init_export.nc", &
+      (/field/), rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#if 0
+    ! Currently do not destroy the ioComp here, because it will trigger
+    ! an issue in StateReconcile(), which looks like a bug to me.
+    call ESMFIO_Destroy(ioComp, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+#else
 ! Write() does not currently support fields on multi-tile grids
     ! finally write the destination side (which is located in the exportState)
     ! to file for inspection
