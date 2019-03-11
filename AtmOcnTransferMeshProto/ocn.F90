@@ -127,6 +127,7 @@ module OCN
   
   !-----------------------------------------------------------------------------
 
+#define TEST_UNDIST_DIM
   subroutine InitializeRealize(model, importState, exportState, clock, rc)
     type(ESMF_GridComp)  :: model
     type(ESMF_State)     :: importState, exportState
@@ -136,6 +137,9 @@ module OCN
     ! local variables    
     type(ESMF_Grid)           :: gridIn, gridOut
     type(ESMF_Mesh)           :: meshIn, meshOut
+#ifdef TEST_UNDIST_DIM
+    type(ESMF_Field)          :: field
+#endif
     character(160)            :: msgString
     integer                   :: dimCount, numOwnedElements, numOwnedNodes
     character(*), parameter   :: rName="InitializeRealize"
@@ -245,6 +249,20 @@ module OCN
 #endif
 
     ! importable field: air_pressure_at_sea_level
+#ifdef TEST_UNDIST_DIM
+    field = ESMF_FieldCreate(meshIn, name="pmsl", &
+      typekind=ESMF_TYPEKIND_R8, meshloc=ESMF_MESHLOC_ELEMENT, &
+      ungriddedLbound=(/1/), ungriddedUbound=(/4/), rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_Realize(importState, field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#else
     call NUOPC_Realize(importState, meshIn, fieldName="pmsl", &
       typekind=ESMF_TYPEKIND_R8, meshloc=ESMF_MESHLOC_ELEMENT, &
       selection="realize_connected_remove_others", rc=rc)
@@ -252,6 +270,7 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     
     ! --- EXPORT -------------------------------------------------------------
 #define READ_MESHOUT_FROM_FILE
