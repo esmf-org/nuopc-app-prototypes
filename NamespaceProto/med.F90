@@ -68,7 +68,7 @@ module MED
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompSpecialize(gcomp, specLabel=mediator_label_TimestampExport, &
-      specRoutine=TimestampExport, rc=rc)
+      specRoutine=TimestampExport, specPhaseLabel="RunPhase1", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
