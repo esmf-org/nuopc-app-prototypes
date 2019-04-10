@@ -69,8 +69,9 @@ module ESM
     
     ! set verbosity on driver
     verbosity = 0 ! reset
-    verbosity = ibset(verbosity,0)  ! log basic intro/extro and indentation
-    verbosity = ibset(verbosity,13) ! log basic intro/extro and indentation
+    verbosity = ibset(verbosity,0)  ! log basic intro/extro with indentation
+    verbosity = ibset(verbosity,11) ! log info about data dependency during init
+    verbosity = ibset(verbosity,13) ! log component creation
     write(attrStr,"(I10)") verbosity
     call NUOPC_CompAttributeSet(driver, name="Verbosity", value=attrStr, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -106,8 +107,8 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-#ifdef HIGH_PE_COUNT_PER_PET_WORKING
-!TODO: fix this to work with GeomObject transfer -> currently hanging!!!
+#define MORE_THAN_ONE_PE_PER_PET_WORKING_ATM
+#ifdef MORE_THAN_ONE_PE_PER_PET_WORKING_ATM
     call ESMF_AttributeSet(info, name="maxPeCountPerPet", value=2, rc=rc)
 #else
     call ESMF_AttributeSet(info, name="maxPeCountPerPet", value=1, rc=rc)
@@ -128,7 +129,7 @@ module ESM
     petCountOCN = min(2,petCount/2) ! don't give OCN more than 2 PETs
     petCountATM = petCount - petCountOCN
 
-     ! SetServices for ATM with petList on first half of PETs
+    ! SetServices for ATM with petList on first half of PETs
     allocate(petList(petCountATM))
     do i=1, petCountATM
       petList(i) = i-1 ! PET labeling goes from 0 to petCount-1
@@ -146,6 +147,17 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     
+#define MORE_THAN_ONE_PE_PER_PET_WORKING_OCN
+#ifdef MORE_THAN_ONE_PE_PER_PET_WORKING_OCN
+    call ESMF_AttributeSet(info, name="maxPeCountPerPet", value=2, rc=rc)
+#else
+    call ESMF_AttributeSet(info, name="maxPeCountPerPet", value=1, rc=rc)
+#endif
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! SetServices for OCN with petList on second half of PETs
     allocate(petList(petCountOCN))
     do i=1, petCountOCN
@@ -171,7 +183,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="9", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -184,7 +196,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="9", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
