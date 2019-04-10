@@ -17,8 +17,8 @@ module MED
   use ESMF
   use NUOPC
   use NUOPC_Mediator, only: &
-    model_routine_SS    => SetServices, &
-    model_label_Advance => label_Advance
+    mediator_routine_SS             => SetServices, &
+    mediator_label_Advance          => label_Advance
   
   implicit none
   
@@ -37,7 +37,7 @@ module MED
     rc = ESMF_SUCCESS
     
     ! the NUOPC model component will register the generic methods
-    call NUOPC_CompDerive(mediator, model_routine_SS, rc=rc)
+    call NUOPC_CompDerive(mediator, mediator_routine_SS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -58,7 +58,7 @@ module MED
       return  ! bail out
     
     ! attach specializing method(s)
-    call NUOPC_CompSpecialize(mediator, specLabel=model_label_Advance, &
+    call NUOPC_CompSpecialize(mediator, specLabel=mediator_label_Advance, &
       specRoutine=MediatorAdvance, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &

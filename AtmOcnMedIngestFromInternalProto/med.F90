@@ -95,7 +95,7 @@ module MED
 #ifdef TEST_WITH_CONDITIONAL_SENDING_FIELDS_on
     ! attach specializing method(s)
     call NUOPC_CompSpecialize(mediator, specLabel=label_TimestampExport, &
-      specRoutine=TimestampExport, rc=rc)
+      specRoutine=TimestampExport, specPhaseLabel="RunPhase1", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
