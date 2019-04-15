@@ -45,7 +45,7 @@ module MODEL
       return  ! bail out
     
     ! set entry point for methods that require specific implementation
-   call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
+    call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
       phaseLabelList=(/"IPDv00p1"/), userRoutine=InitializeP1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
