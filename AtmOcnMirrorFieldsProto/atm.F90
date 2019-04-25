@@ -9,7 +9,10 @@
 !==============================================================================
 
 ! Keep this macro active to test field mirroring
-#define REQUEST_FIELD_MIRRORING
+#define TEST_FIELD_MIRRORING
+
+! By default mirroring triggers GeomTransfer, but can turn it off
+#define TEST_GEOM_TRANSFER
 
 module ATM
 
@@ -62,18 +65,28 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifndef TEST_GEOM_TRANSFER
     call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
       phaseLabelList=(/"IPDv05p2"/), userRoutine=InitializeP2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
       phaseLabelList=(/"IPDv05p4"/), userRoutine=InitializeP4, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef TEST_GEOM_TRANSFER  
+    call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
+      phaseLabelList=(/"IPDv05p6"/), userRoutine=InitializeP6, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
     
     ! attach specializing method(s)
     call NUOPC_CompSpecialize(model, specLabel=model_label_Advance, &
@@ -129,7 +142,7 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
       
-#ifdef REQUEST_FIELD_MIRRORING
+#ifdef TEST_FIELD_MIRRORING
     call NUOPC_SetAttribute(exportState, "FieldTransferPolicy", "transferAll", &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -169,7 +182,7 @@ module ATM
 
     rc = ESMF_SUCCESS
     
-#ifdef REQUEST_FIELD_MIRRORING
+#ifdef TEST_FIELD_MIRRORING
     ! Field mirroring on a State triggers that Fields are advertised with
     ! a TransferOfferGeomObject that is "opposite" to the field that that
     ! was mirrored. Here this means that by default TransferOfferGeomObject is
@@ -250,6 +263,9 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
+#ifndef TEST_GEOM_TRANSFER
+    ! Without GeomTransfer, must provide fully created fields here to realize
+    
     ! exportable field: air_pressure_at_sea_level
     field = ESMF_FieldCreate(name="air_pressure_at_sea_level", grid=gridOut, &
       typekind=ESMF_TYPEKIND_R8, rc=rc)
@@ -262,7 +278,7 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-
+    
     ! exportable field: surface_net_downward_shortwave_flux
     field = ESMF_FieldCreate(name="surface_net_downward_shortwave_flux", &
       grid=gridOut, typekind=ESMF_TYPEKIND_R8, rc=rc)
@@ -275,9 +291,57 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 
   end subroutine
   
+  !-----------------------------------------------------------------------------
+
+  subroutine InitializeP6(model, importState, exportState, clock, rc)
+    type(ESMF_GridComp)  :: model
+    type(ESMF_State)     :: importState, exportState
+    type(ESMF_Clock)     :: clock
+    integer, intent(out) :: rc
+    
+    ! local variables    
+    type(ESMF_Field)        :: field
+    
+    rc = ESMF_SUCCESS
+    
+#ifdef TEST_GEOM_TRANSFER
+    ! With GeomTransfer, just need to complete the empty Fields that have Grid
+    
+    ! air_pressure_at_sea_level
+    call ESMF_StateGet(exportState, field=field, &
+      itemName="air_pressure_at_sea_level", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! the transferred Grid is already set, allocate memory for data by complete
+    call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! surface_net_downward_shortwave_flux
+    call ESMF_StateGet(exportState, field=field, &
+      itemName="surface_net_downward_shortwave_flux", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! the transferred Grid is already set, allocate memory for data by complete
+    call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
+  end subroutine
+
   !-----------------------------------------------------------------------------
 
   subroutine DataInitialize(model, rc)
