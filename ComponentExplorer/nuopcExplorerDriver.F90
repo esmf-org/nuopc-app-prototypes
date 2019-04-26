@@ -36,8 +36,14 @@ module nuopcExplorerDriver
 !    use NUOPC_Compliance_Driver, only:      registerIC_Driver => registerIC
 
 
-#define xstr(a) str(a)
-#define str(a) #a
+#if defined(__GFORTRAN__) || defined(NAGFOR)
+# define STRINGIFY_START(X) "&
+# define STRINGIFY_END(X) &X"
+#else /* default stringification */
+# define STRINGIFY_(X) #X
+# define STRINGIFY_START(X) &
+# define STRINGIFY_END(X) STRINGIFY_(X)
+#endif
 
 #ifdef FRONT_COMP
   use FRONT_COMP, only: compSS => SetServices
@@ -60,8 +66,8 @@ module nuopcExplorerDriver
   
     public SetServices
   
-!-----------------------------------------------------------------------------
-contains
+    !-----------------------------------------------------------------------------
+    contains
     !-----------------------------------------------------------------------------
 
     subroutine SetServices(driver, rc)
@@ -90,7 +96,7 @@ contains
 
         ! set entry point for an internal initialize phase 2
         call NUOPC_CompSetInternalEntryPoint(driver, ESMF_METHOD_INITIALIZE, &
-            phaseLabelList=(/"IPDv00p2"/), userRoutine=InitializeP2, rc=rc)
+            phaseLabelList=(/"IPDv05p2"/), userRoutine=InitializeP2, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
@@ -185,6 +191,11 @@ contains
             call ESMF_Finalize(endflag=ESMF_END_ABORT)
 #endif
 
+        call NUOPC_CompAttributeSet(driver, name="Verbosity", value="low", rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
     end subroutine
 
     !-----------------------------------------------------------------------------
@@ -207,9 +218,13 @@ contains
         type(ESMF_CplComp)            :: drv2comp, comp2drv
         character(len=80)             :: enable_compliance_check
         character(len=80)             :: enable_field_mirroring
+        character(len=80)             :: compName        
 
         rc = ESMF_SUCCESS
     
+        compName = STRINGIFY_START(FRONT_COMP_LABEL)
+          STRINGIFY_END(FRONT_COMP_LABEL)
+
         ! query Driver for localPet
         call ESMF_GridCompGet(driver, localPet=localPet, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -223,7 +238,8 @@ contains
     if (localPet==0) then
       print *, "Exploring a component with Fortran module or C header front..."
     endif
-    call NUOPC_DriverAddComp(driver, xstr(FRONT_COMP_LABEL), compSS, comp=child, rc=rc)
+    
+    call NUOPC_DriverAddComp(driver, compName, compSS, comp=child, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -235,7 +251,7 @@ contains
       print *, "Exploring a component with a shared object front, known at "// &
         "compile time..."
     endif
-    call NUOPC_DriverAddComp(driver, xstr(FRONT_COMP_LABEL), &
+    call NUOPC_DriverAddComp(driver, compName, &
       sharedObj="./"//FRONT_SO_COMP, comp=child, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -282,14 +298,14 @@ contains
             file=__FILE__)) &
             return  ! bail out
     
-        call NUOPC_DriverAddComp(driver, xstr(FRONT_COMP_LABEL), &
+        call NUOPC_DriverAddComp(driver, compName, &
             sharedObj=trim(soName), comp=child, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
 #endif
-        call NUOPC_CompAttributeSet(child, name="Verbosity", value="1", rc=rc)
+        call NUOPC_CompAttributeSet(child, name="Verbosity", value="low", rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
@@ -308,20 +324,20 @@ contains
         if (trim(enable_field_mirroring)=="yes") then
 
             call NUOPC_DriverAddComp(driver, srcCompLabel="explorerDriver", &
-                dstCompLabel=xstr(FRONT_COMP_LABEL), compSetServicesRoutine=cplSS, &
+                dstCompLabel=compName, compSetServicesRoutine=cplSS, &
                 comp=drv2comp, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                 line=__LINE__, &
                 file=__FILE__)) &
                 return  ! bail out
             call NUOPC_CompAttributeSet(drv2comp, name="Verbosity", &
-                value="1", rc=rc)
+                value="low", rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                 line=__LINE__, &
                 file=__FILE__)) &
                 return  ! bail out
 
-            call NUOPC_DriverAddComp(driver, srcCompLabel=xstr(FRONT_COMP_LABEL), &
+            call NUOPC_DriverAddComp(driver, srcCompLabel=compName, &
                 dstCompLabel="explorerDriver", compSetServicesRoutine=cplSS, &
                 comp=comp2drv, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -329,7 +345,7 @@ contains
                 file=__FILE__)) &
                 return  ! bail out
             call NUOPC_CompAttributeSet(comp2drv, name="Verbosity", &
-                value="1", rc=rc)
+                value="low", rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                 line=__LINE__, &
                 file=__FILE__)) &
@@ -516,8 +532,13 @@ contains
         character(len=80)  :: enable_field_mirroring
         type(ESMF_GridComp) :: comp
         type(ESMF_State)   :: compImport, compExport
+        character(len=80)             :: compName        
 
         rc = ESMF_SUCCESS
+    
+        compName = STRINGIFY_START(FRONT_COMP_LABEL)
+          STRINGIFY_END(FRONT_COMP_LABEL)
+
         !print *, "Inside nuopcExplorerDriver.InitializeP1"
 
         call ESMF_AttributeGet(driver, name="enable_field_mirroring", &
@@ -529,7 +550,7 @@ contains
             call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
         if (trim(enable_field_mirroring)=="yes") then
-            call NUOPC_DriverGetComp(driver, compLabel=xstr(FRONT_COMP_LABEL), &
+            call NUOPC_DriverGetComp(driver, compLabel=compName, &
                 comp=comp, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                 line=__LINE__, &
@@ -1254,7 +1275,12 @@ contains
         type(ESMF_GridComp)  :: driver
         integer, intent(out) :: rc
 
+        character(len=80)             :: compName        
+
         rc = ESMF_SUCCESS
+    
+        compName = STRINGIFY_START(FRONT_COMP_LABEL)
+          STRINGIFY_END(FRONT_COMP_LABEL)
 
         !print *, "Resetting run sequence"
 
@@ -1273,21 +1299,21 @@ contains
             return  ! bail out
 
         call NUOPC_DriverAddRunElement(driver, slot=1, &
-            srcCompLabel="explorerDriver", dstCompLabel=xstr(FRONT_COMP_LABEL), rc=rc)
+            srcCompLabel="explorerDriver", dstCompLabel=compName, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
 
         call NUOPC_DriverAddRunElement(driver, slot=1, &
-            srcCompLabel=xstr(FRONT_COMP_LABEL), dstCompLabel="explorerDriver", rc=rc)
+            srcCompLabel=compName, dstCompLabel="explorerDriver", rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
 
         call NUOPC_DriverAddRunElement(driver, slot=1, &
-            compLabel=xstr(FRONT_COMP_LABEL), rc=rc)
+            compLabel=compName, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
@@ -1348,8 +1374,7 @@ contains
   
         deallocate(connectorList)
 
-    end subroutine				
-
+    end subroutine
 
   !-----------------------------------------------------------------------------
   
