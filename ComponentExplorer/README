@@ -1,8 +1,7 @@
 README for the NUOPC Component Explorer
 ---------------------------------------
 
-Dependencies:
-  - ESMF v7.0.0 beta
+An application to explore NUOPC compliant components.
   
 Description:
 
