@@ -17,7 +17,7 @@ Description:
              supplying the component's makefile fragment as a command line
              argument:
              
-             ./nuopcExplorerScript <component-mk-file>
+             ./nuopcExplorerScript <path/component-mk-file> [<comp-label>]
              
              The "nuopcExplorerScript" analyzes the component's makefile
              fragment and prints relevant information to stdout. The last step
