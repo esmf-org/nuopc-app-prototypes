@@ -48,16 +48,11 @@ program explorerApp
   type(ESMF_TimeInterval) :: timeStep
   type(ESMF_Clock)        :: clock
   
-  character(len=80)       :: filter_initialize_phases
-
   character(len=80)       :: enable_run_string
   logical                 :: enable_run
   
   character(len=80)       :: enable_finalize_string
   logical                 :: enable_finalize
-  
-  character(len=80)       :: enable_compliance_check
-  character(len=80)       :: enable_field_mirroring
   
   type(ESMF_State) :: importState, exportState
 
@@ -69,6 +64,12 @@ program explorerApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
     
+  call ESMF_LogSet(flush=.true., rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
   call ESMF_VMGet(vm, localPet=localPet, petCount=petCount, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
@@ -252,7 +253,7 @@ program explorerApp
     print *, "  step_seconds: ", step_seconds
   endif
   
-#if 0    
+#if 0
   call ESMF_ClockPrint(clock, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
@@ -260,13 +261,6 @@ program explorerApp
     call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
 #endif
 
-  call ESMF_ConfigGetAttribute(config, filter_initialize_phases, &
-    label="filter_initialize_phases:", rc=rc)
-  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-    line=__LINE__, &
-    file=__FILE__)) &
-    call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
-  
   call ESMF_ConfigGetAttribute(config, enable_run_string, &
     label="enable_run:", rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -291,20 +285,6 @@ program explorerApp
     enable_finalize = .true.
   endif
   
-  call ESMF_ConfigGetAttribute(config, enable_compliance_check, &
-    label="enable_compliance_check:", rc=rc)
-  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-    line=__LINE__, &
-    file=__FILE__)) &
-    call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
-
-  call ESMF_ConfigGetAttribute(config, enable_field_mirroring, &
-    label="enable_field_mirroring:", rc=rc)
-  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-    line=__LINE__, &
-    file=__FILE__)) &
-    call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
-  
   call ESMF_ConfigDestroy(config, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
@@ -317,40 +297,6 @@ program explorerApp
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  
-
-  ! Set Attributes on Driver
-  call ESMF_AttributeAdd(driver, &
-    convention="compexplorer", purpose="compexplorer", &
-    attrList=(/"filter_initialize_phases", &
-               "enable_compliance_check ", &
-               "enable_field_mirroring  "/), rc=rc)
-  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-    line=__LINE__, &
-    file=__FILE__)) &
-    call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  call ESMF_AttributeSet(driver, &
-    convention="compexplorer", purpose="compexplorer", &
-    name="filter_initialize_phases", value=filter_initialize_phases, rc=rc)
-  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-    line=__LINE__, &
-    file=__FILE__)) &
-    call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  call ESMF_AttributeSet(driver, &
-    convention="compexplorer", purpose="compexplorer", &
-    name="enable_compliance_check", value=enable_compliance_check, rc=rc)
-  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-    line=__LINE__, &
-    file=__FILE__)) &
-    call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  call ESMF_AttributeSet(driver, &
-    convention="compexplorer", purpose="compexplorer", &
-    name="enable_field_mirroring", value=enable_field_mirroring, rc=rc)
-  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-    line=__LINE__, &
-    file=__FILE__)) &
-    call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
   
   ! SetServices
   call ESMF_GridCompSetServices(driver, explorerDriverSS, userRc=urc, &
@@ -371,23 +317,6 @@ program explorerApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
   
-
-  if (trim(enable_compliance_check)=="yes") then
-    ! Explicitly register compliance IC for Driver
-    !TODO: future versions of ESMF/NUOPC may provide RUNTIME environemnt to 
-    !TODO: switch NUOPC component specific compliance checking on/off.
-    call ESMF_GridCompSetServices(driver, userRoutine=registerIC, &
-      userRc=urc, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  endif
-
   ! Call 0 phase Initialize
   call ESMF_GridCompInitialize(driver, phase=0, userRc=urc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -399,21 +328,34 @@ program explorerApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
+  ! Create importState and init NUOPC AttPack
   importState = ESMF_StateCreate(name="explorerDriver Import State", &
      stateintent=ESMF_STATEINTENT_IMPORT, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  call NUOPC_InitAttributes(importState, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
+  ! Create exportState and init NUOPC AttPack
   exportState = ESMF_StateCreate(name="explorerDriver Export State", &
      stateintent=ESMF_STATEINTENT_EXPORT, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  call NUOPC_InitAttributes(exportState, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
   ! Call Driver Initialize, with Clock to set Driver internal Clock
+  if (localPet==0) print *, "Calling into Initialize()..."
   call ESMF_GridCompInitialize(driver, importState=importState, &
     exportState=exportState, clock=clock, userRc=urc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -434,8 +376,10 @@ program explorerApp
     
   if (enable_run) then
     ! Call Driver Run, 
-    ! with Clock that stops from start to stop in one large timeStep
-    call ESMF_GridCompRun(driver, clock=clock, userRc=urc, rc=rc)
+    ! with Clock that steps from start to stop in one single timeStep
+    if (localPet==0) print *, "Calling into Run()..."
+    call ESMF_GridCompRun(driver, importState=importState, &
+      exportState=exportState, clock=clock, userRc=urc, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -448,7 +392,9 @@ program explorerApp
   
   if (enable_finalize) then
     ! Call Driver Finalize
-    call ESMF_GridCompFinalize(driver, userRc=urc, rc=rc)
+    if (localPet==0) print *, "Calling into Finalize()..."
+    call ESMF_GridCompFinalize(driver, importState=importState, &
+      exportState=exportState, userRc=urc, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -466,12 +412,33 @@ program explorerApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
   
+  ! Destroy the importState
+  call ESMF_StateDestroy(importState, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  
+  ! Destroy the importState
+  call ESMF_StateDestroy(ExportState, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  
+  ! Log
   call ESMF_LogWrite("explorerApp FINISHED", ESMF_LOGMSG_INFO, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
+  if (localPet==0) then
+    print *, "NUOPC Component Explorer App done."
+    print *, "See PET*.ESMF_LogFile's for additional information."
+    print *, "------------------------------------------------------------"
+  endif
+  
   ! Finalize ESMF
   call ESMF_Finalize()
   

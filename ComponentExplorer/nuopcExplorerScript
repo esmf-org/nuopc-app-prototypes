@@ -13,8 +13,8 @@
 # - greeting
 
 echo
-echo "NUOPC Component Explorer"
-echo "------------------------"
+echo "NUOPC Component Explorer Script"
+echo "-------------------------------"
 
 
 # - high level error checking
