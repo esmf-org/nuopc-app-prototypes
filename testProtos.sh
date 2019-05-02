@@ -183,45 +183,70 @@ echo ---------------------------------------------------------------------------
 echo
 }
 
-TestProto AsyncIOBlockingProto              asyncIOApp
-TestProto AsyncIONonblockingProto           asyncIOApp
-TestProto AtmOcnConProto                    esmApp
-TestProto AtmOcnCplListProto                esmApp
-TestProto AtmOcnCplSetProto                 esmApp
-TestProto AtmOcnFDSynoProto                 esmApp
-TestProto AtmOcnIceSimpleImplicitProto      esmApp
-TestProto AtmOcnImplicitProto               esmApp
-TestProto AtmOcnLndProto                    esmApp
-TestProto AtmOcnLogNoneProto                esmApp
-TestProto AtmOcnMedIngestFromConfigProto    esmApp
-TestProto AtmOcnMedIngestFromInternalProto  esmApp
-TestProto AtmOcnMedPetListProto             esmApp
-TestProto AtmOcnMedPetListTimescalesProto   esmApp
-TestProto AtmOcnMedPetListTimescalesSplitFastProto esmApp
-TestProto AtmOcnMedProto                    esmApp
-TestProto AtmOcnMirrorFieldsProto           esmApp
-TestProto AtmOcnPetListProto                esmApp
-TestProto AtmOcnProto                       esmApp
-TestProto AtmOcnRtmTwoTimescalesProto       esmApp
-TestProto AtmOcnScalarProto                 esmApp
-TestSelectExternalProto   AtmOcnSelectExternalProto    esmApp
-TestSelectProto           AtmOcnSelectProto            esmApp
-TestProto AtmOcnSimpleImplicitProto         esmApp
-TestProto AtmOcnTransferGridProto           esmApp
-TestProto AtmOcnTransferLocStreamProto      esmApp
-TestProto AtmOcnTransferMeshProto           esmApp
-TestProto CustomFieldDictionaryProto        mainApp
-TestProto DriverInDriverProto               mainApp
-TestProto DriverInDriverProtoIPDv02         mainApp
-TestProto DynPhyProto                       esmApp
-TestProto GenericMediatorProto              app
-TestProto HierarchyProto                    esmApp
-TestProto NamespaceProto                    mainApp
-TestProto NestingMultipleProto              mainApp
-TestProto NestingSingleProto                mainApp
-TestProto NestingTelescopeMultipleProto     mainApp
-TestProto SingleModelProto                  mainApp
-TestProto SingleModelOpenMPProto            mainApp
+function TestExplorer {
+((count++))
+testList[count]=$1
+echo ---------------------------------------------------------------------------
+echo STARTING: $1
+cd $1
+gmake distclean
+set -x
+./nuopcExplorerScript ../AtmOcnSelectExternalProto/ATM-A/atmA.mk
+mpirun -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+set +x
+if [ $? -eq 0 ]
+then
+testResult[count]="PASS"
+else
+testResult[count]="FAIL"
+fi
+echo FINISHED: $1
+cd ..
+echo ---------------------------------------------------------------------------
+echo
+}
+
+# function    # proto directory                           # executable
+TestProto     AsyncIOBlockingProto                        asyncIOApp
+TestProto     AsyncIONonblockingProto                     asyncIOApp
+TestProto     AtmOcnConProto                              esmApp
+TestProto     AtmOcnCplListProto                          esmApp
+TestProto     AtmOcnCplSetProto                           esmApp
+TestProto     AtmOcnFDSynoProto                           esmApp
+TestProto     AtmOcnIceSimpleImplicitProto                esmApp
+TestProto     AtmOcnImplicitProto                         esmApp
+TestProto     AtmOcnLndProto                              esmApp
+TestProto     AtmOcnLogNoneProto                          esmApp
+TestProto     AtmOcnMedIngestFromConfigProto              esmApp
+TestProto     AtmOcnMedIngestFromInternalProto            esmApp
+TestProto     AtmOcnMedPetListProto                       esmApp
+TestProto     AtmOcnMedPetListTimescalesProto             esmApp
+TestProto     AtmOcnMedPetListTimescalesSplitFastProto    esmApp
+TestProto     AtmOcnMedProto                              esmApp
+TestProto     AtmOcnMirrorFieldsProto                     esmApp
+TestProto     AtmOcnPetListProto                          esmApp
+TestProto     AtmOcnProto                                 esmApp
+TestProto     AtmOcnRtmTwoTimescalesProto                 esmApp
+TestProto     AtmOcnScalarProto                           esmApp
+TestSelectExternalProto   AtmOcnSelectExternalProto       esmApp
+TestSelectProto           AtmOcnSelectProto               esmApp
+TestProto     AtmOcnSimpleImplicitProto                   esmApp
+TestProto     AtmOcnTransferGridProto                     esmApp
+TestProto     AtmOcnTransferLocStreamProto                esmApp
+TestProto     AtmOcnTransferMeshProto                     esmApp
+TestExplorer  ComponentExplorer                           nuopcExplorerApp
+TestProto     CustomFieldDictionaryProto                  mainApp
+TestProto     DriverInDriverProto                         mainApp
+TestProto     DriverInDriverProtoIPDv02                   mainApp
+TestProto     DynPhyProto                                 esmApp
+TestProto     GenericMediatorProto                        app
+TestProto     HierarchyProto                              esmApp
+TestProto     NamespaceProto                              mainApp
+TestProto     NestingMultipleProto                        mainApp
+TestProto     NestingSingleProto                          mainApp
+TestProto     NestingTelescopeMultipleProto               mainApp
+TestProto     SingleModelProto                            mainApp
+TestProto     SingleModelOpenMPProto                      mainApp
 
 i=1
 while [[ $i -le $count ]]
