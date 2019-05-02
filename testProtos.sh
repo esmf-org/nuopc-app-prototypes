@@ -10,6 +10,9 @@
 # Licensed under the University of Illinois-NCSA License.
 #==============================================================================
 
+MPIRUN="mpirun -np"
+#MPIRUN="srun -n"
+
 #TOOLRUN="valgrind --leak-check=full"
 
 count=0
@@ -23,7 +26,7 @@ cd $1
 gmake distclean
 gmake
 set -x
-mpirun -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+$MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
 set +x
 if [ $? -eq 0 ]
 then
@@ -47,7 +50,7 @@ echo "OCN_SELECT: A" > esm.config
 ((count++))
 testList[count]=$1
 set -x
-mpirun -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+$MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
 set +x
 if [ $? -eq 0 ]
 then
@@ -62,7 +65,7 @@ echo "OCN_SELECT: A" > esm.config
 ((count++))
 testList[count]=$1
 set -x
-mpirun -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+$MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
 set +x
 if [ $? -eq 0 ]
 then
@@ -77,7 +80,7 @@ echo "OCN_SELECT: B" > esm.config
 ((count++))
 testList[count]=$1
 set -x
-mpirun -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+$MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
 set +x
 if [ $? -eq 0 ]
 then
@@ -103,7 +106,7 @@ echo "OCN_SELECT: A" > esm.config
 ((count++))
 testList[count]=$1
 set -x
-mpirun -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+$MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
 set +x
 if [ $? -eq 0 ]
 then
@@ -118,7 +121,7 @@ echo "OCN_SELECT: B" > esm.config
 ((count++))
 testList[count]=$1
 set -x
-mpirun -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+$MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
 set +x
 if [ $? -eq 0 ]
 then
@@ -133,7 +136,7 @@ echo "OCN_SELECT: C" > esm.config
 ((count++))
 testList[count]=$1
 set -x
-mpirun -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+$MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
 set +x
 if [ $? -eq 0 ]
 then
@@ -148,7 +151,7 @@ echo "OCN_SELECT: A" > esm.config
 ((count++))
 testList[count]=$1
 set -x
-mpirun -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+$MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
 set +x
 if [ $? -eq 0 ]
 then
@@ -164,7 +167,7 @@ echo "OCN_SELECT: B" > esm.config
 ((count++))
 testList[count]=$1
 set -x
-mpirun -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+$MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
 set +x
 if [ $? -eq 0 ]
 then
@@ -176,7 +179,7 @@ echo
 gmake clean
 gmake ATM=F OCN=A,B,C
 echo "OCN_SELECT: C" > esm.config
-#mpirun -np 4 ./$2   --- cannot run this because atmF is not fully implemented
+#$MPIRUN 4 ./$2   --- cannot run this because atmF is not fully implemented
 echo FINISHED: $1
 cd ..
 echo ---------------------------------------------------------------------------
@@ -192,7 +195,7 @@ cd $1
 gmake distclean
 set -x
 ./nuopcExplorerScript ../AtmOcnSelectExternalProto/ATM-A/atmA.mk
-mpirun -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+$MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
 set +x
 if [ $? -eq 0 ]
 then
