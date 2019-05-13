@@ -133,6 +133,13 @@ module nuopcExplorerDriver
       file=__FILE__)) &
       return  ! bail out
 
+    ! Use an internal NUOPC Layer call to allow AutoAdd field dictionary entries
+    call NUOPC_FieldDictionarySetAutoAdd(.true., rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
   end subroutine
 
   !-----------------------------------------------------------------------------
@@ -150,6 +157,8 @@ module nuopcExplorerDriver
 #endif
     type(ESMF_GridComp)           :: child
     character(len=80)             :: compName        
+    type(ESMF_Config)             :: config
+    type(NUOPC_FreeFormat)        :: attrFF
 
     rc = ESMF_SUCCESS
 
@@ -157,7 +166,7 @@ module nuopcExplorerDriver
       STRINGIFY_END(FRONT_COMP_LABEL)
 
     ! query Driver for localPet
-    call ESMF_GridCompGet(driver, localPet=localPet, rc=rc)
+    call ESMF_GridCompGet(driver, localPet=localPet, config=config, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -237,19 +246,23 @@ module nuopcExplorerDriver
       return  ! bail out
 #endif
 
-    ! Set Verbosity on the explored component
-    call NUOPC_CompAttributeSet(child, name="Verbosity", value="high", rc=rc)
+    ! read and ingest free format attributes to be set on the explored component
+    attrFF = NUOPC_FreeFormatCreate(config, label="COMP_attributes::", &
+      relaxedflag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
- 
-    ! Use an internal NUOPC Layer call to allow AutoAdd field dictionary entries
-    call NUOPC_FieldDictionarySetAutoAdd(.true., rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
+    call NUOPC_CompAttributeIngest(child, attrFF, addFlag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_FreeFormatDestroy(attrFF, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 
   end subroutine
 
