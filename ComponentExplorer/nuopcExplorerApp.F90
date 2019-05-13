@@ -285,14 +285,8 @@ program explorerApp
     enable_finalize = .true.
   endif
   
-  call ESMF_ConfigDestroy(config, rc=rc)
-  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-    line=__LINE__, &
-    file=__FILE__)) &
-    call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
-  
   ! Create the Driver Component
-  driver = ESMF_GridCompCreate(name="explorerDriver", rc=rc)
+  driver = ESMF_GridCompCreate(name="explorerDriver", config=config, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
@@ -411,6 +405,13 @@ program explorerApp
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+  ! Destroy the Config
+  call ESMF_ConfigDestroy(config, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
   
   ! Destroy the importState
   call ESMF_StateDestroy(importState, rc=rc)

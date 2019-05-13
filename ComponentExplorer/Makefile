@@ -95,3 +95,6 @@ output:
 
 edit:
 	nedit nuopcExplorerScript nuopcExplorerApp.F90  nuopcExplorerDriver.F90 explorer.config &
+
+run:
+	mpirun -np 4 ./nuopcExplorerApp
