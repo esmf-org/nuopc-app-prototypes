@@ -242,6 +242,7 @@ TestProto     CustomFieldDictionaryProto                  mainApp
 TestProto     DriverInDriverProto                         mainApp
 TestProto     DriverInDriverProtoIPDv02                   mainApp
 TestProto     DynPhyProto                                 esmApp
+TestProto     ExternalDriverAPIProto                      externalApp
 TestProto     GenericMediatorProto                        app
 TestProto     HierarchyProto                              esmApp
 TestProto     NamespaceProto                              mainApp
