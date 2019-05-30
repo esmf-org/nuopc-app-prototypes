@@ -528,7 +528,7 @@ module OCN
 
     ! exportable field: sea_surface_temperature
     call NUOPC_Realize(exportState, gridOut, fieldName="sst", &
-      typekind=ESMF_TYPEKIND_R8, selection="realize_connected_remove_others", &
+      typekind=ESMF_TYPEKIND_R4, selection="realize_connected_remove_others", &
       dataFillScheme="sincos", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
