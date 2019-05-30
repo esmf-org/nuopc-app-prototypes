@@ -274,12 +274,18 @@ module ATM
         return  ! bail out
     endif
 
-    !NOTE: The sea_surface_salinity and air_pressure_at_sea_level Fields are
-    !NOTE: not realized here because they were marked with 
+    !NOTE: The sea_surface_salinity (sss) and air_pressure_at_sea_level (pmsl)
+    !NOTE: Fields are not realized here because they were marked with 
     !NOTE: TransferOfferGeomObject="cannot provide".
     !NOTE: Expect the Connector to fill in a Grid object for these Fields.
 
     ! exportable field: surface_net_downward_shortwave_flux
+    call ESMF_LogWrite("ATM is providing Grid for Field 'rsns'.", &
+      ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
     field = ESMF_FieldCreate(name="rsns", grid=gridOut, &
       typekind=ESMF_TYPEKIND_R8, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -782,6 +788,9 @@ module ATM
     integer                       :: staggerEdgeLWidth(2)
     integer                       :: staggerEdgeUWidth(2)
     integer                       :: staggerAlign(2)
+    integer                       :: tk
+    type(ESMF_TypeKind_Flag)      :: tkf
+    character(80)                 :: tks
 
     rc = ESMF_SUCCESS
 
@@ -791,15 +800,27 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    ! the acceptor field holds information about the provider field in its
+    ! attributes, e.g. typekind, etc.
+    call ESMF_AttributeGet(field, name="TypeKind", &
+      convention="NUOPC", purpose="Instance", &
+      value=tk, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    tkf=tk  ! convert integer into actual TypeKind_Flag
     ! the transferred Grid is already set, allocate memory for data by complete
-    call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
+    call ESMF_FieldEmptyComplete(field, typekind=tkf, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     ! log a message
-    call ESMF_LogWrite("ATM - Just completed the 'sss' Field", &
-      ESMF_LOGMSG_INFO, rc=rc)
+    tks=tkf  ! convert TypeKind_Flag into string
+    write (msgString,*)"ATM - Just completed the 'sss' Field of typekind: "//&
+      tks
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -826,15 +847,26 @@ module ATM
         file=__FILE__)) &
         return  ! bail out
     else
+      ! access the typekind of the field on the provider side
+      call ESMF_AttributeGet(field, name="TypeKind", &
+        convention="NUOPC", purpose="Instance", &
+        value=tk, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      tkf=tk  ! convert integer into actual TypeKind_Flag
       ! the transferred Grid is already set, allocate memory for data by complete
-      call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
+      call ESMF_FieldEmptyComplete(field, typekind=tkf, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
       ! log a message
-      call ESMF_LogWrite("ATM - Just completed the 'sst' Field", &
-        ESMF_LOGMSG_INFO, rc=rc)
+      tks=tkf  ! convert TypeKind_Flag into string
+      write (msgString,*)"ATM - Just completed the 'sst' Field of typekind: "//&
+        tks
+      call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
@@ -847,15 +879,26 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    ! access the typekind of the field on the provider side
+    call ESMF_AttributeGet(field, name="TypeKind", &
+      convention="NUOPC", purpose="Instance", &
+      value=tk, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    tkf=tk  ! convert integer into actual TypeKind_Flag
     ! the transferred Grid is already set, allocate memory for data by complete
-    call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
+    call ESMF_FieldEmptyComplete(field, typekind=tkf, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     ! log a message
-    call ESMF_LogWrite("ATM - Just completed the 'ssh' Field", &
-      ESMF_LOGMSG_INFO, rc=rc)
+    tks=tkf  ! convert TypeKind_Flag into string
+    write (msgString,*)"ATM - Just completed the 'ssh' Field of typekind: "//&
+      tks
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -881,16 +924,27 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    ! access the typekind of the field on the provider side
+    call ESMF_AttributeGet(field, name="TypeKind", &
+      convention="NUOPC", purpose="Instance", &
+      value=tk, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    tkf=tk  ! convert integer into actual TypeKind_Flag
     ! the transferred Grid is already set, allocate memory for data by complete
-    call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, &
+    call ESMF_FieldEmptyComplete(field, typekind=tkf, &
       totalLWidth=(/1,1/), totalUWidth=(/1,1/), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     ! log a message
-    call ESMF_LogWrite("ATM - Just completed the 'pmsl' Field", &
-      ESMF_LOGMSG_INFO, rc=rc)
+    tks=tkf  ! convert TypeKind_Flag into string
+    write (msgString,*)"ATM - Just completed the 'pmsl' Field of typekind: "//&
+      tks
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -1155,12 +1209,26 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    ! here don't access the typekind of the field the provider uses, but 
+    ! instead show that the acceptor can freely choose a different typekind
+    ! (as long as the Connector is not set to remap=redist for this field!
     ! the transferred Grid is already set, allocate memory for data by complete
-    call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
+    tkf=ESMF_TYPEKIND_R4
+    call ESMF_FieldEmptyComplete(field, typekind=tkf, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    ! log a message
+    tks=tkf  ! convert TypeKind_Flag into string
+    write (msgString,*)"ATM - Just completed the 'precip' Field of typekind: "&
+      //tks
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
 #if 0
     ! This does NOT currently work if precip on acceptor side stays arbGrid
     call ESMF_FieldGet(field, grid=grid, rc=rc)
