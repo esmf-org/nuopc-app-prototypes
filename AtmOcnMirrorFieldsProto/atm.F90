@@ -183,12 +183,22 @@ module ATM
     rc = ESMF_SUCCESS
     
 #ifdef TEST_FIELD_MIRRORING
-    ! Field mirroring on a State triggers that Fields are advertised with
-    ! a TransferOfferGeomObject that is "opposite" to the field that that
-    ! was mirrored. Here this means that by default TransferOfferGeomObject is
-    ! set to "cannot provide". However, this can be overwritten here, if the
-    ! accepting component wants to actually set its own Grid. Then set
-    ! TransferOfferGeomObject = "will provide" here.
+    ! Field mirroring was requested on a the component's exportState by 
+    ! setting the "FieldTransferPolicy" attribute to "transferAll" during
+    ! the Advertise phase. This triggers the Connector to automatically 
+    ! advertised all the fields in the exportState for the component that it
+    ! finds on the other side of the connection (i.e. in the Connector's
+    ! importState).
+    ! Mirrored fields are automatically advertised with the 
+    ! "TransferOfferGeomObject" attribute set to be "opposite" to what the
+    ! original field was advertised with. Here this means that the
+    ! TransferOfferGeomObject attribute is set to "cannot provide" for all of
+    ! the mirrored fields (because the OCN component was advertising with the 
+    ! default of "will provide"). 
+    ! However, the automatically set "TransferOfferGeomObject" attribute can be
+    ! overwritten here. E.g. explicitly setting 
+    ! TransferOfferGeomObject = "will provide" here allows the component to set
+    ! its own grid for the mirrored fields.
 
     ! air_pressure_at_sea_level
     call ESMF_StateGet(exportState, field=field, &
@@ -304,12 +314,21 @@ module ATM
     integer, intent(out) :: rc
     
     ! local variables    
-    type(ESMF_Field)        :: field
+    type(ESMF_Field)          :: field
+    integer                   :: tk, count
+    type(ESMF_TypeKind_Flag)  :: tkf
+    integer, pointer          :: gridToFieldMap(:)
+    integer, pointer          :: ugLBound(:), ugUBound(:)
     
     rc = ESMF_SUCCESS
     
 #ifdef TEST_GEOM_TRANSFER
-    ! With GeomTransfer, just need to complete the empty Fields that have Grid
+    ! With GeomTransfer, all empty fields already have the Grid set. Just need
+    ! to complete them here.
+    ! The empty acceptor fields carry information about the provider fields 
+    ! that they mirror in form of attributes. Access the "TypeKind", 
+    ! "GridToFieldMap", "UngriddedLBound", and "UngriddedLBound" attributes,
+    ! and use them when completing the mirrored fields below.
     
     ! air_pressure_at_sea_level
     call ESMF_StateGet(exportState, field=field, &
@@ -318,12 +337,87 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    ! the transferred Grid is already set, allocate memory for data by complete
-    call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
+    ! access the field attributes
+    ! deal with TypeKind
+    call ESMF_AttributeGet(field, name="TypeKind", &
+      convention="NUOPC", purpose="Instance", value=tk, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    tkf=tk  ! convert integer into actual TypeKind_Flag
+    ! prep for the list valued attributes
+    nullify(ugLBound, ugUBound, gridToFieldMap)
+    ! deal with gridToFieldMap
+    call NUOPC_GetAttribute(field, name="GridToFieldMap", &
+      itemCount=count, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    if (count > 0) then
+      allocate(gridToFieldMap(count))
+      call ESMF_AttributeGet(field, name="GridToFieldMap", &
+        convention="NUOPC", purpose="Instance", &
+        valueList=gridToFieldMap, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    endif
+    ! deal with ungriddedLBound
+    call NUOPC_GetAttribute(field, name="UngriddedLBound", &
+      itemCount=count, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    if (count > 0) then
+      allocate(ugLBound(count))
+      call ESMF_AttributeGet(field, name="UngriddedLBound", &
+        convention="NUOPC", purpose="Instance", &
+        valueList=ugLBound, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    endif
+    ! deal with ungriddedUBound
+    call NUOPC_GetAttribute(field, name="UngriddedUBound", &
+      itemCount=count, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    if (count > 0) then
+      allocate(ugUBound(count))
+      call ESMF_AttributeGet(field, name="UngriddedUBound", &
+        convention="NUOPC", purpose="Instance", &
+        valueList=ugUBound, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    endif
+    ! complete the acceptor field
+    if (associated(ugLBound).and.associated(ugUBound)) then
+      call ESMF_FieldEmptyComplete(field, typekind=tkf, &
+        ungriddedLBound=ugLBound, ungriddedUBound=ugUBound, &
+        gridToFieldMap=gridToFieldMap, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      deallocate(ugLBound, ugUBound)
+    else
+      call ESMF_FieldEmptyComplete(field, typekind=tkf, &
+        gridToFieldMap=gridToFieldMap, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    endif
+    deallocate(gridToFieldMap)
 
     ! surface_net_downward_shortwave_flux
     call ESMF_StateGet(exportState, field=field, &
@@ -332,12 +426,87 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    ! the transferred Grid is already set, allocate memory for data by complete
-    call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
+    ! access the field attributes
+    ! deal with TypeKind
+    call ESMF_AttributeGet(field, name="TypeKind", &
+      convention="NUOPC", purpose="Instance", value=tk, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    tkf=tk  ! convert integer into actual TypeKind_Flag
+    ! prep for the list valued attributes
+    nullify(ugLBound, ugUBound, gridToFieldMap)
+    ! deal with gridToFieldMap
+    call NUOPC_GetAttribute(field, name="GridToFieldMap", &
+      itemCount=count, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    if (count > 0) then
+      allocate(gridToFieldMap(count))
+      call ESMF_AttributeGet(field, name="GridToFieldMap", &
+        convention="NUOPC", purpose="Instance", &
+        valueList=gridToFieldMap, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    endif
+    ! deal with ungriddedLBound
+    call NUOPC_GetAttribute(field, name="UngriddedLBound", &
+      itemCount=count, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    if (count > 0) then
+      allocate(ugLBound(count))
+      call ESMF_AttributeGet(field, name="UngriddedLBound", &
+        convention="NUOPC", purpose="Instance", &
+        valueList=ugLBound, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    endif
+    ! deal with ungriddedUBound
+    call NUOPC_GetAttribute(field, name="UngriddedUBound", &
+      itemCount=count, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    if (count > 0) then
+      allocate(ugUBound(count))
+      call ESMF_AttributeGet(field, name="UngriddedUBound", &
+        convention="NUOPC", purpose="Instance", &
+        valueList=ugUBound, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    endif
+    ! complete the acceptor field
+    if (associated(ugLBound).and.associated(ugUBound)) then
+      call ESMF_FieldEmptyComplete(field, typekind=tkf, &
+        ungriddedLBound=ugLBound, ungriddedUBound=ugUBound, &
+        gridToFieldMap=gridToFieldMap, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      deallocate(ugLBound, ugUBound)
+    else
+      call ESMF_FieldEmptyComplete(field, typekind=tkf, &
+        gridToFieldMap=gridToFieldMap, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    endif
+    deallocate(gridToFieldMap)
 #endif
 
   end subroutine
