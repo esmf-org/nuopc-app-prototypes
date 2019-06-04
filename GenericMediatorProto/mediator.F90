@@ -567,13 +567,15 @@ module Mediator
       type(ESMF_State)  :: state
       integer, optional :: rc
       ! local variables
-      integer                                 :: itemCount, item, stat
+      integer                                 :: itemCount, item, stat, count
       type(ESMF_Field)                        :: field
       type(ESMF_FieldStatus_Flag)             :: fieldStatus
       character(len=80), allocatable          :: itemNameList(:)
       type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
       integer, pointer                        :: ugLBound(:), ugUBound(:)
       integer, pointer                        :: gridToFieldMap(:)
+      integer                                 :: tk
+      type(ESMF_TypeKind_Flag)                :: tkf
     
       if (present(rc)) rc = ESMF_SUCCESS
       
@@ -610,16 +612,25 @@ module Mediator
             ! the Connector instructed the Mediator to accept geom object
             ! the transferred geom object is already set, allocate memory 
             ! for data by complete
-            nullify(ugLBound, ugUBound, gridToFieldMap)
-            ! deal with gridToFieldMap
-            call NUOPC_GetAttribute(field, name="GridToFieldMap", &
-              itemCount=itemCount, rc=rc)
+            call ESMF_AttributeGet(field, name="TypeKind", &
+              convention="NUOPC", purpose="Instance", &
+              value=tk, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
               line=__LINE__, &
               file=__FILE__)) &
               return  ! bail out
-            if (itemCount > 0) then
-              allocate(gridToFieldMap(itemCount))
+            tkf=tk  ! convert integer into actual TypeKind_Flag
+            ! prep for the list valued attributes
+            nullify(ugLBound, ugUBound, gridToFieldMap)
+            ! deal with gridToFieldMap
+            call NUOPC_GetAttribute(field, name="GridToFieldMap", &
+              itemCount=count, rc=rc)
+            if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+              line=__LINE__, &
+              file=__FILE__)) &
+              return  ! bail out
+            if (count > 0) then
+              allocate(gridToFieldMap(count))
               call ESMF_AttributeGet(field, name="GridToFieldMap", &
                 convention="NUOPC", purpose="Instance", &
                 valueList=gridToFieldMap, rc=rc)
@@ -630,13 +641,13 @@ module Mediator
             endif
             ! deal with ungriddedLBound
             call NUOPC_GetAttribute(field, name="UngriddedLBound", &
-              itemCount=itemCount, rc=rc)
+              itemCount=count, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
               line=__LINE__, &
               file=__FILE__)) &
               return  ! bail out
-            if (itemCount > 0) then
-              allocate(ugLBound(itemCount))
+            if (count > 0) then
+              allocate(ugLBound(count))
               call ESMF_AttributeGet(field, name="UngriddedLBound", &
                 convention="NUOPC", purpose="Instance", &
                 valueList=ugLBound, rc=rc)
@@ -647,13 +658,13 @@ module Mediator
             endif
             ! deal with ungriddedUBound
             call NUOPC_GetAttribute(field, name="UngriddedUBound", &
-              itemCount=itemCount, rc=rc)
+              itemCount=count, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
               line=__LINE__, &
               file=__FILE__)) &
               return  ! bail out
-            if (itemCount > 0) then
-              allocate(ugUBound(itemCount))
+            if (count > 0) then
+              allocate(ugUBound(count))
               call ESMF_AttributeGet(field, name="UngriddedUBound", &
                 convention="NUOPC", purpose="Instance", &
                 valueList=ugUBound, rc=rc)
@@ -664,7 +675,7 @@ module Mediator
             endif
 
             if (associated(ugLBound).and.associated(ugUBound)) then
-              call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, &
+              call ESMF_FieldEmptyComplete(field, typekind=tkf, &
                 ungriddedLBound=ugLBound, ungriddedUBound=ugUBound, &
                 gridToFieldMap=gridToFieldMap, rc=rc)
               if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -673,7 +684,7 @@ module Mediator
                 return  ! bail out
               deallocate(ugLBound, ugUBound)
             else
-              call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, &
+              call ESMF_FieldEmptyComplete(field, typekind=tkf, &
                 gridToFieldMap=gridToFieldMap, rc=rc)
               if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                 line=__LINE__, &
