@@ -14,6 +14,7 @@ module driver
   ! Code that specializes generic NUOPC_Driver
   !-----------------------------------------------------------------------------
 
+  use MPI
   use ESMF
   use NUOPC
   use NUOPC_Driver, &
@@ -83,6 +84,12 @@ module driver
     type(ESMF_TimeInterval)       :: timeStep
     type(ESMF_Clock)              :: internalClock
     type(ESMF_Info)               :: info
+    
+    ! - diagnostics -
+    type(ESMF_VM)                 :: vm
+    logical                       :: isFlag
+    character(80)                 :: msgString
+    integer                       :: mpiComm
 
     rc = ESMF_SUCCESS
 
@@ -106,6 +113,54 @@ module driver
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompAttributeSet(child, name="Verbosity", value="low", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    ! - diagnostics -
+    isFlag = ESMF_GridCompIsPetLocal(child, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    write(msgString,*) "GridCompIsPetLocal: ", isFlag
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+    call ESMF_GridCompGet(child, vm=vm, rc=rc)      
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    isFlag = ESMF_VMIsCreated(vm, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    write(msgString,*) "VmIsCreated: ", isFlag
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+    call ESMF_VMGet(vm, mpiCommunicator=mpiComm, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    if (mpiComm==MPI_COMM_NULL) then
+      write(msgString,*) "MPI_COMM_NULL"
+    else
+      write(msgString,*) "valid MPI_COMM"
+    endif
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

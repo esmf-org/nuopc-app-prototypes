@@ -14,6 +14,7 @@ module ESM
   ! Code that specializes generic ESM Component code.
   !-----------------------------------------------------------------------------
 
+  use MPI
   use ESMF
   use NUOPC
   use NUOPC_Driver, &
@@ -83,6 +84,12 @@ module ESM
     integer                       :: petCount, i
     integer, allocatable          :: petList(:)
     type(ESMF_Info)               :: info
+    
+    ! - diagnostics -
+    type(ESMF_VM)                 :: vm
+    logical                       :: isFlag
+    character(80)                 :: msgString
+    integer                       :: mpiComm
 
     rc = ESMF_SUCCESS
     
@@ -122,6 +129,50 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     deallocate(petList)
+    
+    ! - ATM diagnostics -
+    isFlag = ESMF_GridCompIsPetLocal(child, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    write(msgString,*) "ATM GridCompIsPetLocal: ", isFlag
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_GridCompGet(child, vm=vm, rc=rc)      
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    isFlag = ESMF_VMIsCreated(vm, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    write(msgString,*) "ATM VmIsCreated: ", isFlag
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_VMGet(vm, mpiCommunicator=mpiComm, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    if (mpiComm==MPI_COMM_NULL) then
+      write(msgString,*) "ATM MPI_COMM_NULL"
+    else
+      write(msgString,*) "ATM valid MPI_COMM"
+    endif
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
     
 #define ATTR_TEST_1_off
 #define ATTR_TEST_2_off
@@ -167,6 +218,50 @@ module ESM
       return  ! bail out
     deallocate(petList)
       
+    ! - OCN diagnostics -
+    isFlag = ESMF_GridCompIsPetLocal(child, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    write(msgString,*) "OCN GridCompIsPetLocal: ", isFlag
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_GridCompGet(child, vm=vm, rc=rc)      
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    isFlag = ESMF_VMIsCreated(vm, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    write(msgString,*) "OCN VmIsCreated: ", isFlag
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_VMGet(vm, mpiCommunicator=mpiComm, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    if (mpiComm==MPI_COMM_NULL) then
+      write(msgString,*) "OCN MPI_COMM_NULL"
+    else
+      write(msgString,*) "OCN valid MPI_COMM"
+    endif
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
     ! SetServices for atm2ocn
     call NUOPC_DriverAddComp(driver, srcCompLabel="ATM", dstCompLabel="OCN", &
       compSetServicesRoutine=cplSS, comp=connector, rc=rc)
