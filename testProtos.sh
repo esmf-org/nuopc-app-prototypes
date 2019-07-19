@@ -27,8 +27,9 @@ gmake distclean
 gmake
 set -x
 $MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+local result=$?
 set +x
-if [ $? -eq 0 ]
+if [ $result -eq 0 ]
 then
 testResult[count]="PASS"
 else
@@ -51,8 +52,9 @@ echo "OCN_SELECT: A" > esm.config
 testList[count]=$1
 set -x
 $MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+local result=$?
 set +x
-if [ $? -eq 0 ]
+if [ $result -eq 0 ]
 then
 testResult[count]="PASS"
 else
@@ -66,8 +68,9 @@ echo "OCN_SELECT: A" > esm.config
 testList[count]=$1
 set -x
 $MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+local result=$?
 set +x
-if [ $? -eq 0 ]
+if [ $result -eq 0 ]
 then
 testResult[count]="PASS"
 else
@@ -81,8 +84,9 @@ echo "OCN_SELECT: B" > esm.config
 testList[count]=$1
 set -x
 $MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+local result=$?
 set +x
-if [ $? -eq 0 ]
+if [ $result -eq 0 ]
 then
 testResult[count]="PASS"
 else
@@ -107,8 +111,9 @@ echo "OCN_SELECT: A" > esm.config
 testList[count]=$1
 set -x
 $MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+local result=$?
 set +x
-if [ $? -eq 0 ]
+if [ $result -eq 0 ]
 then
 testResult[count]="PASS"
 else
@@ -122,8 +127,9 @@ echo "OCN_SELECT: B" > esm.config
 testList[count]=$1
 set -x
 $MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+local result=$?
 set +x
-if [ $? -eq 0 ]
+if [ $result -eq 0 ]
 then
 testResult[count]="PASS"
 else
@@ -137,8 +143,9 @@ echo "OCN_SELECT: C" > esm.config
 testList[count]=$1
 set -x
 $MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+local result=$?
 set +x
-if [ $? -eq 0 ]
+if [ $result -eq 0 ]
 then
 testResult[count]="PASS"
 else
@@ -152,8 +159,9 @@ echo "OCN_SELECT: A" > esm.config
 testList[count]=$1
 set -x
 $MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+local result=$?
 set +x
-if [ $? -eq 0 ]
+if [ $result -eq 0 ]
 then
 testResult[count]="PASS"
 else
@@ -168,8 +176,9 @@ echo "OCN_SELECT: B" > esm.config
 testList[count]=$1
 set -x
 $MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+local result=$?
 set +x
-if [ $? -eq 0 ]
+if [ $result -eq 0 ]
 then
 testResult[count]="PASS"
 else
@@ -196,8 +205,9 @@ gmake distclean
 set -x
 ./nuopcExplorerScript ../AtmOcnSelectExternalProto/ATM-A/atmA.mk
 $MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+local result=$?
 set +x
-if [ $? -eq 0 ]
+if [ $result -eq 0 ]
 then
 testResult[count]="PASS"
 else
