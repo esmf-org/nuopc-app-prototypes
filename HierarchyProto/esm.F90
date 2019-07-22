@@ -56,6 +56,12 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     
+    call NUOPC_CompAttributeSet(driver, name="Verbosity", value="high", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
   end subroutine
 
   !-----------------------------------------------------------------------------
@@ -78,19 +84,6 @@ module ESM
     character(len=10)             :: vString
 
     rc = ESMF_SUCCESS
-
-    ! set driver verbosity
-    verbosity = 0 ! reset
-    verbosity = ibset(verbosity,0)  ! log basic intro/extro and indentation
-    verbosity = ibset(verbosity,9)  ! log info run phase
-    verbosity = ibset(verbosity,11) ! log info about data dependency loop
-    verbosity = ibset(verbosity,12) ! log info about run time-loop
-    write(vString,"(I10)") verbosity
-    call NUOPC_CompAttributeSet(driver, name="Verbosity", value=vString, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
 
     ! get the petCount
     call ESMF_GridCompGet(driver, petCount=petCount, rc=rc)
@@ -121,7 +114,8 @@ module ESM
     verbosity = ibset(verbosity,11) ! log info about data dependency loop
     verbosity = ibset(verbosity,12) ! log info about run time-loop
     write(vString,"(I10)") verbosity
-    call NUOPC_CompAttributeSet(comp, name="Verbosity", value=vString, rc=rc)
+!    call NUOPC_CompAttributeSet(comp, name="Verbosity", value=vString, rc=rc)
+    call NUOPC_CompAttributeSet(comp, name="Verbosity", value="high", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -143,7 +137,8 @@ module ESM
     verbosity = ibset(verbosity,0)  ! log basic intro/extro and indentation
     verbosity = ibset(verbosity,9)  ! log info run phase
     write(vString,"(I10)") verbosity
-    call NUOPC_CompAttributeSet(comp, name="Verbosity", value=vString, rc=rc)
+!    call NUOPC_CompAttributeSet(comp, name="Verbosity", value=vString, rc=rc)
+    call NUOPC_CompAttributeSet(comp, name="Verbosity", value="high", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -156,7 +151,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="1", rc=rc)
+    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="high", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -169,7 +164,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="1", rc=rc)
+    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="high", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
