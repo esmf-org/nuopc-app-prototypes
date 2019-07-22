@@ -2,7 +2,8 @@ README for ATM-OCN with field mirroring NUOPC prototype
 -------------------------------------------------------
 
 A simple two model system, where one Model component requests field mirroring
-on one of its States.
+on one of its States. Optional switching of Field/GeomObject accepting and
+sharing is demonstrated.
 
 Description:
 
