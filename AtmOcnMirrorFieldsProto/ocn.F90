@@ -186,6 +186,11 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    call ESMF_FieldFill(field, dataFillScheme="sincos", member=2, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 
   end subroutine
   
@@ -235,10 +240,12 @@ module OCN
     ! local variables
     type(ESMF_Clock)            :: clock
     type(ESMF_State)            :: importState, exportState
+    type(ESMF_Field)            :: field
     type(ESMF_Time)             :: currTime
     type(ESMF_TimeInterval)     :: timeStep
     type(ESMF_VM)               :: vm
     integer                     :: localPet, localPeCount
+    integer, save               :: slice=1
     character(len=160)          :: msgString
 
     rc = ESMF_SUCCESS
@@ -321,6 +328,34 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+    ! update data in export fields
+    call ESMF_StateGet(exportState, itemName="sst", field=field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_FieldFill(field, dataFillScheme="sincos", member=1, &
+      step=slice, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! write out the Fields in the importState and exportState
+    call NUOPC_Write(importState, fileNamePrefix="field_ocn_import_", &
+      timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_Write(exportState, fileNamePrefix="field_ocn_export_", &
+      timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    slice = slice+1
 
   end subroutine
 

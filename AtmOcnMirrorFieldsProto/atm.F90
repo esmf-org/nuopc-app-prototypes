@@ -18,10 +18,12 @@
 #define TEST_ACCEPTING
 #endif
 
+#ifdef TEST_ACCEPTING
 ! If TEST_ACCEPTING is set (i.e. the default accepting behavior on the mirrored
 ! fields is chosen), it is further possible to trigger field reference sharing.
 ! By default it is off, but can be turned on here:
 #define TEST_FIELD_SHARING
+#endif
 
 module ATM
 
@@ -609,6 +611,11 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    call ESMF_FieldFill(field, dataFillScheme="sincos", member=3, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
     ! set "Updated"
     call NUOPC_SetAttribute(field, name="Updated", value="true", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -619,6 +626,11 @@ module ATM
     ! surface_net_downward_shortwave_flux
     call ESMF_StateGet(exportState, field=field, &
       itemName="surface_net_downward_shortwave_flux", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_FieldFill(field, dataFillScheme="sincos", member=4, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -652,6 +664,7 @@ module ATM
     type(ESMF_State)            :: importState, exportState
     type(ESMF_VM)               :: vm
     integer                     :: localPet, localPeCount
+    integer, save               :: slice=1
     character(len=160)          :: msgString
 
     rc = ESMF_SUCCESS
@@ -726,6 +739,21 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+    ! write out the Fields in the importState and exportState
+    call NUOPC_Write(importState, fileNamePrefix="field_atm_import_", &
+      timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_Write(exportState, fileNamePrefix="field_atm_export_", &
+      timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    slice = slice+1
 
   end subroutine
 
