@@ -8,6 +8,8 @@
 ! Licensed under the University of Illinois-NCSA License.
 !==============================================================================
 
+#define TEST_FIELD_SHARING
+
 module OCN
 
   !-----------------------------------------------------------------------------
@@ -86,7 +88,11 @@ module OCN
 
     ! importable field: air_pressure_at_sea_level
     call NUOPC_Advertise(importState, &
-      StandardName="air_pressure_at_sea_level", name="pmsl", rc=rc)
+      StandardName="air_pressure_at_sea_level", name="pmsl", &
+#ifdef TEST_FIELD_SHARING
+      SharePolicyField="share", &
+#endif
+      rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -94,7 +100,11 @@ module OCN
     
     ! importable field: surface_net_downward_shortwave_flux
     call NUOPC_Advertise(importState, &
-      StandardName="surface_net_downward_shortwave_flux", name="rsns", rc=rc)
+      StandardName="surface_net_downward_shortwave_flux", name="rsns", &
+#ifdef TEST_FIELD_SHARING
+      SharePolicyField="share", &
+#endif
+      rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
