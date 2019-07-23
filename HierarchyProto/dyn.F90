@@ -138,7 +138,8 @@ module DYN
 #ifdef WITHEXPORTFIELDS
     ! exportable field: air_pressure_at_sea_level
     call NUOPC_Advertise(exportState, &
-      StandardName="air_pressure_at_sea_level", name="pmsl", rc=rc)
+      StandardName="air_pressure_at_sea_level", name="pmsl", &
+      SharePolicyField="share", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -203,7 +204,7 @@ module DYN
 #ifdef WITHEXPORTFIELDS
     ! exportable field: air_pressure_at_sea_level
     call NUOPC_Realize(exportState, grid=gridOut, &
-      fieldName="pmsl", &
+      fieldName="pmsl", typekind=ESMF_TYPEKIND_R4, &
       selection="realize_connected_remove_others", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
