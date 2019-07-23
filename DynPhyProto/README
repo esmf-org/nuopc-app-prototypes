@@ -16,7 +16,7 @@ Description:
   consisting of advertise and realize.
   
   Both DYN and PHY components set SharePolicyField="share" when adverising
-  the field with StandardName="PHYEX". This instructs the NUOP_Connector to
+  the field with StandardName="PHYEX". This instructs the NUOPC_Connector to
   evaluate the possibility to implement the connection via reference sharing
   for this field.
   
