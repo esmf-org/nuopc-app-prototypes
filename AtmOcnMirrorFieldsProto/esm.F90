@@ -14,7 +14,7 @@
 
 ! For testing with partially overlapping components keep one active, other _off
 #define WITH_ATM_PETLIST_off
-#define WITH_OCN_PETLIST
+#define WITH_OCN_PETLIST_off
 
 module ESM
 
