@@ -22,7 +22,7 @@
 ! If TEST_ACCEPTING is set (i.e. the default accepting behavior on the mirrored
 ! fields is chosen), it is further possible to trigger field reference sharing.
 ! By default it is off, but can be turned on here:
-#define TEST_FIELD_SHARING
+#define TEST_SHARING
 #endif
 
 module ATM
@@ -242,7 +242,7 @@ module ATM
       return  ! bail out
 #endif
 
-#ifdef TEST_FIELD_SHARING
+#ifdef TEST_SHARING
     ! By default, mirrored Fields are advertized by the Connector with the
     ! default SharePolicyField="not share".
     ! This can be overwritten here, e.g. by setting SharePolicyField="share"
@@ -255,8 +255,8 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    ! set TransferOfferGeomObject = "will provide"
-    call NUOPC_SetAttribute(field, name="SharePolicyField", &
+    ! set SharePolicyGeomObject = "share"
+    call NUOPC_SetAttribute(field, name="SharePolicyGeomObject", &
       value="share", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -270,7 +270,16 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    ! set TransferOfferGeomObject = "will provide"
+#if 1
+    ! set SharePolicyGeomObject = "share"
+    call NUOPC_SetAttribute(field, name="SharePolicyGeomObject", &
+      value="share", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+    ! set SharePolicyField = "share"
     call NUOPC_SetAttribute(field, name="SharePolicyField", &
       value="share", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
