@@ -615,10 +615,6 @@ module ATM
     
   !-----------------------------------------------------------------------------
 
-! -- NOTE: define only ONE of these two test macros (mutually excusive!)
-#undef TEST_REGRID
-#define TEST_UNDIST_DIM
-
   subroutine InitializeAcceptMeshAndRealize(model, importState, exportState, clock, rc)
     type(ESMF_GridComp)  :: model
     type(ESMF_State)     :: importState, exportState
@@ -628,17 +624,8 @@ module ATM
     ! local variables
     type(ESMF_Field)              :: field
     character(160)                :: msgString
-#ifdef TEST_REGRID
     type(ESMF_Field)              :: fieldIn, fieldOut
     type(ESMF_RouteHandle)        :: rh
-#endif
-#ifdef TEST_UNDIST_DIM
-    integer                       :: gridToFieldMapCount, ungriddedCount
-    integer, allocatable          :: gridToFieldMap(:)
-    integer, allocatable          :: ungriddedLBound(:), ungriddedUBound(:)
-    logical                       :: isPresent
-#endif
-
     type(ESMF_Mesh)               :: mesh
 
     character(*), parameter   :: rName="InitializeAcceptMeshAndRealize"
@@ -657,73 +644,13 @@ module ATM
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
     
-    ! access the "pmsl" field in the exportState
-    call ESMF_StateGet(exportState, field=field, itemName="pmsl", rc=rc)
+    ! realize "pmsl" field in the exportState, with transferred Mesh
+    call NUOPC_Realize(exportState, fieldName="pmsl", field=field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 
-    ! the transferred Mesh is already set, allocate memory for data by complete
-#ifdef TEST_UNDIST_DIM
-    call ESMF_AttributeGet(field, name="GridToFieldMap", &
-      convention="NUOPC", purpose="Instance", &
-      itemCount=gridToFieldMapCount, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    allocate(gridToFieldMap(gridToFieldMapCount))
-    call ESMF_AttributeGet(field, name="GridToFieldMap", &
-      convention="NUOPC", purpose="Instance", &
-      valueList=gridToFieldMap, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    ungriddedCount=0  ! initialize in case it was not set
-    call ESMF_AttributeGet(field, name="UngriddedLBound", &
-      convention="NUOPC", purpose="Instance", &
-      itemCount=ungriddedCount, isPresent=isPresent, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    allocate(ungriddedLBound(ungriddedCount), ungriddedUBound(ungriddedCount))
-    if (ungriddedCount > 0) then
-      call ESMF_AttributeGet(field, name="UngriddedLBound", &
-        convention="NUOPC", purpose="Instance", &
-        valueList=ungriddedLBound, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-      call ESMF_AttributeGet(field, name="UngriddedUBound", &
-        convention="NUOPC", purpose="Instance", &
-        valueList=ungriddedUBound, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-    endif
-    call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, &
-      gridToFieldMap=gridToFieldMap, &
-      ungriddedLbound=ungriddedLbound, ungriddedUbound=ungriddedUbound, &
-      rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    deallocate(gridToFieldMap, ungriddedLbound, ungriddedUbound)
-#else
-    call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, &
-      rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-#endif
-   
 #if 1
     call ESMF_FieldGet(field, mesh=mesh, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -743,9 +670,7 @@ module ATM
       return  ! bail out
 #endif
 
-#ifdef TEST_REGRID
     fieldOut = field ! keep field for RegridStore() test
-#endif
     
     call ESMF_LogWrite("ATM - Just completed the 'pmsl' Field", &
       ESMF_LOGMSG_INFO, rc=rc)
@@ -754,20 +679,15 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
-    ! access the "sst" field in the importState
-    call ESMF_StateGet(importState, field=field, itemName="sst", rc=rc)
+    ! realize "sst" field in the importState, with transferred Mesh
+    ! test the option here to specify an explicit typekind
+    call NUOPC_Realize(importState, fieldName="sst", &
+      typekind=ESMF_TYPEKIND_R4, field=field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
-    ! the transferred Mesh is already set, allocate memory for data by complete
-    call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
+
 #if 1
     call ESMF_FieldGet(field, mesh=mesh, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -787,9 +707,7 @@ module ATM
       return  ! bail out
 #endif
 
-#ifdef TEST_REGRID
     fieldIn = field ! keep field for RegridStore() test
-#endif
 
     call ESMF_LogWrite("ATM - Just completed the 'sst' Field", &
       ESMF_LOGMSG_INFO, rc=rc)
@@ -797,14 +715,13 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
-#ifdef TEST_REGRID
+
+    ! test a regrid between to fields that were created on transferred Meshes      
     call ESMF_FieldRegridStore(fieldIn, fieldOut, routehandle=rh, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-#endif
 
     ! extro
     call NUOPC_LogExtro(name, rName, verbosity, rc=rc)
@@ -843,7 +760,7 @@ module ATM
       return  ! bail out
 
     ! initialize data
-#ifndef TEST_UNDIST_DIM
+#if 0
     ! FieldFill is currently limited wrt Mesh and undstr. dims
     call ESMF_FieldFill(field, dataFillScheme="sincos", member=2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
