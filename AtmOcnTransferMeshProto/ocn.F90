@@ -363,6 +363,20 @@ module OCN
 #endif
 
     ! exportable field: sea_surface_temperature
+#ifdef TEST_UNDIST_DIM
+    field = ESMF_FieldCreate(meshOut, name="sst", &
+      typekind=ESMF_TYPEKIND_R8, &
+      ungriddedLbound=(/1/), ungriddedUbound=(/4/), rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_Realize(exportState, field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#else
     call NUOPC_Realize(exportState, meshOut, fieldName="sst", &
       typekind=ESMF_TYPEKIND_R8, selection="realize_connected_remove_others", &
       rc=rc)
@@ -370,6 +384,7 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 
     ! extro
     call NUOPC_LogExtro(name, rName, verbosity, rc=rc)
