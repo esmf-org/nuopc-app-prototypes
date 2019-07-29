@@ -222,11 +222,27 @@ module CON
     type(ESMF_RouteHandle)        :: rh1, rh2
     type(ESMF_State)              :: state
     type(ESMF_FieldBundle)        :: dstFields, srcFields
+    type(ESMF_Clock)              :: clock
+    character(len=160)            :: msgString
 
     rc = ESMF_SUCCESS
     
     call NUOPC_ConnectorGet(connector, srcFields=srcFields, &
-      dstFields=dstFields, state=state, rc=rc)
+      dstFields=dstFields, state=state, driverClock=clock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+     
+    ! test the parent clock
+    call ESMF_ClockPrint(clock, options="currTime", &
+      preString="Testing parentClock from conn.F90 ExecuteRH(): ", &
+      unit=msgString, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
