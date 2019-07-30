@@ -86,7 +86,8 @@ program esmApp
   verbosity = ibset(verbosity,13) ! log creation of components
 !  verbosity = ibset(verbosity,14) ! log creation of states
   write(vString,"(I10)") verbosity
-  call NUOPC_CompAttributeSet(atmComp, name="Verbosity", value=vString, rc=rc)
+!  call NUOPC_CompAttributeSet(atmComp, name="Verbosity", value=vString, rc=rc)
+  call NUOPC_CompAttributeSet(atmComp, name="Verbosity", value="high", rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
