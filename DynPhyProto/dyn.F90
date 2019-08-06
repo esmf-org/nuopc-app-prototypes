@@ -206,6 +206,11 @@ module DYN
     integer                   :: verbosity
     type(ESMF_Grid)           :: gridIn
     type(ESMF_Grid)           :: gridOut
+    type(ESMF_Field)          :: field
+    real(ESMF_KIND_R8), pointer :: fptr(:,:)
+    type(ESMF_INDEX_FLAG)     :: indexflag
+    type(ESMF_Array)          :: array
+    character(len=160)        :: msgString
     
     rc = ESMF_SUCCESS
     
@@ -241,6 +246,7 @@ module DYN
       file=__FILE__)) &
       return  ! bail out
     ! importable field: PHYEX
+#if 0
     call NUOPC_Realize(importState, grid=gridIn, &
       fieldName="phyex_field", &
       selection="realize_connected_remove_others", rc=rc)
@@ -248,6 +254,68 @@ module DYN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#else
+    field = ESMF_FieldCreate(gridIn, ESMF_TYPEKIND_R8, &
+!      indexflag=ESMF_INDEX_USER, &
+      staggerloc=ESMF_STAGGERLOC_CENTER, name="phyex_field", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#if 1
+    call ESMF_FieldGet(field, array=array, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_ArrayGet(array, indexflag=indexflag, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    write(msgString,*) "Field.Array.indexflag=", indexflag
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call ESMF_FieldGet(field, farrayPtr=fptr, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    field = ESMF_FieldCreate(gridIn, farray=fptr, indexflag=ESMF_INDEX_GLOBAL, &
+      staggerloc=ESMF_STAGGERLOC_CENTER, name="phyex_field", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+    call ESMF_FieldGet(field, array=array, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_ArrayGet(array, indexflag=indexflag, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    write(msgString,*) "Field.Array.indexflag=", indexflag
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call NUOPC_Realize(importState, field=field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+      
 #endif
 
 #ifdef WITHEXPORTFIELDS
