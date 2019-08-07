@@ -482,9 +482,6 @@ module IOComp
     type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
     
-    ! local variables
-    type(ESMF_Field)              :: field
-
     rc = ESMF_SUCCESS
 
     call realizeWithAcceptedGeom(importState, rc=rc)
@@ -508,21 +505,18 @@ module IOComp
       integer, optional :: rc
       ! local variables
       integer                                 :: itemCount, item
-      type(ESMF_Field)                        :: field
-      type(ESMF_FieldStatus_Flag)             :: fieldStatus
       character(len=80), allocatable          :: itemNameList(:)
       type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
     
       if (present(rc)) rc = ESMF_SUCCESS
       
+      ! query info about the items in the state
       call ESMF_StateGet(state, nestedFlag=.true., itemCount=itemCount, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-    
       allocate(itemNameList(itemCount), itemTypeList(itemCount))
-    
       call ESMF_StateGet(state, nestedFlag=.true., &
         itemNameList=itemNameList, itemTypeList=itemTypeList, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -530,29 +524,15 @@ module IOComp
         file=__FILE__)) &
         return  ! bail out
 
+      ! realize all the fields in the state (geoms have been transferred)
       do item=1, itemCount
         if (itemTypeList(item)==ESMF_STATEITEM_FIELD) then
-          ! this is a field -> get more info
-          call ESMF_StateGet(state, field=field, itemName=itemNameList(item), &
-            rc=rc)
+          ! realize this field
+          call NUOPC_Realize(state, fieldName=itemNameList(item), rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
-          call ESMF_FieldGet(field, status=fieldStatus, rc=rc)
-          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=__LINE__, &
-            file=__FILE__)) &
-            return  ! bail out
-          if (fieldStatus==ESMF_FIELDSTATUS_GRIDSET) then
-            ! the Connector instructed the gcomp to accept geom object
-            ! the transferred geom object is already set, allocate memory for data by complete
-            call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
-            if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-              line=__LINE__, &
-              file=__FILE__)) &
-              return  ! bail out
-          endif
         endif
       enddo
       

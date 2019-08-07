@@ -798,81 +798,75 @@ module ATM
 
     rc = ESMF_SUCCESS
 
-    ! access the "sss" field in the importState
-    call ESMF_StateGet(importState, field=field, itemName="sss", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    ! the transferred Grid is already set, allocate memory for data by complete
-    call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
+    ! realize the "sss" field in the importState
+    call NUOPC_Realize(importState, fieldName="sss", field=field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     ! log a message
-    call ESMF_LogWrite("ATM - Just completed the 'sss' Field", &
-      ESMF_LOGMSG_INFO, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    ! access the "sst" field in the importState
-    call ESMF_StateGet(importState, field=field, itemName="sst", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    ! check status of "sst" field and decide on action
-    call ESMF_FieldGet(field, status=fieldStatus, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    if (fieldStatus==ESMF_FIELDSTATUS_COMPLETE) then
-      ! log a message
-      call ESMF_LogWrite("ATM - The 'sst' Field was already complete", &
-        ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_FieldIsCreated(field,rc=rc)) then
+      write (msgString,*)"ATM - Just realized the 'sss' Field in importState."
+      call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
     else
-      ! the transferred Grid is already set, allocate memory for data by complete
-      call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-      ! log a message
-      call ESMF_LogWrite("ATM - Just completed the 'sst' Field", &
-        ESMF_LOGMSG_INFO, rc=rc)
+      write (msgString,*)"ATM - 'sss' Field not realized in importState here."
+      call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
     endif
 
-    ! access the "ssh" field in the importState
-    call ESMF_StateGet(importState, field=field, itemName="ssh", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    ! the transferred Grid is already set, allocate memory for data by complete
-    call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
+    ! realize the "sst" field in the importState
+    call NUOPC_Realize(importState, fieldName="sst", field=field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     ! log a message
-    call ESMF_LogWrite("ATM - Just completed the 'ssh' Field", &
-      ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_FieldIsCreated(field,rc=rc)) then
+      write (msgString,*)"ATM - Just realized the 'sst' Field in importState."
+      call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    else
+      write (msgString,*)"ATM - 'sst' Field not realized in importState here."
+      call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    endif
+
+    ! realize the "ssh" field in the importState
+    call NUOPC_Realize(importState, fieldName="ssh", field=field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    ! log a message
+    if (ESMF_FieldIsCreated(field,rc=rc)) then
+      write (msgString,*)"ATM - Just realized the 'ssh' Field in importState."
+      call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    else
+      write (msgString,*)"ATM - 'ssh' Field not realized in importState here."
+      call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    endif
+
 #ifdef TEST_MULTI_TILE_GRID    
     ! write cubed sphere grid out to VTK
     call ESMF_FieldGet(field, grid=grid, rc=rc)
@@ -888,26 +882,30 @@ module ATM
       return  ! bail out
 #endif
 
-    ! access the "pmsl" field in the exportState
-    call ESMF_StateGet(exportState, field=field, itemName="pmsl", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    ! the transferred Grid is already set, allocate memory for data by complete
-    call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, &
-      totalLWidth=(/1,1/), totalUWidth=(/1,1/), rc=rc)
+    ! realize the "pmsl" field in the exportState
+    ! ... but with specified totalLWidth/totalUWidth
+    call NUOPC_Realize(exportState, fieldName="pmsl", &
+      totalLWidth=(/1,1/), totalUWidth=(/1,1/), field=field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     ! log a message
-    call ESMF_LogWrite("ATM - Just completed the 'pmsl' Field", &
-      ESMF_LOGMSG_INFO, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
+    if (ESMF_FieldIsCreated(field,rc=rc)) then
+      write (msgString,*)"ATM - Just realized the 'pmsl' Field in exportState."
+      call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    else
+      write (msgString,*)"ATM - 'pmsl' Field not realized in exportState here."
+      call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    endif
 
     ! inspect the Grid name
     call ESMF_FieldGet(field, grid=grid, rc=rc)
@@ -1162,18 +1160,30 @@ module ATM
       return  ! bail out
 #endif
 
-    ! access the "precip" field in the exportState
-    call ESMF_StateGet(exportState, field=field, itemName="precip", rc=rc)
+    ! realize the "precip" field in the exportState
+    ! ... but with specified typekind
+    call NUOPC_Realize(exportState, fieldName="precip", &
+      typekind=ESMF_TYPEKIND_R4, field=field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    ! the transferred Grid is already set, allocate memory for data by complete
-    call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
+    ! log a message
+    if (ESMF_FieldIsCreated(field,rc=rc)) then
+      write (msgString,*)"ATM - Just realized the 'precip' Field in exportState."
+      call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    else
+      write (msgString,*)"ATM - 'precip' Field not realized in exportState here."
+      call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    endif
 #if 0
     ! This does NOT currently work if precip on acceptor side stays arbGrid
     call ESMF_FieldGet(field, grid=grid, rc=rc)
