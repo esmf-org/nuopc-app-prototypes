@@ -385,6 +385,13 @@ module ATM
     ! to complete them here.
 
     ! air_pressure_at_sea_level
+    
+#if 0
+    ! Leave this section in the proto (but disabled) to show how
+    ! FieldEmptyComplete() can be called explicitly with the correct info
+    ! to realize the field. However, the more convenient, and recommended
+    ! method is to go through the NUOPC_Realize() interface.
+
     call ESMF_StateGet(exportState, field=field, &
       itemName="air_pressure_at_sea_level", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -489,107 +496,25 @@ module ATM
       endif
       deallocate(gridToFieldMap)
     endif
+    
+#else
+    ! Much simpler way to realize the advertised field
+    call NUOPC_Realize(exportState, &
+      fieldName="air_pressure_at_sea_level", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+#endif
 
     ! surface_net_downward_shortwave_flux
-    call ESMF_StateGet(exportState, field=field, &
-      itemName="surface_net_downward_shortwave_flux", rc=rc)
+    call NUOPC_Realize(exportState, &
+      fieldName="surface_net_downward_shortwave_flux", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-
-    ! First see if Field are shared. If so, don't need to do anything here,
-    ! because the Connector will have realized the Fields automatically using
-    ! reference sharing.
-    call NUOPC_GetAttribute(field, name="ShareStatusField", &
-      value=value, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    if (trim(value)=="not shared") then
-      ! access the field attributes
-      ! deal with TypeKind
-      call ESMF_AttributeGet(field, name="TypeKind", &
-        convention="NUOPC", purpose="Instance", value=tk, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-      tkf=tk  ! convert integer into actual TypeKind_Flag
-      ! prep for the list valued attributes
-      nullify(ugLBound, ugUBound, gridToFieldMap)
-      ! deal with gridToFieldMap
-      call NUOPC_GetAttribute(field, name="GridToFieldMap", &
-        itemCount=count, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-      if (count > 0) then
-        allocate(gridToFieldMap(count))
-        call ESMF_AttributeGet(field, name="GridToFieldMap", &
-          convention="NUOPC", purpose="Instance", &
-          valueList=gridToFieldMap, rc=rc)
-        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=__LINE__, &
-          file=__FILE__)) &
-          return  ! bail out
-      endif
-      ! deal with ungriddedLBound
-      call NUOPC_GetAttribute(field, name="UngriddedLBound", &
-        itemCount=count, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-      if (count > 0) then
-        allocate(ugLBound(count))
-        call ESMF_AttributeGet(field, name="UngriddedLBound", &
-          convention="NUOPC", purpose="Instance", &
-          valueList=ugLBound, rc=rc)
-        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=__LINE__, &
-          file=__FILE__)) &
-          return  ! bail out
-      endif
-      ! deal with ungriddedUBound
-      call NUOPC_GetAttribute(field, name="UngriddedUBound", &
-        itemCount=count, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-      if (count > 0) then
-        allocate(ugUBound(count))
-        call ESMF_AttributeGet(field, name="UngriddedUBound", &
-          convention="NUOPC", purpose="Instance", &
-          valueList=ugUBound, rc=rc)
-        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=__LINE__, &
-          file=__FILE__)) &
-          return  ! bail out
-      endif
-      ! complete the acceptor field
-      if (associated(ugLBound).and.associated(ugUBound)) then
-        call ESMF_FieldEmptyComplete(field, typekind=tkf, &
-          ungriddedLBound=ugLBound, ungriddedUBound=ugUBound, &
-          gridToFieldMap=gridToFieldMap, rc=rc)
-        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=__LINE__, &
-          file=__FILE__)) &
-          return  ! bail out
-        deallocate(ugLBound, ugUBound)
-      else
-        call ESMF_FieldEmptyComplete(field, typekind=tkf, &
-          gridToFieldMap=gridToFieldMap, rc=rc)
-        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=__LINE__, &
-          file=__FILE__)) &
-          return  ! bail out
-      endif
-      deallocate(gridToFieldMap)
-    endif
 #endif
 
   end subroutine
