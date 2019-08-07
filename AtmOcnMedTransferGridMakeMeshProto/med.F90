@@ -618,9 +618,6 @@ module MED
     type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
     
-    ! local variables
-    type(ESMF_Field)              :: field
-
     rc = ESMF_SUCCESS
 
     call realizeWithAcceptedGeom(importState, rc=rc)
