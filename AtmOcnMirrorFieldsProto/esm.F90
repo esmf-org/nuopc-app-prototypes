@@ -65,7 +65,7 @@ module ESM
       return  ! bail out
 
     ! set driver verbosity
-    call NUOPC_CompAttributeSet(driver, name="Verbosity", value="low", rc=rc)
+    call NUOPC_CompAttributeSet(driver, name="Verbosity", value="high", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -138,7 +138,7 @@ module ESM
     deallocate(petList)
     
     ! SetServices for OCN with petList on second half of PETs
-    call ESMF_AttributeSet(info, name="maxPeCountPerPet", value=4, rc=rc)
+    call ESMF_AttributeSet(info, name="maxPeCountPerPet", value=2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
