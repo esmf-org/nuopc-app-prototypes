@@ -21,7 +21,7 @@ module ESM
     driver_label_SetModelServices => label_SetModelServices
   
   use ATM, only: atmSS => SetServices
-  use OCN, only: ocnSS => SetServices
+  use OCN, only: ocnSVM => SetVM, ocnSS => SetServices
   
   use NUOPC_Connector, only: cplSS => SetServices
   
@@ -82,8 +82,16 @@ module ESM
     type(ESMF_CplComp)            :: conn
     integer                       :: verbosity
     character(len=10)             :: vString
+    type(ESMF_Info)               :: info
 
     rc = ESMF_SUCCESS
+
+    ! Create and set the info object that is used to pass hints into methods
+    info = ESMF_InfoCreate(rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 
     ! get the petCount
     call ESMF_GridCompGet(driver, petCount=petCount, rc=rc)
@@ -126,8 +134,13 @@ module ESM
     do i=1, petCountOCN
       petList(i) = petCountATM + i-1 ! PET labeling goes from 0 to petCount-1
     enddo
-    call NUOPC_DriverAddComp(driver, "OCN", ocnSS, petList=petList, &
-      comp=comp, rc=rc)
+    call ESMF_AttributeSet(info, name="maxPeCountPerPet", value=2, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_DriverAddComp(driver, "OCN", ocnSS, ocnSVM, info=info, &
+      petList=petList, comp=comp, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
