@@ -110,6 +110,8 @@ module DYN
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
+    ! local variables
+    type(ESMF_State)     :: nestedState
     
     rc = ESMF_SUCCESS
     
@@ -139,7 +141,8 @@ module DYN
     ! exportable field: air_pressure_at_sea_level
     call NUOPC_Advertise(exportState, &
       StandardName="air_pressure_at_sea_level", name="pmsl", &
-      SharePolicyField="share", rc=rc)
+      SharePolicyField="share", SharePolicyGeomObject="not share",&
+      rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -147,11 +150,32 @@ module DYN
     
     ! exportable field: surface_net_downward_shortwave_flux
     call NUOPC_Advertise(exportState, &
-      StandardName="surface_net_downward_shortwave_flux", name="rsns", rc=rc)
+      StandardName="surface_net_downward_shortwave_flux", name="rsns", &
+      SharePolicyField="share", &
+      rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    
+#if 1
+    call NUOPC_AddNestedState(exportState, &
+      CplSet="TestingSet", nestedState=nestedState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+    call NUOPC_Advertise(nestedState, &
+      StandardName="surface_net_downward_shortwave_flux", name="rsns", &
+      SharePolicyField="share", &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+    
 #endif
 
   end subroutine
