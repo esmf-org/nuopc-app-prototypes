@@ -208,7 +208,7 @@ module PHY
         file=__FILE__)) &
         return  ! bail out
     endif
-      
+    
     ! write out the Fields in the exportState
     call NUOPC_Write(exportState, fileNamePrefix="field_phy_export_datainit_", &
       status=ESMF_FILESTATUS_REPLACE, relaxedFlag=.true., rc=rc)

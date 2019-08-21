@@ -85,7 +85,8 @@ module ATM
     rc = ESMF_SUCCESS
     
     ! SetServices for DYN
-    call NUOPC_DriverAddComp(driver, "DYN", dynSS, comp=child, rc=rc)
+    call NUOPC_DriverAddComp(driver, "DYN", dynSS, petList=(/0/), &
+      comp=child, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -103,7 +104,8 @@ module ATM
       return  ! bail out
     
     ! SetServices for PHY
-    call NUOPC_DriverAddComp(driver, "PHY", phySS, comp=child, rc=rc)
+    call NUOPC_DriverAddComp(driver, "PHY", phySS, petList=(/1/), &
+      comp=child, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
