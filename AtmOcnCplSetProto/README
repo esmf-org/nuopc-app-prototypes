@@ -22,10 +22,6 @@ Description
   The OCN-TO-ATM connector couples OCN:Nest2 to ATM:Nest2 and OCN:Nest3 to
   ATM:Nest3. ATM:Nest1 is not connected.
 
-Dependencies:
-  - ESMF v7.1.0r or later. CplSet connections were first added in
-    ESMF_7_1_0_beta_snapshot_40
-  
 Build:
   - Set environment variable ESMFMKFILE to point to the esmf.mk of your ESMF
     installation.
