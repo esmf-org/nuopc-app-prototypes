@@ -1,0 +1,52 @@
+README for Custom Field Dictionary NUOPC prototype
+--------------------------------------------------
+
+Very simple NUOPC app to demonstrate how to setup a custom NUOPC Field
+dictionary from a NUOPC Field dictionary file in YAML format. 
+This app consists of a Driver controlling a single Model component.
+The main app sets up a default NUOPC Field dictionary first and outputs
+it to the log files in both traditional and YAML format. Subsequently,
+it replaces the default NUOPC Field dictionary with a custom one by
+reading its content from a YAML file. The dictionary is then written 
+again to the log files as in the previous case.
+
+NOTE: Reading a custom NUOPC Field dictionary from a YAML file requires
+building ESMF with support for the third-party library yaml-cpp 
+(https://github.com/jbeder/yaml-cpp). See the ESMF User Guide for details.
+
+Description:
+
+  A single model component driven by a single driver component.
+
+  The ESM driver component uses the default run sequence to drive the MODEL
+  component.
+  
+  No connector components are present.
+  
+  The MODEL component uses a simple two-phase initialization,
+  consisting of advertise and realize.
+  
+
+Build:
+  - Set environment variable ESMFMKFILE to point to the esmf.mk of your ESMF
+    installation.
+  - gmake
+  
+Execution:
+  - Optionally set environment variable ESMF_RUNTIME_COMPLIANCECHECK to ON.
+  - mpirun -np X ./esmApp (where X is the total number of PETs, typically 4)
+  
+Output:
+  - PET*.Log files including the content of both the default and custom
+    NUOPC Field dictionary, as well as compliance checker output if turned on.
+  - The prototype outputs time stepping information to stdout.
+
+Code structure:
+  - Makefile    - Makefile that is based on the standard esmf.mk mechanism.
+  - model.F90   - The MODEL component, specializing generic NUOPC_Model.
+  - driver.F90  - Driver specializing NUOPC_Driver, driving the single MODEL.
+  - util.F90    - Module containing utility to log the NUOPC Field dictionary.
+  - mainApp.F90 - Main application.
+
+Additional files:
+  - fd.yaml     - custom NUOPC Field dictionary file (YAML format)
