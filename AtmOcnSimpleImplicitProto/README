@@ -1,0 +1,47 @@
+README for ATM-OCN with simple implicit coupling NUOPC prototype
+----------------------------------------------------------------
+
+Show a simple implicit coupling between two model components. The OCN component
+lags behind the ATM component and expects ATM fields at time t+dt for its own
+forward step t -> t+dt.
+
+Description:
+
+  A two-way coupled system with a single driver and two model components.
+
+  The ESM driver uses explicitly constructed petLists when adding the ATM, 
+  and OCN components. 
+
+  The ESM driver constructs a custom run sequence to introduce a time lag
+  between ATM and OCN components.
+  
+  The connector components are explicitly added by the driver.
+  
+  Both ATM and OCN components use a simple two-phase initialization,
+  consisting of advertise and realize.
+  
+
+Build:
+  - Set environment variable ESMFMKFILE to point to the esmf.mk of your ESMF
+    installation.
+  - gmake
+  
+Execution:
+  - Optionally set environment variable ESMF_RUNTIME_COMPLIANCECHECK to ON.
+  - mpirun -np X ./esmApp (where X is the total number of PETs, typically 4)
+  
+Output:
+  - PET*.Log files containing compliance checker output if turned on.
+  - The prototype outputs time stepping information to stdout.
+
+Code structure:
+  - Makefile    - Makefile that is based on the standard esmf.mk mechanism.
+  - atm.F90     - The ATM component, specializing generic NUOPC_Model.
+  - ocn.F90     - The OCN component, specializing generic NUOPC_Model.
+                  -> expects ATM fields at t+dt for integration step t->t+dt
+                  -> this is done by overwriting CheckImport by an
+                     implicit version (checking for import Fields with future
+                     timeStamp)
+  - esm.F90     - The Earth System Model (ESM) component, specializing generic
+                  NUOPC_Driver.
+  - esmApp.F90  - ESM application.
