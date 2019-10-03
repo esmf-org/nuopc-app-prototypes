@@ -1,0 +1,66 @@
+README for DYN-PHY NUOPC prototype
+----------------------------------
+
+Show field reference sharing between two components.
+
+Description:
+
+  A one-way coupled system with a single driver and two model components.
+
+  The ATM driver component uses the default run sequence to implement coupling
+  between DYN and PHY components. 
+  
+  The connector component, PHY to DYN, is explicitly added by the driver.
+  
+  Both DYN and PHY components use a simple two-phase initialization,
+  consisting of advertise and realize.
+  
+  Both DYN and PHY components set SharePolicyField="share" when adverising
+  the field with StandardName="PHYEX". This instructs the NUOPC_Connector to
+  evaluate the possibility to implement the connection via reference sharing
+  for this field.
+  
+  The DYN component uses the default TransferOffer setting of 
+  "will provide" during Advertise (by not specifying it). The PHY component
+  explicitly sets TransferOffer="can provide".
+  
+  Since both DYN and PHY components inidcate their willingness to share the
+  Field allocation via SharePolicyField="share", _and_ both components run on
+  the same petList, the Connector is able to set the ShareStatusField="shared"
+  (on both sides). Further, the Connector sets TransferAction="provide"
+  on the DYN side (which indicated "will provide"), and 
+  TransferAction="accept" on the PHY side (which indicated just 
+  "can provide").
+  
+  The DYN component realizes in the standard way using NUOPC_Realize() for
+  convenience, with selection="realize_connected_remove_others". The PHY
+  component on the other hand must consider the TransferAction="accept"
+  setting. Fields that have TransferAction="accept" are realized 
+  automatically by the Connector using the data allocation specified by the
+  provider side (here DYN component). Fields can still be modified if needed,
+  but in most cases are fine the way they are. To simplify different treatment
+  depending on the TransferAction setting, the NUOPC_Realize() provides
+  selection="realize_connected+provide_remove_others". This indicates that 
+  only fields that are connected _and_ have TransferAction="provide", 
+  should be realized. Fields that have TransferAction="accept" are left
+  untouched.
+
+Build:
+  - Set environment variable ESMFMKFILE to point to the esmf.mk of your ESMF
+    installation.
+  - gmake
+  
+Execution:
+  - Optionally set environment variable ESMF_RUNTIME_COMPLIANCECHECK to ON.
+  - mpirun -np X ./esmApp (where X is the total number of PETs, typically 4)
+  
+Output:
+  - PET*.Log files containing compliance checker output if turned on.
+  - The prototype outputs time stepping information to stdout.
+
+Code structure:
+  - Makefile    - Makefile that is based on the standard esmf.mk mechanism.
+  - dyn.F90     - The DYN component, specializing generic NUOPC_Model.
+  - phy.F90     - The PHY component, specializing generic NUOPC_Model.
+  - atm.F90     - The ATM component, specializing generic NUOPC_Driver.
+  - esmApp.F90  - ESM application.
