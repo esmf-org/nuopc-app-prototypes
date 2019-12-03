@@ -54,7 +54,6 @@ program esmApp
 
   !-----------------------------------------------------------------------------
 
-  ! need to add "density" to the NUOPC Field Dictionary
   ! Create the earth system Component
   esmComp = ESMF_GridCompCreate(name="esm", rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
