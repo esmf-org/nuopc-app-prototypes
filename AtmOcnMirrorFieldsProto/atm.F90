@@ -201,14 +201,14 @@ module ATM
     ! finds on the other side of the connection (i.e. in the Connector's
     ! importState).
     ! Mirrored fields are automatically advertised with the 
-    ! "TransferOfferGeomObject" attribute set to be "opposite" to what the
+    ! "TransferOffer" attribute set to be "opposite" to what the
     ! original field was advertised with. Here this means that the
-    ! TransferOfferGeomObject attribute is set to "cannot provide" for all of
+    ! TransferOffer attribute is set to "cannot provide" for all of
     ! the mirrored fields (because the OCN component was advertising with the 
     ! default of "will provide"). 
-    ! However, the automatically set "TransferOfferGeomObject" attribute can be
+    ! However, the automatically set "TransferOffer" attribute can be
     ! overwritten here. E.g. explicitly setting 
-    ! TransferOfferGeomObject = "will provide" here allows the component to set
+    ! TransferOffer = "will provide" here allows the component to set
     ! its own grid for the mirrored fields.
 
     ! air_pressure_at_sea_level
@@ -218,8 +218,8 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    ! set TransferOfferGeomObject = "will provide"
-    call NUOPC_SetAttribute(field, name="TransferOfferGeomObject", &
+    ! set ProducerTransferOffer = "will provide"
+    call NUOPC_SetAttribute(field, name="ProducerTransferOffer", &
       value="will provide", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -233,8 +233,8 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    ! set TransferOfferGeomObject = "will provide"
-    call NUOPC_SetAttribute(field, name="TransferOfferGeomObject", &
+    ! set ProducerTransferOffer = "will provide"
+    call NUOPC_SetAttribute(field, name="ProducerTransferOffer", &
       value="will provide", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
