@@ -74,12 +74,12 @@ program externalApp
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
       
   ! Create the earth system import/export States
-  esmImportState = ESMF_StateCreate(rc=rc)
+  esmImportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  esmExportState = ESMF_StateCreate(rc=rc)
+  esmExportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &

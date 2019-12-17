@@ -239,7 +239,7 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_GetAttribute(field, name="TransferActionGeomObject", &
+    call NUOPC_GetAttribute(field, name="ConsumerTransferAction", &
       value=transferAction, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -741,7 +741,7 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_GetAttribute(field, name="TransferActionGeomObject", &
+    call NUOPC_GetAttribute(field, name="ConsumerTransferAction", &
       value=transferAction, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
