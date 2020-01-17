@@ -100,7 +100,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call ESMF_AttributeSet(info, name="maxPeCountPerPet", value=2, rc=rc)
+    call ESMF_InfoSet(info, key="maxPeCountPerPet", value=2, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -138,7 +138,7 @@ module ESM
     deallocate(petList)
     
     ! SetServices for OCN with petList on second half of PETs
-    call ESMF_AttributeSet(info, name="maxPeCountPerPet", value=4, rc=rc)
+    call ESMF_InfoSet(info, key="maxPeCountPerPet", value=4, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

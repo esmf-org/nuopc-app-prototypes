@@ -109,9 +109,9 @@ module ESM
       return  ! bail out
 #define MORE_THAN_ONE_PE_PER_PET_WORKING_ATM
 #ifdef MORE_THAN_ONE_PE_PER_PET_WORKING_ATM
-    call ESMF_AttributeSet(info, name="maxPeCountPerPet", value=2, rc=rc)
+    call ESMF_InfoSet(info, key="maxPeCountPerPet", value=2, rc=rc)
 #else
-    call ESMF_AttributeSet(info, name="maxPeCountPerPet", value=1, rc=rc)
+    call ESMF_InfoSet(info, key="maxPeCountPerPet", value=1, rc=rc)
 #endif
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -149,9 +149,9 @@ module ESM
     
 #define MORE_THAN_ONE_PE_PER_PET_WORKING_OCN
 #ifdef MORE_THAN_ONE_PE_PER_PET_WORKING_OCN
-    call ESMF_AttributeSet(info, name="maxPeCountPerPet", value=2, rc=rc)
+    call ESMF_InfoSet(info, key="maxPeCountPerPet", value=2, rc=rc)
 #else
-    call ESMF_AttributeSet(info, name="maxPeCountPerPet", value=1, rc=rc)
+    call ESMF_InfoSet(info, key="maxPeCountPerPet", value=1, rc=rc)
 #endif
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
