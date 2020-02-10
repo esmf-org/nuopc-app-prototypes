@@ -9,7 +9,7 @@
 !==============================================================================
 
 ! Make sure to define test macros consistently across all source files:
-#define TEST_GRID_EDGE_WIDTHS
+#define TEST_GRID_EDGE_WIDTHS_off
 #define TEST_GRID_EDGE_WIDTHS_KEEP_FACTORIZED_COORDS___off
 #define TEST_MULTI_TILE_GRID
 
