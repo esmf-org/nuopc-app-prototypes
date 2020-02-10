@@ -296,11 +296,32 @@ module MED
       character(len=80)                       :: stateName
       type(ESMF_Field)                        :: field
       character(len=80)                       :: connectedValue
-      character(len=20)                       :: transferAction
+      character(len=80)                       :: transferAction
       character(len=80), allocatable          :: itemNameList(:)
       type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
+      type(ESMF_StateIntent_Flag)             :: stateIntent
+      character(len=80)                       :: transferActionAttr
     
       if (present(rc)) rc = ESMF_SUCCESS
+      
+      call ESMF_StateGet(state, stateIntent=stateIntent, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+      if (stateIntent==ESMF_STATEINTENT_EXPORT) then
+        transferActionAttr="ProducerTransferAction"
+      elseif (stateIntent==ESMF_STATEINTENT_IMPORT) then
+        transferActionAttr="ConsumerTransferAction"
+      else
+        call ESMF_LogSetError(ESMF_RC_ARG_BAD, &
+          msg="The stateIntent must either be IMPORT or EXPORT here.", &
+          line=__LINE__, &
+          file=__FILE__, &
+          rcToReturn=rc)
+        return  ! bail out
+      endif
     
       call ESMF_StateGet(state, name=stateName, nestedFlag=.true., &
         itemCount=itemCount, rc=rc)
@@ -341,7 +362,7 @@ module MED
               file=__FILE__)) &
               return  ! bail out
           else
-            call NUOPC_GetAttribute(field, name="TransferActionGeomObject", &
+            call NUOPC_GetAttribute(field, name=transferActionAttr, &
               value=transferAction, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
               line=__LINE__, &
@@ -400,7 +421,7 @@ module MED
       ! local variables
       integer                                 :: itemCount, item
       type(ESMF_Field)                        :: field
-      character(len=20)                       :: transferAction
+      character(len=80)                       :: transferAction
       character(len=80), allocatable          :: itemNameList(:)
       type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
       type(ESMF_GeomType_Flag)                :: geomtype
@@ -413,9 +434,30 @@ module MED
       integer, allocatable                    :: minIndexPTile(:,:), maxIndexPTile(:,:)
       integer, allocatable                    :: regDecompPTile(:,:)
       integer                                 :: i, j
+      type(ESMF_StateIntent_Flag)             :: stateIntent
+      character(len=80)                       :: transferActionAttr
     
       if (present(rc)) rc = ESMF_SUCCESS
       
+      call ESMF_StateGet(state, stateIntent=stateIntent, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+      if (stateIntent==ESMF_STATEINTENT_EXPORT) then
+        transferActionAttr="ProducerTransferAction"
+      elseif (stateIntent==ESMF_STATEINTENT_IMPORT) then
+        transferActionAttr="ConsumerTransferAction"
+      else
+        call ESMF_LogSetError(ESMF_RC_ARG_BAD, &
+          msg="The stateIntent must either be IMPORT or EXPORT here.", &
+          line=__LINE__, &
+          file=__FILE__, &
+          rcToReturn=rc)
+        return  ! bail out
+      endif
+
       call ESMF_StateGet(state, nestedFlag=.true., itemCount=itemCount, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
@@ -440,7 +482,7 @@ module MED
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
-          call NUOPC_GetAttribute(field, name="TransferActionGeomObject", &
+          call NUOPC_GetAttribute(field, name=transferActionAttr, &
             value=transferAction, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
@@ -653,7 +695,7 @@ module MED
       integer                                 :: itemCount, item, stat, idxns, ii
       type(ESMF_State)                        :: nestedState
       type(ESMF_State)                        :: nestedStates(4)
-      type(ESMF_Field)                        :: field
+      type(ESMF_Field)                        :: field, fieldOnMesh
       type(ESMF_Grid)                         :: grid
       type(ESMF_Mesh)                         :: mesh
       character(len=80)                       :: fieldName
@@ -681,6 +723,7 @@ module MED
         file=__FILE__)) &
         return  ! bail out
 
+      idxns = 0
       do item =1, itemCount
         if(itemTypeList(item) == ESMF_STATEITEM_STATE) then
           call ESMF_StateGet(state, itemName=itemNameList(item), nestedState=nestedState, rc=rc)
@@ -728,19 +771,12 @@ module MED
               file=__FILE__)) &
               return  ! bail out
 
-            field = ESMF_FieldCreate(mesh, typekind=ESMF_TYPEKIND_R8, name=FieldName, rc=rc)
+            fieldOnMesh = ESMF_FieldCreate(mesh, typekind=ESMF_TYPEKIND_R8, name=FieldName, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
               line=__LINE__, &
               file=__FILE__)) &
               return  ! bail out
 
-            call ESMF_StateRemove(state, itemNameList(item), rc=rc)
-            if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-              line=__LINE__, &
-              file=__FILE__)) &
-              return  ! bail out
-
-            ! Find the nested State where this field is contained
             do ii = 1, idxns
               call ESMF_StateGet(nestedStates(ii), itemName=fieldName, itemType=itemType, rc=rc)
               if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -754,14 +790,14 @@ module MED
             !call NUOPC_Realize(State, mesh=mesh, selection="realize_connected_remove_others", fieldName=fieldName, rc=rc)
             !call NUOPC_Realize(State, mesh=mesh, fieldName=fieldName, rc=rc)
             !call NUOPC_Realize(State, mesh=mesh, fieldName=itemNameList(item), rc=rc)
-            !call NUOPC_Realize(State, field=field, rc=rc)
+            call NUOPC_Realize(nestedStates(ii), field=fieldOnMesh, rc=rc)
             !call NUOPC_Realize(nestedStates(ii), mesh=mesh, fieldName=fieldName, rc=rc)
-            call NUOPC_Realize(State, mesh=mesh, fieldName=fieldName, rc=rc)
+            !call NUOPC_Realize(State, mesh=mesh, fieldName=fieldName, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
               line=__LINE__, &
               file=__FILE__)) &
               return  ! bail out
-
+#if 0
             nullify(ugLBound, ugUBound, gridToFieldMap)
             ! deal with gridToFieldMap
             call ESMF_AttributeGet(field, name="GridToFieldMap", &
@@ -836,12 +872,13 @@ module MED
                 return  ! bail out
             endif
             deallocate(gridToFieldMap)
+#endif
           endif
         endif
       enddo
       
       deallocate(itemNameList, itemTypeList)
-    
+
     end subroutine
 
   end subroutine
