@@ -288,6 +288,7 @@ module ESM
           return  ! bail out
         ! go through all of the entries in the cplList
         do j=1, cplListSize
+#if 0
           if (trim(cplList(j))=="precipitation_flux") then
             ! switch remapping to redist, b/c arbDistr Grid
             cplList(j) = trim(cplList(j))//":REMAPMETHOD=redist"
@@ -301,6 +302,7 @@ module ESM
             ! switch remapping to redist, b/c can have holes in index space
             cplList(j) = trim(cplList(j))//":REMAPMETHOD=redist"
           endif
+#endif
         enddo
         ! store the modified cplList in CplList attribute of connector i
         call NUOPC_CompAttributeSet(connectorList(i), &
