@@ -62,7 +62,7 @@ module driver
       return  ! bail out
 
     ! set driver verbosity
-    call NUOPC_CompAttributeSet(driver, name="Verbosity", value="low", rc=rc)
+    call NUOPC_CompAttributeSet(driver, name="Verbosity", value="high", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -89,7 +89,7 @@ module driver
     type(ESMF_VM)                 :: vm
     logical                       :: isFlag
     character(80)                 :: msgString
-    integer                       :: mpiComm
+    integer                       :: mpiComm, size, ierr
 
     rc = ESMF_SUCCESS
 
@@ -112,7 +112,7 @@ module driver
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(child, name="Verbosity", value="low", rc=rc)
+    call NUOPC_CompAttributeSet(child, name="Verbosity", value="high", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -158,7 +158,8 @@ module driver
     if (mpiComm==MPI_COMM_NULL) then
       write(msgString,*) "MPI_COMM_NULL"
     else
-      write(msgString,*) "valid MPI_COMM"
+      call MPI_Comm_size(mpiComm, size, ierr)
+      write(msgString,*) "valid MPI_COMM with size=",size
     endif
     call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
