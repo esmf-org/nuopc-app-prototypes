@@ -154,6 +154,16 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
+    ! importable field: sea_surface_salinity
+    ! -> marked as "cannot provide"
+    call NUOPC_Advertise(importState, &
+      StandardName="sea_surface_salinity", name="sss", &
+      TransferOfferGeomObject="cannot provide", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! exportable field: air_pressure_at_sea_level
     ! -> marked as "cannot provide"
     call NUOPC_Advertise(exportState, &
@@ -606,6 +616,25 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
+    ! access the "sss" field in the importState
+    call ESMF_StateGet(importState, field=field, itemName="sss", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! Swap Mesh in the "sss" field to be the same one that was constructed
+    ! for "sst". This way the NUOPC Layer knows that both fields are to be
+    ! built on the same Mesh (with same distribution) and will transfer the
+    ! Mesh coordinates only once.
+    ! If on the other hand a different distribution is desired for different
+    ! fields, then construct separate Meshes and swap those into the field.
+    call ESMF_FieldEmptySet(field, mesh=mesh, rc=rc)    
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! extro
     call NUOPC_LogExtro(name, rName, verbosity, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -718,6 +747,15 @@ module ATM
 
     ! test a regrid between to fields that were created on transferred Meshes      
     call ESMF_FieldRegridStore(fieldIn, fieldOut, routehandle=rh, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! realize "sss" field in the importState, with transferred Mesh
+    ! test the option here to specify an explicit typekind
+    call NUOPC_Realize(importState, fieldName="sss", &
+      typekind=ESMF_TYPEKIND_R4, field=field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

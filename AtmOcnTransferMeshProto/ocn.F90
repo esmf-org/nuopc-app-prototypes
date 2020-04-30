@@ -118,6 +118,15 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
 
+    ! exportable field: sea_surface_temperature
+    ! -> use default, i.e. marked as "will provide"
+    call NUOPC_Advertise(exportState, &
+      StandardName="sea_surface_salinity", name="sss", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! extro
     call NUOPC_LogExtro(name, rName, verbosity, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -385,6 +394,15 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
 #endif
+
+    ! exportable field: sea_surface_salinity
+    call NUOPC_Realize(exportState, meshOut, fieldName="sss", &
+      typekind=ESMF_TYPEKIND_R8, selection="realize_connected_remove_others", &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 
     ! extro
     call NUOPC_LogExtro(name, rName, verbosity, rc=rc)
