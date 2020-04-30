@@ -73,7 +73,7 @@ module ESM
     verbosity = ibset(verbosity,11) ! log info about data dependency during init
     verbosity = ibset(verbosity,13) ! log component creation
     write(attrStr,"(I10)") verbosity
-    call NUOPC_CompAttributeSet(driver, name="Verbosity", value=attrStr, rc=rc)
+    call NUOPC_CompAttributeSet(driver, name="Verbosity", value="high", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -141,7 +141,7 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     deallocate(petList)
-    call NUOPC_CompAttributeSet(child, name="Verbosity", value="9", rc=rc)
+    call NUOPC_CompAttributeSet(child, name="Verbosity", value="high", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -170,7 +170,7 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     deallocate(petList)
-    call NUOPC_CompAttributeSet(child, name="Verbosity", value="9", rc=rc)
+    call NUOPC_CompAttributeSet(child, name="Verbosity", value="high", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -183,7 +183,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="9", rc=rc)
+    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="high", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -196,7 +196,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="9", rc=rc)
+    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="high", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
