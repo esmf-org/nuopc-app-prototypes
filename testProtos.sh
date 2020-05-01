@@ -223,6 +223,7 @@ echo
 TestProto     AsyncIOBlockingProto                        asyncIOApp
 TestProto     AsyncIONonblockingProto                     asyncIOApp
 TestProto     AtmOcnConProto                              esmApp
+TestProto     AtmOcnConOptsProto                          esmApp
 TestProto     AtmOcnCplListProto                          esmApp
 TestProto     AtmOcnCplSetProto                           esmApp
 TestProto     AtmOcnFDSynoProto                           esmApp
