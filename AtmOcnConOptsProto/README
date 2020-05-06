@@ -9,7 +9,7 @@ Description:
   connectors.
 
   The ESM driver component uses the run sequence configured in the
-  esmApp.runconfig file.
+  [runconfig] file.
   
   The connector components are automatically added by the driver unless
   AUTOCONNECTORS is disabled in esm.F90.
@@ -19,7 +19,7 @@ Description:
 
   Run success is determined by the zeroValues and missingValues found in
   the final import state. Set zeroValues and missingValues in the
-  esmApp.runconfig file as needed.
+  [runconfig] file as needed.
 
   For example:
     zeroregion=select, this setting results in missing values
@@ -32,7 +32,10 @@ Build:
   
 Execution:
   - Optionally set environment variable ESMF_RUNTIME_COMPLIANCECHECK to ON.
-  - mpirun -np X ./esmApp (where X is the total number of PETs, typically 4)
+  - mpirun -np X ./esmApp [runconfig]
+      where X is the total number of PETs, typically 4
+      and [runconfig] is the configuration file, which defaults to
+      bilinear.cfg if no command line argument is provided.
   
 Output:
   - PET*.Log files containing compliance checker output if turned on.
@@ -45,4 +48,12 @@ Code structure:
   - esm.F90          - The Earth System Model (ESM) component, specializing
                        generic NUOPC_Driver.
   - esmApp.F90       - ESM application.
-  - esmApp.runconfig - Runtime configuration
+
+Runtime configuraiton files:
+  - bilinear.cfg         - Bilinear regridding with zero values used to fill
+                           unmapped points.
+  - bilinear_nearest.cfg - Bilinear regridding with nearest neighbor
+                           extrapolation used to fill unmapped points.
+  - bilinear_select.cfg  - Bilinear regridding with zeroregion=select used to
+                           ignore unmapped points resulting in missing value
+                           in unmapped points.
