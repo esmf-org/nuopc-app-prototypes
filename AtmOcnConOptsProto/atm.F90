@@ -29,6 +29,10 @@ module ATM
 
   real(ESMF_KIND_R8),parameter :: zeroValue    =      0.0_ESMF_KIND_R8
   real(ESMF_KIND_R8),parameter :: missingValue = 999999.0_ESMF_KIND_R8
+  real(ESMF_KIND_R8),parameter :: islandLoc(4) = (/ 289.5_ESMF_KIND_R8, &
+                                                    295.5_ESMF_KIND_R8, &
+                                                      9.5_ESMF_KIND_R8, &
+                                                     25.5_ESMF_KIND_R8 /)
 
   !-----------------------------------------------------------------------------
   contains
@@ -128,9 +132,14 @@ module ATM
     integer, intent(out) :: rc
     
     ! local variables    
-    type(ESMF_Field)        :: field
-    type(ESMF_Grid)         :: gridIn
-    type(ESMF_Grid)         :: gridOut
+    type(ESMF_Field)               :: field
+    type(ESMF_Grid)                :: gridIn
+    type(ESMF_Grid)                :: gridOut
+    integer                        :: tlb(2), tub(2)
+    real(ESMF_KIND_R8), pointer    :: lon_fptr(:)
+    real(ESMF_KIND_R8), pointer    :: lat_fptr(:)
+    integer(ESMF_KIND_I4), pointer :: msk_fptr(:,:)
+    integer                        :: i,j
     
     rc = ESMF_SUCCESS
     
@@ -144,6 +153,47 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+    ! get grid coordinates
+    call ESMF_GridGetCoord(gridIn, coordDim=1, &
+      staggerLoc=ESMF_STAGGERLOC_CENTER, farrayPtr=lon_fptr, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_GridGetCoord(gridIn, coordDim=2, &
+      staggerLoc=ESMF_STAGGERLOC_CENTER, farrayPtr=lat_fptr, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! add mask and island
+    call ESMF_GridAddItem(gridIn, itemflag=ESMF_GRIDITEM_MASK, &
+      staggerLoc=ESMF_STAGGERLOC_CENTER, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_GridGetItem(gridIn, itemflag=ESMF_GRIDITEM_MASK, &
+      staggerLoc=ESMF_STAGGERLOC_CENTER, &
+      totalLBound=tlb, totalUBound=tub, farrayPtr=msk_fptr, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    msk_fptr = 0
+    do j=tlb(2), tub(2)
+    do i=tlb(1), tub(1)
+      if ((lon_fptr(i).ge.islandLoc(1)) .AND. &
+          (lon_fptr(i).le.islandLoc(2)) .AND. &
+          (lat_fptr(j).ge.islandLoc(3)) .AND. &
+          (lat_fptr(j).le.islandLoc(4)) ) then
+        msk_fptr(i,j) = 1
+      endif
+    enddo
+    enddo
+
     gridOut = gridIn ! for now out same as in
     
 #ifdef WITHIMPORTFIELDS
@@ -159,7 +209,7 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    ! fill import field sst with 999999
+    ! fill import field sst with missingValue
     call ESMF_FieldFill(field, dataFillScheme="const", &
       const1=missingValue, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
