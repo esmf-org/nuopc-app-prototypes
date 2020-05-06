@@ -438,7 +438,7 @@ module ATM
               if ((gblZero(1).gt.0).neqv.zeroValues) then
                 write (*,"(A,A,A,L1,A)") "ERROR: ",trim(name), &
                   " zero values must be ", zeroValues, &
-                  ", see esmApp.runconfig file "
+                  ", see [runconfig] file "
                 call ESMF_LogSetError(ESMF_RC_NOT_VALID, &
                   msg="Zero values does not match config settings", &
                   line=__LINE__, &
@@ -448,7 +448,7 @@ module ATM
               elseif ((gblMissing(1).gt.0).neqv.missingValues) then
                 write (*,"(A,A,A,L1,A)") "ERROR: ",trim(name), &
                   " missing values must be ", missingValues, &
-                  ", see esmApp.runconfig file "
+                  ", see [runconfig] file "
                 call ESMF_LogSetError(ESMF_RC_NOT_VALID, &
                   msg="Missing values does not match config settings", &
                   line=__LINE__, &

@@ -41,6 +41,42 @@ echo ---------------------------------------------------------------------------
 echo
 }
 
+function TestProtoArgList {
+if [ "$#" -ne 3 ]; then
+echo ERROR: TestProtoArg requires 3 arguments.
+echo "  $*"
+return 1
+fi
+((count++))
+testList[count]=$1
+read -ra ARGS <<< "$3"
+echo ---------------------------------------------------------------------------
+echo STARTING: $1
+cd $1
+gmake distclean
+gmake
+for arg in "${ARGS[@]}"; do
+set -x
+$MPIRUN 4 $TOOLRUN ./$2 $arg > $2.$arg.stdout 2>&1
+local result=$?
+set +x
+if [ $result -ne 0 ]
+then
+break
+fi
+done
+if [ $result -eq 0 ]
+then
+testResult[count]="PASS"
+else
+testResult[count]="FAIL"
+fi
+echo FINISHED: $1
+cd ..
+echo ---------------------------------------------------------------------------
+echo
+}
+
 function TestSelectProto {
 echo ---------------------------------------------------------------------------
 echo STARTING: $1

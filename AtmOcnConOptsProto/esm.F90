@@ -36,6 +36,8 @@ module ESM
   private
   
   public SetServices
+
+  character(*), parameter :: dflt_cfname = "bilinear.cfg"
   
   !-----------------------------------------------------------------------------
   contains
@@ -45,7 +47,11 @@ module ESM
     type(ESMF_GridComp)  :: driver
     integer, intent(out) :: rc
     
+    type(ESMF_VM)               :: vm
+    integer                     :: localPet
     type(ESMF_Config)           :: config
+    integer                     :: argCount(1)
+    character(len=32)           :: cfName
 
     rc = ESMF_SUCCESS
     
@@ -69,14 +75,44 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
+    ! query the Component for its vm and localPet
+    call ESMF_GridCompGet(driver, vm=vm, localPet=localPet, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out 
+
+    ! get config file name from command line arguments
+    if (localPet.eq.0) then
+      call ESMF_UtilGetArgC(argCount(1), rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      if (argCount(1).gt.0) then
+        call ESMF_UtilGetArg(argindex=1, argvalue=cfName, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+      else
+        cfName = dflt_cfName
+      endif
+    endif
+    call ESMF_VMBroadcast(vm, cfName, 32, rootPet=0, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! create, open and set the config
     config = ESMF_ConfigCreate(rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call ESMF_ConfigLoadFile(config, "esmApp.runconfig", rc=rc)
+    call ESMF_ConfigLoadFile(config, cfName, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
