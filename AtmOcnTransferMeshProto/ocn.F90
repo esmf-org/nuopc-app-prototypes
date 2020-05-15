@@ -1,6 +1,6 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright 2002-2020, University Corporation for Atmospheric Research, 
+! Copyright 2002-2019, University Corporation for Atmospheric Research, 
 ! Massachusetts Institute of Technology, Geophysical Fluid Dynamics 
 ! Laboratory, University of Michigan, National Centers for Environmental 
 ! Prediction, Los Alamos National Laboratory, Argonne National Laboratory, 
@@ -113,15 +113,6 @@ module OCN
     ! -> use default, i.e. marked as "will provide"
     call NUOPC_Advertise(exportState, &
       StandardName="sea_surface_temperature", name="sst", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    ! exportable field: sea_surface_temperature
-    ! -> use default, i.e. marked as "will provide"
-    call NUOPC_Advertise(exportState, &
-      StandardName="sea_surface_salinity", name="sss", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -394,15 +385,6 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
 #endif
-
-    ! exportable field: sea_surface_salinity
-    call NUOPC_Realize(exportState, meshOut, fieldName="sss", &
-      typekind=ESMF_TYPEKIND_R8, selection="realize_connected_remove_others", &
-      rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
 
     ! extro
     call NUOPC_LogExtro(name, rName, verbosity, rc=rc)
