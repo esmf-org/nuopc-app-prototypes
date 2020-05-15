@@ -1,6 +1,6 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright 2002-2020, University Corporation for Atmospheric Research, 
+! Copyright 2002-2019, University Corporation for Atmospheric Research, 
 ! Massachusetts Institute of Technology, Geophysical Fluid Dynamics 
 ! Laboratory, University of Michigan, National Centers for Environmental 
 ! Prediction, Los Alamos National Laboratory, Argonne National Laboratory, 
@@ -62,7 +62,7 @@ module driver
       return  ! bail out
 
     ! set driver verbosity
-    call NUOPC_CompAttributeSet(driver, name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(driver, name="Verbosity", value="low", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -89,7 +89,7 @@ module driver
     type(ESMF_VM)                 :: vm
     logical                       :: isFlag
     character(80)                 :: msgString
-    integer                       :: mpiComm, size, ierr
+    integer                       :: mpiComm
 
     rc = ESMF_SUCCESS
 
@@ -112,7 +112,7 @@ module driver
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(child, name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(child, name="Verbosity", value="low", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -158,8 +158,7 @@ module driver
     if (mpiComm==MPI_COMM_NULL) then
       write(msgString,*) "MPI_COMM_NULL"
     else
-      call MPI_Comm_size(mpiComm, size, ierr)
-      write(msgString,*) "valid MPI_COMM with size=",size
+      write(msgString,*) "valid MPI_COMM"
     endif
     call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &

@@ -1,6 +1,6 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright 2002-2020, University Corporation for Atmospheric Research, 
+! Copyright 2002-2019, University Corporation for Atmospheric Research, 
 ! Massachusetts Institute of Technology, Geophysical Fluid Dynamics 
 ! Laboratory, University of Michigan, National Centers for Environmental 
 ! Prediction, Los Alamos National Laboratory, Argonne National Laboratory, 
@@ -185,35 +185,14 @@ module IOComp
       character(len=80)                       :: stateName
       type(ESMF_Field)                        :: field
       character(len=80)                       :: connectedValue
-      character(len=80)                       :: transferAction
+      character(len=20)                       :: transferAction
       character(len=80), allocatable          :: itemNameList(:)
       type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
       type(ESMF_Config)                       :: config
       integer                                 :: gridDims(2)
       type(ESMF_Grid)                         :: gridIn
-      type(ESMF_StateIntent_Flag)             :: stateIntent
-      character(len=80)                       :: transferActionAttr
-    
-      if (present(rc)) rc = ESMF_SUCCESS
       
-      call ESMF_StateGet(state, stateIntent=stateIntent, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-
-      if (stateIntent==ESMF_STATEINTENT_EXPORT) then
-        transferActionAttr="ProducerTransferAction"
-      elseif (stateIntent==ESMF_STATEINTENT_IMPORT) then
-        transferActionAttr="ConsumerTransferAction"
-      else
-        call ESMF_LogSetError(ESMF_RC_ARG_BAD, &
-          msg="The stateIntent must either be IMPORT or EXPORT here.", &
-          line=__LINE__, &
-          file=__FILE__, &
-          rcToReturn=rc)
-        return  ! bail out
-      endif
+      if (present(rc)) rc = ESMF_SUCCESS
     
       call ESMF_StateGet(state, name=stateName, nestedFlag=.true., &
         itemCount=itemCount, rc=rc)
@@ -254,7 +233,7 @@ module IOComp
               file=__FILE__)) &
               return  ! bail out
           else
-            call NUOPC_GetAttribute(field, name=transferActionAttr, &
+            call NUOPC_GetAttribute(field, name="TransferActionGeomObject", &
               value=transferAction, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
               line=__LINE__, &
@@ -353,7 +332,7 @@ module IOComp
       ! local variables
       integer                                 :: itemCount, item
       type(ESMF_Field)                        :: field
-      character(len=80)                       :: transferAction
+      character(len=20)                       :: transferAction
       character(len=80), allocatable          :: itemNameList(:)
       type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
       type(ESMF_GeomType_Flag)                :: geomtype
@@ -363,30 +342,14 @@ module IOComp
       type(ESMF_DistGrid)                     :: distgrid
       integer                                 :: dimCount, tileCount
       integer, allocatable                    :: minIndexPTile(:,:), maxIndexPTile(:,:)
-      type(ESMF_StateIntent_Flag)             :: stateIntent
-      character(len=80)                       :: transferActionAttr
     
       if (present(rc)) rc = ESMF_SUCCESS
       
-      call ESMF_StateGet(state, nestedFlag=.true., itemCount=itemCount, &
-        stateIntent=stateIntent, rc=rc)
+      call ESMF_StateGet(state, nestedFlag=.true., itemCount=itemCount, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-
-      if (stateIntent==ESMF_STATEINTENT_EXPORT) then
-        transferActionAttr="ProducerTransferAction"
-      elseif (stateIntent==ESMF_STATEINTENT_IMPORT) then
-        transferActionAttr="ConsumerTransferAction"
-      else
-        call ESMF_LogSetError(ESMF_RC_ARG_BAD, &
-          msg="The stateIntent must either be IMPORT or EXPORT here.", &
-          line=__LINE__, &
-          file=__FILE__, &
-          rcToReturn=rc)
-        return  ! bail out
-      endif
     
       allocate(itemNameList(itemCount), itemTypeList(itemCount))
     
@@ -406,7 +369,7 @@ module IOComp
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
-          call NUOPC_GetAttribute(field, name=transferActionAttr, &
+          call NUOPC_GetAttribute(field, name="TransferActionGeomObject", &
             value=transferAction, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
