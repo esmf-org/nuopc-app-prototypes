@@ -96,11 +96,6 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call ESMF_MethodRemove(model, model_label_CheckImport, rc=rc) 
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
     call NUOPC_CompSpecialize(model, specLabel=model_label_CheckImport, & 
       specRoutine=NUOPC_NoOp, rc=rc) 
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &

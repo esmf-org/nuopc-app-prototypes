@@ -123,17 +123,11 @@ module MED
       return  ! bail out
 
     ! Handle the clocks when multiple run phases exist
-    call ESMF_MethodRemove(mediator, mediator_label_CheckImport, rc=rc) 
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, & 
-      line=__LINE__, file=__FILE__)) return  ! bail out 
     call NUOPC_CompSpecialize(mediator, specLabel=mediator_label_CheckImport, & 
       specRoutine=NUOPC_NoOp, rc=rc) 
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, & 
       line=__LINE__, file=__FILE__)) return  ! bail out
 
-    call ESMF_MethodRemove(mediator, mediator_label_SetRunClock, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, file=__FILE__)) return  ! bail out
     call NUOPC_CompSpecialize(mediator, specLabel=mediator_label_SetRunClock, &
       specRoutine=SetRunClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &

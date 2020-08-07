@@ -64,12 +64,6 @@ module MED
       return  ! bail out
     
     ! attach specializing method(s)
-    ! -> NUOPC specializes by default --->>> first need to remove the default
-    call ESMF_MethodRemove(mediator, label_CheckImport, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
     call NUOPC_CompSpecialize(mediator, specLabel=label_CheckImport, &
       specRoutine=NUOPC_NoOp, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -78,12 +72,6 @@ module MED
       return  ! bail out
 
     ! attach specializing method(s)
-    ! -> NUOPC specializes by default --->>> first need to remove the default
-    call ESMF_MethodRemove(mediator, label_SetRunClock, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
     call NUOPC_CompSpecialize(mediator, specLabel=label_SetRunClock, &
       specRoutine=SetRunClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
