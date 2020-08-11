@@ -99,7 +99,8 @@ module driver
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call ESMF_InfoSet(info, key="maxPeCountPerPet", value=2, rc=rc)
+    call ESMF_InfoSet(info, key="/NUOPC/Instance/maxPeCountPerPet", value=2, &
+      rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
