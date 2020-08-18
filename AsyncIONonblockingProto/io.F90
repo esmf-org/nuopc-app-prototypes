@@ -1,9 +1,9 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright 2002-2020, University Corporation for Atmospheric Research, 
-! Massachusetts Institute of Technology, Geophysical Fluid Dynamics 
-! Laboratory, University of Michigan, National Centers for Environmental 
-! Prediction, Los Alamos National Laboratory, Argonne National Laboratory, 
+! Copyright 2002-2020, University Corporation for Atmospheric Research,
+! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
+! Laboratory, University of Michigan, National Centers for Environmental
+! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
 ! NASA Goddard Space Flight Center.
 ! Licensed under the University of Illinois-NCSA License.
 !==============================================================================
@@ -16,121 +16,84 @@ module IOComp
 
   use ESMF
   use NUOPC
-  use NUOPC_Model, only: &
-    model_routine_SS            => SetServices, &
-    model_label_DataInitialize  => label_DataInitialize, &
-    model_label_Advance         => label_Advance
-  
+  use NUOPC_Model, &
+    modelSS    => SetServices
+
   implicit none
-  
+
   private
-  
+
   public SetServices
-  
+
   !-----------------------------------------------------------------------------
   contains
   !-----------------------------------------------------------------------------
-  
-  subroutine SetServices(gcomp, rc)
-    type(ESMF_GridComp)  :: gcomp
+
+  subroutine SetServices(model, rc)
+    type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
-    
+
     rc = ESMF_SUCCESS
-    
-    ! the NUOPC model component will register the generic methods
-    call NUOPC_CompDerive(gcomp, model_routine_SS, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
-    ! --- Initialization phases --------------------------------------
 
-    ! Provide InitializeP0 to switch from default IPDv00 to IPDv03
-    call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
-      userRoutine=InitializeP0, phase=0, rc=rc)
+    ! derive from NUOPC_Model
+    call NUOPC_CompDerive(model, modelSS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 
-    ! IPDv03p1: advertise Fields
-    call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv03p1"/), userRoutine=InitializeP1, rc=rc)
+    ! specialize model
+    call NUOPC_CompSpecialize(model, specLabel=label_Advertise, &
+      specRoutine=Advertise, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-
-    ! IPDv03p3: realize connected Fields with transfer action "provide"
-    call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv03p3"/), userRoutine=InitializeP3, rc=rc)
+    call NUOPC_CompSpecialize(model, specLabel=label_RealizeProvided, &
+      specRoutine=RealizeProvided, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-
-    ! IPDv03p4: optionally modify the decomp/distr of transferred Grid/Mesh
-    call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv03p4"/), userRoutine=InitializeP4, rc=rc)
+    call NUOPC_CompSpecialize(model, specLabel=label_AcceptTransfer, &
+      specRoutine=AcceptTransfer, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-
-    ! IPDv03p5: realize all Fields with transfer action "accept"
-    call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv03p5"/), userRoutine=InitializeP5, rc=rc)
+    call NUOPC_CompSpecialize(model, specLabel=label_RealizeAccepted, &
+      specRoutine=RealizeAccepted, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-
-    ! attach specializing method(s)
-    call NUOPC_CompSpecialize(gcomp, specLabel=model_label_Advance, &
-      specRoutine=ModelAdvance, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_CompSpecialize(gcomp, specLabel=model_label_DataInitialize, &
-      specRoutine=DataInitialize, rc=rc)
+    call NUOPC_CompSpecialize(model, specLabel=label_Advance, &
+      specRoutine=Advance, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 
   end subroutine
-  
+
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP0(gcomp, importState, exportState, clock, rc)
-    type(ESMF_GridComp)   :: gcomp
-    type(ESMF_State)      :: importState, exportState
-    type(ESMF_Clock)      :: clock
-    integer, intent(out)  :: rc
-    
+  subroutine Advertise(model, rc)
+    type(ESMF_GridComp)  :: model
+    integer, intent(out) :: rc
+
+    ! local variables
+    type(ESMF_State)        :: importState, exportState
+
     rc = ESMF_SUCCESS
 
-    ! Switch to IPDv03 by filtering all other phaseMap entries
-    call NUOPC_CompFilterPhaseMap(gcomp, ESMF_METHOD_INITIALIZE, &
-      acceptStringList=(/"IPDv03p"/), rc=rc)
+    ! query for importState and exportState
+    call NUOPC_ModelGet(model, importState=importState, &
+      exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
-  end subroutine
-  
-  !-----------------------------------------------------------------------------
-
-  subroutine InitializeP1(gcomp, importState, exportState, clock, rc)
-    type(ESMF_GridComp)  :: gcomp
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
-    integer, intent(out) :: rc
-    
-    rc = ESMF_SUCCESS
 
     ! importable field: air_pressure_at_sea_level
     call NUOPC_Advertise(importState, &
@@ -140,7 +103,7 @@ module IOComp
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
 #ifdef SECONDFIELD
     ! importable field: surface_net_downward_shortwave_flux
     call NUOPC_Advertise(importState, &
@@ -153,19 +116,26 @@ module IOComp
 #endif
 
   end subroutine
-  
+
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP3(gcomp, importState, exportState, clock, rc)
-    ! IPDv03p3: realize connected Fields with transfer action "provide"
-    ! and remove Fields that are not connected
-    type(ESMF_GridComp)  :: gcomp
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
+  subroutine RealizeProvided(model, rc)
+    type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
-    
+
+    ! local variables
+    type(ESMF_State)        :: importState, exportState
+
     rc = ESMF_SUCCESS
-    
+
+    ! query for importState and exportState
+    call NUOPC_ModelGet(model, importState=importState, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     call checkConnectedFlagProvide(importState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -179,10 +149,10 @@ module IOComp
       return  ! bail out
 
     contains ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    
+
     subroutine checkConnectedFlagProvide(state, rc)
       ! Look at all of the fields in state, including in nested states. Error
-      ! out if a connected field is found for which geom object must be 
+      ! out if a connected field is found for which geom object must be
       ! provided here. Remove all not connected fields.
       type(ESMF_State)  :: state
       integer, optional :: rc
@@ -194,18 +164,18 @@ module IOComp
       character(len=20)                       :: transferAction
       character(len=80), allocatable          :: itemNameList(:)
       type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
-    
+
       if (present(rc)) rc = ESMF_SUCCESS
-    
+
       call ESMF_StateGet(state, name=stateName, nestedFlag=.true., &
         itemCount=itemCount, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-    
+
       allocate(itemNameList(itemCount), itemTypeList(itemCount))
-    
+
       call ESMF_StateGet(state, nestedFlag=.true., &
         itemNameList=itemNameList, itemTypeList=itemTypeList, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -243,7 +213,7 @@ module IOComp
               file=__FILE__)) &
               return  ! bail out
             if (trim(transferAction)=="provide") then
-              ! the Connector instructed the gcomp to provide geom object
+              ! the Connector instructed the model to provide geom object
               call ESMF_LogSetError(ESMF_RC_NOT_VALID, &
                 msg="Cannot fulfill request to provide geom object for "// &
                 trim(itemNameList(item))//" in State "//trim(stateName), &
@@ -255,23 +225,31 @@ module IOComp
           endif
         endif
       enddo
-      
+
       deallocate(itemNameList, itemTypeList)
-    
+
     end subroutine
 
   end subroutine
-  
+
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP4(gcomp, importState, exportState, clock, rc)
-    ! IPDv03p4: optionally modify the decomp/distr of transferred Grid/Mesh
-    type(ESMF_GridComp)  :: gcomp
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
+  subroutine AcceptTransfer(model, rc)
+    type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
-    
+
+    ! local variables
+    type(ESMF_State)        :: importState, exportState
+
     rc = ESMF_SUCCESS
+
+    ! query for importState and exportState
+    call NUOPC_ModelGet(model, importState=importState, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 
     call adjustAcceptedGeom(importState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -286,7 +264,7 @@ module IOComp
       return  ! bail out
 
     contains ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    
+
     subroutine adjustAcceptedGeom(state, rc)
       ! Look at all of the fields in state, including in nested states. Adjust
       ! the distribution of the accepted geom object to a 1 DE/PET distribution.
@@ -305,17 +283,17 @@ module IOComp
       type(ESMF_DistGrid)                     :: distgrid
       integer                                 :: dimCount, tileCount
       integer, allocatable                    :: minIndexPTile(:,:), maxIndexPTile(:,:)
-    
+
       if (present(rc)) rc = ESMF_SUCCESS
-      
+
       call ESMF_StateGet(state, nestedFlag=.true., itemCount=itemCount, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-    
+
       allocate(itemNameList(itemCount), itemTypeList(itemCount))
-    
+
       call ESMF_StateGet(state, nestedFlag=.true., &
         itemNameList=itemNameList, itemTypeList=itemTypeList, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -339,7 +317,7 @@ module IOComp
             file=__FILE__)) &
             return  ! bail out
           if (trim(transferAction)=="accept") then
-            ! the Connector instructed the gcomp to accept geom object
+            ! the Connector instructed the model to accept geom object
             ! -> find out which type geom object the field holds
             call ESMF_FieldGet(field, geomtype=geomtype, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -359,7 +337,7 @@ module IOComp
                 line=__LINE__, &
                 file=__FILE__)) &
                 return  ! bail out
-              ! Create a custom DistGrid, based on the minIndex, maxIndex of the 
+              ! Create a custom DistGrid, based on the minIndex, maxIndex of the
               ! accepted DistGrid, but with a default regDecomp for the current VM
               ! that leads to 1DE/PET.
               ! get dimCount and tileCount
@@ -393,7 +371,7 @@ module IOComp
                 line=__LINE__, &
                 file=__FILE__)) &
                 return  ! bail out
-              call ESMF_FieldEmptySet(field, grid=grid, rc=rc)    
+              call ESMF_FieldEmptySet(field, grid=grid, rc=rc)
               if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                 line=__LINE__, &
                 file=__FILE__)) &
@@ -413,7 +391,7 @@ module IOComp
                 line=__LINE__, &
                 file=__FILE__)) &
                 return  ! bail out
-              ! Create a custom DistGrid, based on the minIndex, maxIndex of the 
+              ! Create a custom DistGrid, based on the minIndex, maxIndex of the
               ! accepted DistGrid, but with a default regDecomp for the current VM
               ! that leads to 1DE/PET.
               ! get dimCount and tileCount
@@ -447,7 +425,7 @@ module IOComp
                 line=__LINE__, &
                 file=__FILE__)) &
                 return  ! bail out
-              call ESMF_FieldEmptySet(field, mesh=mesh, rc=rc)    
+              call ESMF_FieldEmptySet(field, mesh=mesh, rc=rc)
               if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                 line=__LINE__, &
                 file=__FILE__)) &
@@ -466,23 +444,31 @@ module IOComp
           endif
         endif
       enddo
-      
+
       deallocate(itemNameList, itemTypeList)
-    
+
     end subroutine
-    
+
   end subroutine
-    
+
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP5(gcomp, importState, exportState, clock, rc)
-    ! IPDv03p5: realize all Fields with transfer action "accept"
-    type(ESMF_GridComp)  :: gcomp
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
+  subroutine RealizeAccepted(model, rc)
+    type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
-    
+
+    ! local variables
+    type(ESMF_State)        :: importState, exportState
+
     rc = ESMF_SUCCESS
+
+    ! query for importState and exportState
+    call NUOPC_ModelGet(model, importState=importState, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 
     call realizeWithAcceptedGeom(importState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -495,9 +481,9 @@ module IOComp
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
     contains ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    
+
     subroutine realizeWithAcceptedGeom(state, rc)
       ! Look at all of the fields in state, including in nested states. Realize
       ! with the accepted and adjusted geom object.
@@ -507,9 +493,9 @@ module IOComp
       integer                                 :: itemCount, item
       character(len=80), allocatable          :: itemNameList(:)
       type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
-    
+
       if (present(rc)) rc = ESMF_SUCCESS
-      
+
       ! query info about the items in the state
       call ESMF_StateGet(state, nestedFlag=.true., itemCount=itemCount, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -535,37 +521,19 @@ module IOComp
             return  ! bail out
         endif
       enddo
-      
+
       deallocate(itemNameList, itemTypeList)
-    
+
     end subroutine
 
   end subroutine
-    
-  !-----------------------------------------------------------------------------
-
-  subroutine DataInitialize(gcomp, rc)
-    type(ESMF_GridComp)  :: gcomp
-    integer, intent(out) :: rc
-    
-    rc = ESMF_SUCCESS
-
-    ! indicate that data initialization is complete (breaking out of init-loop)
-    call NUOPC_CompAttributeSet(gcomp, &
-      name="InitializeDataComplete", value="true", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
-  end subroutine
 
   !-----------------------------------------------------------------------------
 
-  subroutine ModelAdvance(gcomp, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine Advance(model, rc)
+    type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
-    
+
     ! local variables
     type(ESMF_Clock)            :: clock
     type(ESMF_State)            :: importState, exportState
@@ -579,9 +547,9 @@ module IOComp
     integer, save               :: slice=1
 
     rc = ESMF_SUCCESS
-    
+
     ! query the Component for its clock, importState
-    call ESMF_GridCompGet(gcomp, clock=clock, importState=importState, &
+    call ESMF_GridCompGet(model, clock=clock, importState=importState, &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -600,7 +568,7 @@ module IOComp
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
     call ESMF_ClockPrint(clock, options="stopTime", &
       preString="---------------------> to: ", unit=msgString, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -624,5 +592,7 @@ module IOComp
     slice = slice + 1
 
   end subroutine
+
+  !-----------------------------------------------------------------------------
 
 end module

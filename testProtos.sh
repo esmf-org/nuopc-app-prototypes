@@ -287,7 +287,7 @@ TestProto     AtmOcnTransferMeshProto                     esmApp
 TestExplorer  ComponentExplorer                           nuopcExplorerApp
 TestProto     CustomFieldDictionaryProto                  mainApp
 TestProto     DriverInDriverProto                         mainApp
-TestProto     DriverInDriverProtoIPDv02                   mainApp
+TestProto     DriverInDriverDataDepProto                  mainApp
 TestProto     DynPhyProto                                 esmApp
 TestProto     ExternalDriverAPIProto                      externalApp
 TestProto     GenericMediatorProto                        app

@@ -1,9 +1,9 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright 2002-2020, University Corporation for Atmospheric Research, 
-! Massachusetts Institute of Technology, Geophysical Fluid Dynamics 
-! Laboratory, University of Michigan, National Centers for Environmental 
-! Prediction, Los Alamos National Laboratory, Argonne National Laboratory, 
+! Copyright 2002-2020, University Corporation for Atmospheric Research,
+! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
+! Laboratory, University of Michigan, National Centers for Environmental
+! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
 ! NASA Goddard Space Flight Center.
 ! Licensed under the University of Illinois-NCSA License.
 !==============================================================================
@@ -16,72 +16,65 @@ module MED
 
   use ESMF
   use NUOPC
-  use NUOPC_Mediator, inheritMediator    => SetServices
-  
+  use NUOPC_Mediator, &
+    mediatorSS             => SetServices
+
   implicit none
-  
+
   private
-  
+
   public SetServices
-  
+
   !-----------------------------------------------------------------------------
   contains
   !-----------------------------------------------------------------------------
-  
+
   subroutine SetServices(mediator, rc)
     type(ESMF_GridComp)  :: mediator
     integer, intent(out) :: rc
-    
+
     rc = ESMF_SUCCESS
-    
-    ! the NUOPC model component will register the generic methods
-    call NUOPC_CompDerive(mediator, inheritMediator, rc=rc)
+
+    ! derive from NUOPC_Mediator
+    call NUOPC_CompDerive(mediator, mediatorSS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
-    ! set entry point for methods that require specific implementation
-    call NUOPC_CompSetEntryPoint(mediator, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv00p1"/), userRoutine=InitializeP1, rc=rc)
+
+    ! specialize mediator
+    call NUOPC_CompSpecialize(mediator, specLabel=label_Advertise, &
+      specRoutine=Advertise, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSetEntryPoint(mediator, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv00p2"/), userRoutine=InitializeP2, rc=rc)
+    call NUOPC_CompSpecialize(mediator, specLabel=label_RealizeProvided, &
+      specRoutine=Realize, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
-    ! attach specializing method(s)
     call NUOPC_CompSpecialize(mediator, specLabel=label_Advance, &
-      specRoutine=MediatorAdvance, rc=rc)
+      specRoutine=Advance, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
-    ! attach specializing method(s)
     call NUOPC_CompSpecialize(mediator, specLabel=label_CheckImport, &
       specRoutine=NUOPC_NoOp, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-
-    ! attach specializing method(s)
     call NUOPC_CompSpecialize(mediator, specLabel=label_SetRunClock, &
       specRoutine=SetRunClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-
 #define TEST_WITH_CONDITIONAL_SENDING_FIELDS_on
 #ifdef TEST_WITH_CONDITIONAL_SENDING_FIELDS_on
-    ! attach specializing method(s)
     call NUOPC_CompSpecialize(mediator, specLabel=label_TimestampExport, &
       specRoutine=TimestampExport, specPhaseLabel="RunPhase1", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -91,22 +84,29 @@ module MED
 #endif
 
   end subroutine
-  
+
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP1(mediator, importState, exportState, clock, rc)
+  subroutine Advertise(mediator, rc)
     type(ESMF_GridComp)  :: mediator
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
-    
-    ! local variables    
+
+    ! local variables
+    type(ESMF_State)     :: importState, exportState
     type(ESMF_State)     :: state
 
     rc = ESMF_SUCCESS
 
+    ! query for importState and exportState
+    call NUOPC_MediatorGet(mediator, importState=importState, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! do NOT use namespaces for import:
-    
+
     ! importable field: sea_surface_temperature
     call NUOPC_Advertise(importState, &
       StandardName="sea_surface_temperature", name="sst", rc=rc)
@@ -114,7 +114,7 @@ module MED
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     ! importable field: air_pressure_at_sea_level
     call NUOPC_Advertise(importState, &
       StandardName="air_pressure_at_sea_level", name="pmsl", rc=rc)
@@ -122,7 +122,7 @@ module MED
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
     ! importable field: surface_net_downward_shortwave_flux
     call NUOPC_Advertise(importState, &
       StandardName="surface_net_downward_shortwave_flux", name="rsns", rc=rc)
@@ -154,7 +154,7 @@ module MED
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
     ! exportable field: surface_net_downward_shortwave_flux
     call NUOPC_Advertise(exportState, &
       StandardName="surface_net_downward_shortwave_flux", name="rsns", rc=rc)
@@ -164,23 +164,30 @@ module MED
       return  ! bail out
 
   end subroutine
-  
+
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP2(mediator, importState, exportState, clock, rc)
+  subroutine Realize(mediator, rc)
     type(ESMF_GridComp)  :: mediator
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
-    
-    ! local variables    
+
+    ! local variables
+    type(ESMF_State)        :: importState, exportState
     type(ESMF_Field)        :: field
     type(ESMF_Grid)         :: gridIn
     type(ESMF_Grid)         :: gridOut
     type(ESMF_State)        :: state
-    
+
     rc = ESMF_SUCCESS
-    
+
+    ! query for importState and exportState
+    call NUOPC_MediatorGet(mediator, importState=importState, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! create a Grid object for Fields
     gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/20, 200/), &
       minCornerCoord=(/10._ESMF_KIND_R8, 20._ESMF_KIND_R8/), &
@@ -218,7 +225,7 @@ module MED
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
     ! importable field: surface_net_downward_shortwave_flux
     field = ESMF_FieldCreate(name="rsns", grid=gridIn, &
       typekind=ESMF_TYPEKIND_R8, rc=rc)
@@ -278,42 +285,42 @@ module MED
       return  ! bail out
 
   end subroutine
-  
+
   !-----------------------------------------------------------------------------
 
-  subroutine MediatorAdvance(mediator, rc)
+  subroutine Advance(mediator, rc)
     type(ESMF_GridComp)  :: mediator
     integer, intent(out) :: rc
-    
+
     ! local variables
     type(ESMF_Clock)            :: clock
     type(ESMF_State)            :: importState, exportState
     character(len=160)          :: msgString
 
     rc = ESMF_SUCCESS
-    
-    ! query the Component for its clock, importState and exportState
+
+    ! query for clock, importState and exportState
     call ESMF_GridCompGet(mediator, clock=clock, importState=importState, &
       exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     ! HERE THE MEDIATOR does the mediation of Fields that come in on the
-    ! importState with a timestamp consistent to the currTime of the 
+    ! importState with a timestamp consistent to the currTime of the
     ! mediators Clock.
-    
+
     ! The Mediator uses the data on the import Fields to update the data
     ! held by Fields in the exportState.
-    
+
     ! After this routine returns the generic Mediator will correctly
     ! timestamp the export Fields at currTime, and update the Mediator Clock to:
     !
     !       currTime -> currTime + timeStep
     !
     ! Where the timeStep is equal to the parent timeStep.
-    
+
     call ESMF_ClockPrint(clock, options="currTime", &
       preString="------>Advancing MED from: ", unit=msgString, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -325,7 +332,7 @@ module MED
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
     call ESMF_ClockPrint(clock, options="stopTime", &
       preString="---------------------> to: ", unit=msgString, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -337,7 +344,7 @@ module MED
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-     
+
   end subroutine
 
   !-----------------------------------------------------------------------------
@@ -345,21 +352,21 @@ module MED
   subroutine SetRunClock(mediator, rc)
     type(ESMF_GridComp)  :: mediator
     integer, intent(out) :: rc
-    
+
     ! local variables
     type(ESMF_Clock)              :: mediatorClock, driverClock
     type(ESMF_Time)               :: currTime
 
     rc = ESMF_SUCCESS
-    
-    ! query the Mediator for clocks
+
+    ! query for clocks
     call NUOPC_MediatorGet(mediator, mediatorClock=mediatorClock, &
       driverClock=driverClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
     ! set the mediatorClock to have the current start time as the driverClock
     call ESMF_ClockGet(driverClock, currTime=currTime, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -371,7 +378,7 @@ module MED
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     ! check and set the component clock against the driver clock
     call NUOPC_CompCheckSetClock(mediator, driverClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, &
@@ -387,7 +394,7 @@ module MED
   subroutine TimestampExport(mediator, rc)
     type(ESMF_GridComp)   :: mediator
     integer, intent(out)  :: rc
-    
+
     ! local variables
     type(ESMF_Clock)        :: clock
     type(ESMF_Time)         :: currTime, invalidTime
@@ -398,41 +405,41 @@ module MED
 
     rc = ESMF_SUCCESS
 
-    ! query the Component for info
+    ! query for info
     call ESMF_GridCompGet(mediator, name=name, clock=clock, &
       exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) &
       return  ! bail out
-      
+
     ! get info out of clock
     call ESMF_ClockGet(clock, currTime=currTime, timeStep=timeStep, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) &
       return  ! bail out
-      
+
     ! recalc currTime for which mediation really happened, i.e. one timeStep
-    ! ago (because label_TimestampExport is called _after_ MED Clock is stepped 
+    ! ago (because label_TimestampExport is called _after_ MED Clock is stepped
     ! forward!).
     currTime = currTime - timeStep
 
-    ! Here is where the TEST_WITH_CONDITIONAL_SENDING_FIELDS_on magic is 
+    ! Here is where the TEST_WITH_CONDITIONAL_SENDING_FIELDS_on magic is
     ! really implemented. For purpose of demonstraction, every time that the
-    ! currTime is 30mins past the hour, ONLY send valid fields over to the 
+    ! currTime is 30mins past the hour, ONLY send valid fields over to the
     ! ATM component. All other times valid fields are sent to ALL components.
-    
+
     call ESMF_TimeGet(currTime, &
       yy=yy, mm=mm, dd=dd, h=h, m=m, s=s, ms=ms, us=us, ns=ns, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     if (m==30) then
       ! 30min past the hour -> only send valid fields to ATM
-      
+
       ! FIRST: invalidate all of the fields in the exportState, because the
-      ! generic mediator code will have applied currTime stamp on all of 
+      ! generic mediator code will have applied currTime stamp on all of
       ! them already.
       call ESMF_TimeSet(invalidTime, yy=99999999, mm=01, dd=01, &
         h=00, m=00, s=00, rc=rc)
@@ -456,7 +463,7 @@ module MED
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, file=trim(name)//":"//__FILE__)) &
         return  ! bail out
-    
+
     else
       ! other times send valid fields to ALL components
 
@@ -465,9 +472,9 @@ module MED
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, file=trim(name)//":"//__FILE__)) &
         return  ! bail out
-      
+
     endif
-    
+
   end subroutine
 
   !-----------------------------------------------------------------------------

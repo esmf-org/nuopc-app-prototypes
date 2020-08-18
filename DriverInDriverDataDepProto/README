@@ -1,5 +1,5 @@
-README for Driver-in-Driver IPDv02 NUOPC prototype
---------------------------------------------------
+README for Driver-in-Driver with Data Dependency NUOPC prototype
+----------------------------------------------------------------
 
 Show how a driver component can be driven as a child component of another 
 driver component.
@@ -21,9 +21,9 @@ Description:
   default run sequence to only drive the ATM component.
 
   Both ATM and OCN components use a simple two-phase initialization,
-  consisting of advertise and realize. However, use IPDv02, allowing to resolve
-  data dependencies during initialization.
-  
+  consisting of advertise and realize. However, there is also a data dependency
+  that is resolved during initialization.
+
 
 Build:
   - Set environment variable ESMFMKFILE to point to the esmf.mk of your ESMF
