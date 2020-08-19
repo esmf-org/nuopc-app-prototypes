@@ -115,7 +115,7 @@ program externalApp
 
   ! Call "ExternalAdvertise" Initialize for the earth system Component
   call NUOPC_CompSearchPhaseMap(esmComp, methodflag=ESMF_METHOD_INITIALIZE, &
-    phaseLabel="ExternalAdvertise", phaseIndex=phase, rc=rc)
+    phaseLabel=label_ExternalAdvertise, phaseIndex=phase, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
@@ -133,7 +133,7 @@ program externalApp
 
   ! Call "ExternalRealize" Initialize for the earth system Component
   call NUOPC_CompSearchPhaseMap(esmComp, methodflag=ESMF_METHOD_INITIALIZE, &
-    phaseLabel="ExternalRealize", phaseIndex=phase, rc=rc)
+    phaseLabel=label_ExternalRealize, phaseIndex=phase, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
@@ -149,9 +149,9 @@ program externalApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-  ! Call "ExternalDataInitialize" Initialize for the earth system Component
+  ! Call "ExternalDataInit" Initialize for the earth system Component
   call NUOPC_CompSearchPhaseMap(esmComp, methodflag=ESMF_METHOD_INITIALIZE, &
-    phaseLabel="ExternalDataInitialize", phaseIndex=phase, rc=rc)
+    phaseLabel=label_ExternalDataInit, phaseIndex=phase, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
