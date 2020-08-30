@@ -299,12 +299,14 @@ TestProto     NestingTelescopeMultipleProto               mainApp
 TestProto     SingleModelProto                            mainApp
 TestProto     SingleModelOpenMPProto                      mainApp
 
+echo "== TEST SUMMARY START =="
 i=1
 while [[ $i -le $count ]]
 do
 echo ${testResult[i]}: ${testList[i]}
 ((i++))
 done
+echo "== TEST SUMMARY STOP =="
 
 echo
 echo ---------------------------------------------------------------------------
