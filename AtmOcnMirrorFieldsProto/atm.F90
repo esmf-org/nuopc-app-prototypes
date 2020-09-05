@@ -14,7 +14,7 @@
 #ifdef TEST_FIELD_MIRRORING
 ! By default mirroring triggers TransferOffer="cannot provide" if the other
 ! side of the mirror will or can provide.
-! This can be overwritten my unsetting the macro below:
+! This can be overwritten by unsetting the macro below:
 #define TEST_ACCEPTING
 #endif
 
