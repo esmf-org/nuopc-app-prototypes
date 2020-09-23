@@ -142,7 +142,7 @@ module ESM
 #endif
 
     ! set the driver clock
-    call ESMF_TimeIntervalSet(timeStep, m=15, rc=rc) ! 15 minute steps
+    call ESMF_TimeIntervalSet(timeStep, s=90, rc=rc) ! 90 second steps
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -155,7 +155,7 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
 
-    call ESMF_TimeSet(stopTime, yy=2010, mm=6, dd=1, h=1, m=0, &
+    call ESMF_TimeSet(stopTime, yy=2010, mm=6, dd=2, h=1, m=0, &
       calkindflag=ESMF_CALKIND_GREGORIAN, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
