@@ -71,3 +71,6 @@ edit:
 
 run:
 	mpirun -np 4 ./esmApp
+
+runX:
+	mpirun -np 4 $(ESMF_LIBSDIR)/preload.sh ./esmApp

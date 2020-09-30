@@ -93,6 +93,11 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    call NUOPC_CompAttributeSet(child, name="Profiling", value="max", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 
     ! SetServices for OCN
     call NUOPC_DriverAddComp(driver, "OCN", ocnSS, comp=child, rc=rc)
@@ -101,6 +106,11 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompAttributeSet(child, name="Verbosity", value="high", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompAttributeSet(child, name="Profiling", value="max", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
