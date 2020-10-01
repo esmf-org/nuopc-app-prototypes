@@ -191,7 +191,7 @@ module ATM
 
     ! importable field: sea_surface_temperature
     ! This Field was marked with TransferOfferGeomObject="can provide", so here
-    ! we need to see what TransferActionGeomObject the Connector determined for
+    ! we need to see what ConsumerTransferAction the Connector determined for
     ! this Field:
     call ESMF_StateGet(importState, field=field, itemName="sst", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
