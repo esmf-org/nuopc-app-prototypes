@@ -223,8 +223,29 @@ module Mediator
       character(len=20)                       :: transferAction
       character(len=80), allocatable          :: itemNameList(:)
       type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
+      type(ESMF_StateIntent_Flag)             :: stateIntent
+      character(len=80)                       :: transferActionAttr
 
       if (present(rc)) rc = ESMF_SUCCESS
+
+      call ESMF_StateGet(state, stateIntent=stateIntent, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+      if (stateIntent==ESMF_STATEINTENT_EXPORT) then
+        transferActionAttr="ProducerTransferAction"
+      elseif (stateIntent==ESMF_STATEINTENT_IMPORT) then
+        transferActionAttr="ConsumerTransferAction"
+      else
+        call ESMF_LogSetError(ESMF_RC_ARG_BAD, &
+          msg="The stateIntent must either be IMPORT or EXPORT here.", &
+          line=__LINE__, &
+          file=__FILE__, &
+          rcToReturn=rc)
+        return  ! bail out
+      endif
 
       call ESMF_StateGet(state, name=stateName, nestedFlag=.true., &
         itemCount=itemCount, rc=rc)
@@ -265,7 +286,7 @@ module Mediator
               file=__FILE__)) &
               return  ! bail out
           else
-            call NUOPC_GetAttribute(field, name="TransferActionGeomObject", &
+            call NUOPC_GetAttribute(field, name=transferActionAttr, &
               value=transferAction, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
               line=__LINE__, &
@@ -342,8 +363,29 @@ module Mediator
       type(ESMF_DistGrid)                     :: distgrid
       integer                                 :: dimCount, tileCount
       integer, allocatable                    :: minIndexPTile(:,:), maxIndexPTile(:,:)
+      type(ESMF_StateIntent_Flag)             :: stateIntent
+      character(len=80)                       :: transferActionAttr
 
       if (present(rc)) rc = ESMF_SUCCESS
+
+      call ESMF_StateGet(state, stateIntent=stateIntent, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+      if (stateIntent==ESMF_STATEINTENT_EXPORT) then
+        transferActionAttr="ProducerTransferAction"
+      elseif (stateIntent==ESMF_STATEINTENT_IMPORT) then
+        transferActionAttr="ConsumerTransferAction"
+      else
+        call ESMF_LogSetError(ESMF_RC_ARG_BAD, &
+          msg="The stateIntent must either be IMPORT or EXPORT here.", &
+          line=__LINE__, &
+          file=__FILE__, &
+          rcToReturn=rc)
+        return  ! bail out
+      endif
 
       call ESMF_StateGet(state, nestedFlag=.true., itemCount=itemCount, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -369,7 +411,7 @@ module Mediator
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
-          call NUOPC_GetAttribute(field, name="TransferActionGeomObject", &
+          call NUOPC_GetAttribute(field, name=transferActionAttr, &
             value=transferAction, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
