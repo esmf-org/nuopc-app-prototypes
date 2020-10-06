@@ -240,7 +240,7 @@ module MODEL
     type(ESMF_Clock)            :: clock
     type(ESMF_State)            :: importState, exportState
     type(ESMF_VM)               :: vm
-    integer                     :: localPet, localPeCount, localPe
+    integer                     :: localPet, localPeCount, currentSsiPe
     character(len=160)          :: msgString
 
     rc = ESMF_SUCCESS
@@ -270,12 +270,12 @@ module MODEL
 
     ! Now can use OpenMP for fine grained parallelism...
     ! Here just write info about the PET-local OpenMP threads to Log.
-!$omp parallel private(msgString, localPe)
+!$omp parallel private(msgString, currentSsiPe)
 !$omp critical
-!$    call ESMF_VMGet(vm, localPe=localPe)
+!$    call ESMF_VMGet(vm, currentSsiPe=currentSsiPe)
 !$    write(msgString,'(A,I4,A,I4,A,I4,A,I4,A,I4)') &
 !$      "thread_num=", omp_get_thread_num(), &
-!$      "   localPe=", localPe, &
+!$      "   currentSsiPe=", currentSsiPe, &
 !$      "   num_threads=", omp_get_num_threads(), &
 !$      "   max_threads=", omp_get_max_threads(), &
 !$      "   num_procs=", omp_get_num_procs()
