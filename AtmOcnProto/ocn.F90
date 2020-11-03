@@ -248,7 +248,12 @@ module OCN
     type(ESMF_TimeInterval)     :: timeStep
     character(len=160)          :: msgString
 
-#define NUOPC_TRACE__OFF
+
+    type(ESMF_Info)             :: info
+    integer                     :: valueI
+    logical                     :: isPresent, isNull
+
+#define NUOPC_TRACE
 #ifdef NUOPC_TRACE
     call ESMF_TraceRegionEnter("OCN:Advance")
 #endif
@@ -278,11 +283,13 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#if 0
     call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 
     call ESMF_ClockGet(clock, currTime=currTime, timeStep=timeStep, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -296,12 +303,108 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#if 0
     call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 
+
+    call ESMF_InfoGetFromHost(model, info=info, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+#if 0
+    ! this would fail here because key not present
+    call ESMF_InfoGet(info, key="GJT", value=valueI, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
+#if 0
+    call ESMF_TraceRegionEnter("ESMF_InfoGet: isPresent, isNull 1")
+    call ESMF_InfoGet(info, key="GJT", isPresent=isPresent, isNull=isNull, rc=rc)
+    call ESMF_TraceRegionExit("ESMF_InfoGet: isPresent, isNull 1")
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    
+!    print *, isPresent, isNull
+
+    call ESMF_InfoSetNull(info, key="GJT", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call ESMF_TraceRegionEnter("ESMF_InfoGet: isNull 2")
+    call ESMF_InfoGet(info, key="GJT", isNull=isNull, rc=rc)
+    call ESMF_TraceRegionExit("ESMF_InfoGet: isNull 2")
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call ESMF_TraceRegionEnter("ESMF_InfoGet: isNull 3")
+    isNull = ESMF_InfoIsSet(info, key="GJT", rc=rc)
+    call ESMF_TraceRegionExit("ESMF_InfoGet: isNull 3")
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call ESMF_TraceRegionEnter("ESMF_InfoGet: isPresent 2")
+    call ESMF_InfoGet(info, key="GJT", isPresent=isPresent, rc=rc)
+    call ESMF_TraceRegionExit("ESMF_InfoGet: isPresent 2")
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call ESMF_TraceRegionEnter("ESMF_InfoGet: isPresent 3")
+    isPresent = ESMF_InfoIsPresent(info, key="GJT", rc=rc)
+    call ESMF_TraceRegionExit("ESMF_InfoGet: isPresent 3")
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+!    print *, isPresent, isNull
+
+    call ESMF_TraceRegionEnter("ESMF_InfoGet: default1")
+    call ESMF_InfoGet(info, key="GJT", value=valueI, default=10, rc=rc)
+    call ESMF_TraceRegionExit("ESMF_InfoGet: default1")
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+#if 0
+    call ESMF_InfoSet(info, key="GJT", value=20, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call ESMF_TraceRegionEnter("ESMF_InfoGet: default2")
+    call ESMF_InfoGet(info, key="GJT", value=valueI, default=10, rc=rc)
+    call ESMF_TraceRegionExit("ESMF_InfoGet: default2")
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
+!    print *, valueI
+#endif
+    
 #ifdef NUOPC_TRACE
     call ESMF_TraceRegionExit("OCN:Advance")
 #endif

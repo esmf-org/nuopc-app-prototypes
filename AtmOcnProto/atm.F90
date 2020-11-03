@@ -237,7 +237,7 @@ module ATM
     type(ESMF_State)            :: importState, exportState
     character(len=160)          :: msgString
 
-#define NUOPC_TRACE__OFF
+#define NUOPC_TRACE
 #ifdef NUOPC_TRACE
     call ESMF_TraceRegionEnter("ATM:Advance")
 #endif
@@ -259,17 +259,21 @@ module ATM
     ! currTime + timeStep is equal to the stopTime of the internal Clock
     ! for this call of the Advance() routine.
 
+    call ESMF_TraceRegionEnter("ATM:ESMF_ClockPrint")
+#if 0
     call ESMF_ClockPrint(clock, options="currTime", &
       preString="------>Advancing ATM from: ", unit=msgString, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#if 0
     call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 
     call ESMF_ClockPrint(clock, options="stopTime", &
       preString="---------------------> to: ", unit=msgString, rc=rc)
@@ -277,11 +281,15 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#if 0
     call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
+#endif
+    call ESMF_TraceRegionExit("ATM:ESMF_ClockPrint")
 
 #ifdef NUOPC_TRACE
     call ESMF_TraceRegionExit("ATM:Advance")

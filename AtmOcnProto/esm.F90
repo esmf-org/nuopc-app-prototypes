@@ -56,7 +56,12 @@ module ESM
       return  ! bail out
 
     ! set driver verbosity
-    call NUOPC_CompAttributeSet(driver, name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(driver, name="Verbosity", value="off", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompAttributeSet(driver, name="Profiling", value="off", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -88,12 +93,12 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(child, name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(child, name="Verbosity", value="off", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(child, name="Profiling", value="max", rc=rc)
+    call NUOPC_CompAttributeSet(child, name="Profiling", value="off", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -105,12 +110,12 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(child, name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(child, name="Verbosity", value="off", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(child, name="Profiling", value="max", rc=rc)
+    call NUOPC_CompAttributeSet(child, name="Profiling", value="off", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -130,7 +135,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="off", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -143,7 +148,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="off", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -166,6 +171,7 @@ module ESM
       return  ! bail out
 
     call ESMF_TimeSet(stopTime, yy=2010, mm=6, dd=2, h=1, m=0, &
+!    call ESMF_TimeSet(stopTime, yy=2010, mm=6, dd=1, h=0, m=3, &
       calkindflag=ESMF_CALKIND_GREGORIAN, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
