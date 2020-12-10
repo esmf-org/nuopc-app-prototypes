@@ -11,7 +11,7 @@
 program externalApp
 
   !-----------------------------------------------------------------------------
-  ! Generic ESM application driver
+  ! Generic external application driver
   !-----------------------------------------------------------------------------
 
   use ESMF
@@ -25,7 +25,7 @@ program externalApp
   type(ESMF_Time)         :: startTime, stopTime
   type(ESMF_TimeInterval) :: timeStep
   type(ESMF_Clock)        :: clock
-  type(ESMF_State)        :: esmImportState, esmExportState
+  type(ESMF_State)        :: externalExportState, externalImportState
   integer                 :: phase
 
   ! Initialize ESMF
@@ -74,22 +74,16 @@ program externalApp
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
   ! Create the earth system import/export States
-  esmImportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT, rc=rc)
+  ! NOTE: The "stateintent" must be specified, and it must be set from the
+  ! perspective of the external level!
+  externalExportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT, &
+    rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  esmExportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT, rc=rc)
-  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-    line=__LINE__, &
-    file=__FILE__)) &
-    call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-  ! advertise field in the earth system export State
-  call NUOPC_Advertise(esmExportState, &
-    StandardNames=(/"air_pressure_at_sea_level           ", &
-                    "surface_net_downward_shortwave_flux "/), &
-    TransferOfferGeomObject="cannot provide", rc=rc)
+  externalImportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT, &
+    rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
@@ -113,6 +107,15 @@ program externalApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
+  ! Advertise field(s) in external import state in order to receive from ESM
+  call NUOPC_Advertise(externalImportState, &
+    StandardNames=(/"sea_surface_temperature"/), &
+    TransferOfferGeomObject="cannot provide", SharePolicyField="share", rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
   ! Call "ExternalAdvertise" Initialize for the earth system Component
   call NUOPC_CompSearchPhaseMap(esmComp, methodflag=ESMF_METHOD_INITIALIZE, &
     phaseLabel=label_ExternalAdvertise, phaseIndex=phase, rc=rc)
@@ -121,7 +124,8 @@ program externalApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
   call ESMF_GridCompInitialize(esmComp, phase=phase, clock=clock, &
-    importState=esmImportState, exportState=esmExportState, userRc=urc, rc=rc)
+    importState=externalExportState, exportState=externalImportState, &
+    userRc=urc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
@@ -139,7 +143,8 @@ program externalApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
   call ESMF_GridCompInitialize(esmComp, phase=phase, clock=clock, &
-    importState=esmImportState, exportState=esmExportState, userRc=urc, rc=rc)
+    importState=externalExportState, exportState=externalImportState, &
+    userRc=urc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
@@ -157,7 +162,8 @@ program externalApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
   call ESMF_GridCompInitialize(esmComp, phase=phase, clock=clock, &
-    importState=esmImportState, exportState=esmExportState, userRc=urc, rc=rc)
+    importState=externalExportState, exportState=externalImportState, &
+    userRc=urc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
@@ -167,9 +173,27 @@ program externalApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
+  ! write out the Fields in the externalImportState
+  call NUOPC_Write(externalImportState, &
+    fileNamePrefix="field_externalImportState_", &
+    overwrite=.true., relaxedFlag=.true., rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  ! write out the Fields in the externalExportState
+  call NUOPC_Write(externalExportState, &
+    fileNamePrefix="field_externalExportState_", &
+    overwrite=.true., relaxedFlag=.true., rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
   ! Run the earth system Component
   call ESMF_GridCompRun(esmComp, clock=clock, &
-    importState=esmImportState, exportState=esmExportState, userRc=urc, rc=rc)
+    importState=externalExportState, exportState=externalImportState, &
+    userRc=urc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
@@ -181,7 +205,8 @@ program externalApp
 
   ! Finalize the earth system Component
   call ESMF_GridCompFinalize(esmComp, clock=clock, &
-    importState=esmImportState, exportState=esmExportState, userRc=urc, rc=rc)
+    importState=externalExportState, exportState=externalImportState, &
+    userRc=urc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &

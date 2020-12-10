@@ -123,7 +123,8 @@ module OCN
 
     ! exportable field: sea_surface_temperature
     call NUOPC_Advertise(exportState, &
-      StandardName="sea_surface_temperature", name="sst", rc=rc)
+      StandardName="sea_surface_temperature", name="sst", &
+      SharePolicyField="share", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
