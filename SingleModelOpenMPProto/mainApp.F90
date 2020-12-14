@@ -8,6 +8,8 @@
 ! Licensed under the University of Illinois-NCSA License.
 !==============================================================================
 
+#define EXPLICIT_MPI_INIT
+
 program mainApp
 
   !-----------------------------------------------------------------------------
@@ -15,6 +17,9 @@ program mainApp
   !-----------------------------------------------------------------------------
 
   use ESMF
+#ifdef EXPLICIT_MPI_INIT
+  use MPI
+#endif
 
   use driver, only: &
     driver_SS => SetServices
@@ -24,7 +29,18 @@ program mainApp
   integer                       :: rc, userRc
   type(ESMF_GridComp)           :: drvComp
 
-  ! Initialize ESMF
+  ! Initialize MPI/ESMF
+#ifdef EXPLICIT_MPI_INIT
+  ! This prototype implements ESMF-aware resource management for threading.
+  ! Therefore must call ESMF_InitializePreMPI() before MPI_Init*() if later is
+  ! called explicitly from user level!
+  call ESMF_InitializePreMPI(rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  call MPI_Init_thread(MPI_THREAD_MULTIPLE, userRc, rc)
+#endif
   call ESMF_Initialize(defaultCalkind=ESMF_CALKIND_GREGORIAN, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
