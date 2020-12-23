@@ -111,7 +111,7 @@ module ESM
     do i=1, petCount/2
       petList(i) = i-1 ! PET labeling goes from 0 to petCount-1
     enddo
-    call ESMF_InfoSet(info, key="/NUOPC/Instance/maxPeCountPerPet", value=2, &
+    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/maxCount", value=2, &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -200,7 +200,7 @@ module ESM
     do i=1, petCount/2
       petList(i) = petCount/2 + i-1 ! PET labeling goes from 0 to petCount-1
     enddo
-    call ESMF_InfoSet(info, key="/NUOPC/Instance/maxPeCountPerPet", value=2, &
+    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/maxCount", value=2, &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
