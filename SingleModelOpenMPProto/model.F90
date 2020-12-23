@@ -266,8 +266,6 @@ module MODEL
       file=__FILE__)) &
       return  ! bail out
 
-!$  call omp_set_num_threads(localPeCount)
-
     ! Now can use OpenMP for fine grained parallelism...
     ! Here just write info about the PET-local OpenMP threads to Log.
 !$omp parallel private(msgString, currentSsiPe)
