@@ -134,7 +134,7 @@ module ESM
     do i=1, petCountOCN
       petList(i) = petCountATM + i-1 ! PET labeling goes from 0 to petCount-1
     enddo
-    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/maxCount", value=2, &
+    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/MaxCount", value=2, &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &

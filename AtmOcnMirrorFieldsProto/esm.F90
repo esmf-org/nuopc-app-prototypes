@@ -99,7 +99,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/maxCount", value=2, &
+    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/MaxCount", value=2, &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -138,7 +138,7 @@ module ESM
     deallocate(petList)
 
     ! SetServices for OCN with petList on second half of PETs
-    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/maxCount", value=4, &
+    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/MaxCount", value=4, &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
