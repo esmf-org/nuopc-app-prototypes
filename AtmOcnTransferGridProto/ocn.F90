@@ -190,6 +190,7 @@ module OCN
     integer               :: dimCount, rank
     integer               :: coordDimMap(2,2)
     character(160)        :: msgString
+    character(80)         :: name
 #ifdef TEST_MULTI_TILE_GRID
     type(ESMF_GridComp)   :: ioComp
 #endif
@@ -450,6 +451,21 @@ module OCN
       return  ! bail out
 #endif
 
+#if 1
+    ! analyze the Grid and log some info
+    call ESMF_GridGet(gridIn, name=name, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_PointerLog(gridIn%this, &
+      prefix="OCN gridIn:   name="//trim(name)//": ", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
     ! importable field: air_pressure_at_sea_level
 #ifdef CREATE_AND_REALIZE
     ! This branch shows the standard procedure of calling Realize().
@@ -538,6 +554,21 @@ module OCN
       return  ! bail out
 #endif
 
+#if 1
+    ! analyze the Grid and log some info
+    call ESMF_GridGet(gridOut, name=name, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_PointerLog(gridOut%this, &
+      prefix="OCN gridOut:  name="//trim(name)//": ", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
     ! exportable field: sea_surface_temperature
     call NUOPC_Realize(exportState, gridOut, fieldName="sst", &
       typekind=ESMF_TYPEKIND_R4, selection="realize_connected_remove_others", &
@@ -572,6 +603,20 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#if 1
+    ! analyze the Grid and log some info
+    call ESMF_GridGet(gridOut, name=name, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_PointerLog(gridOut%this, &
+      prefix="OCN gridOut:  name="//trim(name)//": ", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
 #endif
 
     ! exportable field: sea_surface_height_above_sea_level
@@ -650,6 +695,21 @@ module OCN
     do i=lbound(fptr,1),ubound(fptr,1)
       fptr(i) = real((arbIndexList(i,2)-1)) * 160.0 / real(jCount) - 80.0
     enddo
+
+#if 1
+    ! analyze the Grid and log some info
+    call ESMF_GridGet(gridArb, name=name, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_PointerLog(gridArb%this, &
+      prefix="OCN gridArb:  name="//trim(name)//": ", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
 
     ! create a field on the grid
     fieldArb = ESMF_FieldCreate(gridArb, typekind=ESMF_TYPEKIND_R8, rc=rc)
@@ -874,10 +934,12 @@ module OCN
     type(ESMF_Clock)            :: clock
     type(ESMF_State)            :: importState, exportState
     type(ESMF_Field)            :: field
+    type(ESMF_Grid)             :: grid
     type(ESMF_Time)             :: currTime
     type(ESMF_TimeInterval)     :: timeStep
     integer, save               :: slice=1
     character(len=160)          :: msgString
+    character(80)               :: fieldName, gridName
 
     rc = ESMF_SUCCESS
 
@@ -940,6 +1002,26 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#if 1
+    ! analyze the Grid on which this field is created
+    call ESMF_FieldGet(field, grid=grid, name=fieldName, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_GridGet(grid, name=gridName, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_PointerLog(grid%this, &
+      prefix="OCN Grid: fieldName="//trim(fieldName)// &
+      " gridName="//trim(gridName)//": ", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif 
     call ESMF_StateGet(exportState, itemName="sst", field=field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -951,6 +1033,26 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#if 1
+    ! analyze the Grid on which this field is created
+    call ESMF_FieldGet(field, grid=grid, name=fieldName, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_GridGet(grid, name=gridName, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_PointerLog(grid%this, &
+      prefix="OCN Grid: fieldName="//trim(fieldName)// &
+      " gridName="//trim(gridName)//": ", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif 
 
     ! write out the Fields in the importState and exportState
     call NUOPC_Write(importState, fileNamePrefix="field_ocn_import_", &
