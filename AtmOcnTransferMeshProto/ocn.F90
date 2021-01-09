@@ -133,8 +133,8 @@ module OCN
     type(ESMF_Field)          :: field
 #endif
     character(160)            :: msgString
+    character(80)             :: name
     integer                   :: dimCount, numOwnedElements, numOwnedNodes
-    character(*), parameter   :: rName="InitializeRealize"
 
     rc = ESMF_SUCCESS
 
@@ -151,7 +151,7 @@ module OCN
 #ifdef READ_MESHIN_FROM_FILE
     ! create from file
     meshIn = ESMF_MeshCreate("./gx3v7_unstructured.nc", &
-      fileformat=ESMF_FILEFORMAT_ESMFMESH, rc=rc)
+      fileformat=ESMF_FILEFORMAT_ESMFMESH, name="OCN-MeshIn", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -198,7 +198,7 @@ module OCN
 #endif
 
     ! convert the Grid into a Mesh
-    meshIn = ESMF_MeshCreate(grid=gridIn, rc=rc)
+    meshIn = ESMF_MeshCreate(grid=gridIn, name="OCN-MeshIn", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -221,13 +221,14 @@ module OCN
 
 #if 1
     ! analyze the Mesh and log some info
-    call ESMF_MeshGet(meshIn, spatialDim=dimCount, &
+    call ESMF_MeshGet(meshIn, name=name, spatialDim=dimCount, &
       numOwnedElements=numOwnedElements, numOwnedNodes=numOwnedNodes, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    write(msgString,*) "OCN meshIn:   numOwnedElements=", numOwnedElements, &
+    write(msgString,*) "OCN meshIn:   name=", trim(name), &
+      " numOwnedElements=", numOwnedElements, &
       "numOwnedNodes=", numOwnedNodes, "dimCount=", dimCount
     call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -265,7 +266,7 @@ module OCN
 #ifdef READ_MESHOUT_FROM_FILE
     ! create from file
     meshOut = ESMF_MeshCreate("./fv1.9x2.5_unstructured.nc", &
-      fileformat=ESMF_FILEFORMAT_ESMFMESH, rc=rc)
+      fileformat=ESMF_FILEFORMAT_ESMFMESH, name="OCN-GridOut", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -312,7 +313,7 @@ module OCN
 #endif
 
     ! convert the Grid into a Mesh
-    meshOut = ESMF_MeshCreate(grid=gridOut, rc=rc)
+    meshOut = ESMF_MeshCreate(grid=gridOut, name="OCN-MeshOut", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -335,13 +336,14 @@ module OCN
 
 #if 1
     ! analyze the Mesh and log some info
-    call ESMF_MeshGet(meshOut, spatialDim=dimCount, &
+    call ESMF_MeshGet(meshOut, name=name, spatialDim=dimCount, &
       numOwnedElements=numOwnedElements, numOwnedNodes=numOwnedNodes, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    write(msgString,*) "OCN meshOut:   numOwnedElements=", numOwnedElements, &
+    write(msgString,*) "OCN meshOut:  name=", trim(name), &
+      " numOwnedElements=", numOwnedElements, &
       "numOwnedNodes=", numOwnedNodes, "dimCount=", dimCount
     call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &

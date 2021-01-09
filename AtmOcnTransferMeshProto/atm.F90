@@ -146,9 +146,6 @@ module ATM
     integer                           :: i, j
     real(kind=ESMF_KIND_R8),  pointer :: lonPtr(:,:), latPtr(:,:)
     character(ESMF_MAXSTR)            :: transferAction
-    character(*), parameter   :: rName="InitializeRealizeForProvide"
-    character(ESMF_MAXSTR)    :: name
-    integer                   :: verbosity
 
     rc = ESMF_SUCCESS
 
@@ -256,8 +253,7 @@ module ATM
     type(ESMF_DistGrid)       :: elementDG, nodalDG
     type(ESMF_DistGrid)       :: newElementDG, newNodalDG
     type(ESMF_DELayout)       :: delayout
-    character(*), parameter   :: rName="InitializeAcceptChangeDistGrid"
-    character(ESMF_MAXSTR)    :: name
+    character(80)             :: name
 
     rc = ESMF_SUCCESS
 
@@ -296,11 +292,15 @@ module ATM
 
     ! get distgrids out of mesh
     call ESMF_MeshGet(mesh, nodalDistgrid=nodalDG, elementDistgrid=elementDG, &
-      rc=rc)
+      name=name, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+    call ESMF_PointerLog(mesh%this, &
+      prefix="ATM - AcceptTransfer: exportState Mesh name="//trim(name)//": ",&
+      rc=rc)
 
     ! The acceptor side can either use the nodal DistGrid, or the element
     ! DistGrid, or both to define its own decomposition and distribution of
@@ -330,8 +330,8 @@ module ATM
       return  ! bail out
     ! report localDeCount to log
     write (msgString,"(A,I3)") &
-      "ATM - InitializeAcceptChangeDistGrid: nodal DistGrid "// &
-      "localDeCount = ", localDeCount
+      "ATM - AcceptTransfer: exportState Mesh="//trim(name)// &
+        " nodal DistGrid localDeCount = ", localDeCount
     call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -367,8 +367,8 @@ module ATM
       return  ! bail out
     ! report localDeCount to log
     write (msgString,"(A,I3)") &
-      "ATM - InitializeAcceptChangeDistGrid: element DistGrid "// &
-      "localDeCount = ", localDeCount
+      "ATM - AcceptTransfer: exportState Mesh="//trim(name)// &
+      " element DistGrid localDeCount = ", localDeCount
     call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -387,21 +387,21 @@ module ATM
 #if (defined USE_NODAL_DG && defined USE_ELEMENT_DG)
     ! Create a new Mesh on both new DistGrid
     mesh = ESMF_MeshEmptyCreate(nodalDistGrid=newNodalDG, &
-      elementDistGrid=newElementDG, rc=rc)
+      elementDistGrid=newElementDG, name=name, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 #elif (defined USE_NODAL_DG)
     ! Create a new Mesh on new nodal DistGrid
-    mesh = ESMF_MeshEmptyCreate(nodalDistGrid=newNodalDG, rc=rc)
+    mesh = ESMF_MeshEmptyCreate(nodalDistGrid=newNodalDG, name=name, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 #elif (defined USE_ELEMENT_DG)
     ! Create a new Mesh on new element DistGrid
-    mesh = ESMF_MeshEmptyCreate(elementDistGrid=newElementDG, rc=rc)
+    mesh = ESMF_MeshEmptyCreate(elementDistGrid=newElementDG, name=name, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -435,11 +435,15 @@ module ATM
 
     ! get distgrids out of mesh
     call ESMF_MeshGet(mesh, nodalDistgrid=nodalDG, elementDistgrid=elementDG, &
-      rc=rc)
+      name=name, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+    call ESMF_PointerLog(mesh%this, &
+      prefix="ATM - AcceptTransfer: importState Mesh name="//trim(name)//": ",&
+      rc=rc)
 
     ! The acceptor side can either use the nodal DistGrid, or the element
     ! DistGrid, or both to define its own decomposition and distribution of
@@ -471,8 +475,8 @@ module ATM
       return  ! bail out
     ! report localDeCount to log
     write (msgString,"(A,I3)") &
-      "ATM - InitializeAcceptChangeDistGrid: nodal DistGrid "// &
-      "localDeCount = ", localDeCount
+      "ATM - AcceptTransfer: importState Mesh="//trim(name)// &
+      " nodal DistGrid localDeCount = ", localDeCount
     call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -508,8 +512,8 @@ module ATM
       return  ! bail out
     ! report localDeCount to log
     write (msgString,"(A,I3)") &
-      "ATM - InitializeAcceptChangeDistGrid: element DistGrid "// &
-      "localDeCount = ", localDeCount
+      "ATM - AcceptTransfer: importState Mesh="//trim(name)// &
+      " element DistGrid localDeCount = ", localDeCount
     call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -528,21 +532,21 @@ module ATM
 #if (defined USE_NODAL_DG && defined USE_ELEMENT_DG)
     ! Create a new Mesh on both new DistGrid
     mesh = ESMF_MeshEmptyCreate(nodalDistGrid=newNodalDG, &
-      elementDistGrid=newElementDG, rc=rc)
+      elementDistGrid=newElementDG, name=name, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 #elif (defined USE_NODAL_DG)
     ! Create a new Mesh on new nodal DistGrid
-    mesh = ESMF_MeshEmptyCreate(nodalDistGrid=newNodalDG, rc=rc)
+    mesh = ESMF_MeshEmptyCreate(nodalDistGrid=newNodalDG, name=name, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 #elif (defined USE_ELEMENT_DG)
     ! Create a new Mesh on new element DistGrid
-    mesh = ESMF_MeshEmptyCreate(elementDistGrid=newElementDG, rc=rc)
+    mesh = ESMF_MeshEmptyCreate(elementDistGrid=newElementDG, name=name, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -590,10 +594,7 @@ module ATM
     type(ESMF_Field)              :: fieldIn, fieldOut
     type(ESMF_RouteHandle)        :: rh
     type(ESMF_Mesh)               :: mesh
-
-    character(*), parameter   :: rName="InitializeAcceptMeshAndRealize"
-    character(ESMF_MAXSTR)    :: name
-    integer                   :: verbosity
+    character(80)                 :: fieldName, meshName
 
     rc = ESMF_SUCCESS
 
@@ -631,6 +632,27 @@ module ATM
       return  ! bail out
 #endif
 
+#if 1
+    ! analyze the Mesh on which this field is created
+    call ESMF_FieldGet(field, mesh=mesh, name=fieldName, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_MeshGet(mesh, name=meshName, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_PointerLog(mesh%this, &
+      prefix="Atm-exportState Mesh fieldName="//trim(fieldName)// &
+      " meshName="//trim(meshName)//": ", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif 
+
     fieldOut = field ! keep field for RegridStore() test
 
     call ESMF_LogWrite("ATM - Just completed the 'pmsl' Field", &
@@ -667,6 +689,27 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 #endif
+
+#if 1
+    ! analyze the Mesh on which this field is created
+    call ESMF_FieldGet(field, mesh=mesh, name=fieldName, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_MeshGet(mesh, name=meshName, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_PointerLog(mesh%this, &
+      prefix="Atm-importState Mesh fieldName="//trim(fieldName)// &
+      " meshName="//trim(meshName)//": ", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif 
 
     fieldIn = field ! keep field for RegridStore() test
 
