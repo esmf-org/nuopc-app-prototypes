@@ -240,7 +240,7 @@ module MODEL
     type(ESMF_Clock)            :: clock
     type(ESMF_State)            :: importState, exportState
     type(ESMF_VM)               :: vm
-    integer                     :: localPet, localPeCount, currentSsiPe
+    integer                     :: currentSsiPe
     character(len=160)          :: msgString
 
     rc = ESMF_SUCCESS
@@ -248,19 +248,6 @@ module MODEL
     ! query for clock, importState and exportState
     call ESMF_GridCompGet(model, clock=clock, importState=importState, &
       exportState=exportState, vm=vm, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    ! Query the VM of the component for the localPeCount and set OpenMP
-    ! num_threads accordingly.
-    call ESMF_VMGet(vm, localPet=localPet, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call ESMF_VMGet(vm, pet=localPet, peCount=localPeCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
