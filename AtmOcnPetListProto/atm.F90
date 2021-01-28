@@ -203,7 +203,7 @@ module ATM
     type(ESMF_Clock)            :: clock
     type(ESMF_State)            :: importState, exportState
     type(ESMF_VM)               :: vm
-    integer                     :: localPet, localPeCount
+    integer                     :: currentSsiPe
     character(len=160)          :: msgString
 
     rc = ESMF_SUCCESS
@@ -216,19 +216,8 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
-    ! Query the VM of the component for the localPeCount and set OpenMP
-    ! num_threads accordingly.
+    ! Query for VM
     call ESMF_GridCompGet(model, vm=vm, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call ESMF_VMGet(vm, localPet=localPet, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call ESMF_VMGet(vm, pet=localPet, peCount=localPeCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -236,10 +225,12 @@ module ATM
 
     ! Now can use OpenMP for fine grained parallelism...
     ! Here just write info about the PET-local OpenMP threads to Log.
-!$omp parallel private(msgString)
+!$omp parallel private(msgString, currentSsiPe)
 !$omp critical
-!$    write(msgString,'(A,I4,A,I4,A,I4,A,I4)') &
+!$    call ESMF_VMGet(vm, currentSsiPe=currentSsiPe)
+!$    write(msgString,'(A,I4,A,I4,A,I4,A,I4,A,I4)') &
 !$      "thread_num=", omp_get_thread_num(), &
+!$      "   currentSsiPe=", currentSsiPe, &
 !$      "   num_threads=", omp_get_num_threads(), &
 !$      "   max_threads=", omp_get_max_threads(), &
 !$      "   num_procs=", omp_get_num_procs()
