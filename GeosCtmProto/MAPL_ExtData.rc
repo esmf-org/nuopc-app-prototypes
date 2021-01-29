@@ -1,0 +1,123 @@
+PrimaryExports%%
+# ---------|-------------|-------|--------|----------------------|--------|--------|-------------|----------|
+#  Import  |             |       | Regrid |        Refresh       | OffSet | Scale  | Variable On |   File   |
+#  Name    |    Units    | Clim  | Method |     Time Template    | Factor | Factor |     File    | Template |
+# ---------|-------------|-------|--------|----------------------|--------|--------|-------------|----------|
+#
+#------------
+# Climatilogy
+#------------
+FRLAND      '1'              Y        N           0                 0.0      1.0     FRLAND       /discover/nobackup/projects/gmi/gmidata2/input/metfields/rawMERRA2/MERRA2_400.const_2d_asm_Nx.climatology.nc4
+FRLAKE      '1'              Y        N           0                 0.0      1.0     FRLAKE       /discover/nobackup/projects/gmi/gmidata2/input/metfields/rawMERRA2/MERRA2_400.const_2d_asm_Nx.climatology.nc4
+FRLANDICE   '1'              Y        N           0                 0.0      1.0     FRLANDICE    /discover/nobackup/projects/gmi/gmidata2/input/metfields/rawMERRA2/MERRA2_400.const_2d_asm_Nx.climatology.nc4
+FROCEAN     '1'              Y        N           0                 0.0      1.0     FROCEAN      /discover/nobackup/projects/gmi/gmidata2/input/metfields/rawMERRA2/MERRA2_400.const_2d_asm_Nx.climatology.nc4
+
+#-------------
+# 2D Variables
+#-------------
+FRACI       '1'              N        N           0                 0.0      1.0     FRSEAICE     /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_flx_Nx.%y4%m2%d2.nc4
+ZPBL        'm'              N        N           0                 0.0      1.0     PBLH         /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_flx_Nx.%y4%m2%d2.nc4
+CN_PRCP     'kg m-2 s-1'     N        N           0                 0.0      1.0     PRECCON      /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_flx_Nx.%y4%m2%d2.nc4
+TPREC       'kg m-2 s-1'     N        N           0                 0.0      1.0     PRECTOT      /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_flx_Nx.%y4%m2%d2.nc4
+USTAR       'm s-1'          N        N           0                 0.0      1.0     USTAR        /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_flx_Nx.%y4%m2%d2.nc4
+Z0H         'm'              N        N           0                 0.0      1.0     Z0H          /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_flx_Nx.%y4%m2%d2.nc4
+DZ          'm'              N        N           0                 0.0      1.0     HLML         /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_flx_Nx.%y4%m2%d2.nc4
+SH          'W m-2'          N        N           0                 0.0      1.0     HFLUX        /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_flx_Nx.%y4%m2%d2.nc4
+LWI         '1'              N        N           0                 0.0      1.0     LWI          /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_chm_Nx.%y4%m2%d2.nc4
+
+SNOMAS      'kg m-2'         N        N           0                 0.0      1.0     SNOMAS       /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_lnd_Nx.%y4%m2%d2.nc4
+SNOWDP      'kg m-2'         N        N           0                 0.0      1.0     SNODP        /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_lnd_Nx.%y4%m2%d2.nc4
+
+ALBVF       '1'              N        N           0                 0.0      1.0     ALBVISDF     /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_rad_Nx.%y4%m2%d2.nc4
+SWNDSRF     'W m-2'          N        N           0                 0.0      1.0     SWGNT        /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_rad_Nx.%y4%m2%d2.nc4
+CLDTT       '1'              N        N           0                 0.0      1.0     CLDTOT       /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_rad_Nx.%y4%m2%d2.nc4
+DFPAR       'W m-2'          N        N           0                 0.0      1.0     PARDFLAND    /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_lnd_Nx.%y4%m2%d2.nc4
+DRPAR       'W m-2'          N        N           0                 0.0      1.0     PARDRLAND    /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_lnd_Nx.%y4%m2%d2.nc4
+GRN         '1'              N        N           0                 0.0      1.0     GRN          /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_lnd_Nx.%y4%m2%d2.nc4
+LAI         '1'              N        N           0                 0.0      1.0     LAI          /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_lnd_Nx.%y4%m2%d2.nc4
+TSOIL1      'K'              N        N           0                 0.0      1.0     TSOIL1       /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_lnd_Nx.%y4%m2%d2.nc4
+ASNOW       '1'              N        N           0                 0.0      1.0     FRSNO        /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_lnd_Nx.%y4%m2%d2.nc4
+WET1        '1'              N        N           0                 0.0      1.0     GWETTOP      /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_lnd_Nx.%y4%m2%d2.nc4
+WET2        '1'              N        N           0                 0.0      1.0     GWETROOT     /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_lnd_Nx.%y4%m2%d2.nc4
+RHOA        '1'              N        N           0                 0.0      1.0     RHOA         /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_flx_Nx.%y4%m2%d2.nc4
+CM          '1'              N        N           0                 0.0      1.0     CDM          /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_flx_Nx.%y4%m2%d2.nc4
+CN          '1'              N        N           0                 0.0      1.0     CN           /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_flx_Nx.%y4%m2%d2.nc4
+TA          'K'              N        N           0                 0.0      1.0     TLML         /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_flx_Nx.%y4%m2%d2.nc4
+PS          'Pa'             N        N           0                 0.0      1.0     PS           /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_slv_Nx.%y4%m2%d2.nc4
+SLP         'Pa'             N        N           0                 0.0      1.0     SLP          /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_slv_Nx.%y4%m2%d2.nc4
+TROPP       'Pa'             N        N           0                 0.0      1.0     TROPPB       /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_slv_Nx.%y4%m2%d2.nc4
+U10M        'm s-1'          N        N           0                 0.0      1.0     U10M         /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_slv_Nx.%y4%m2%d2.nc4
+V10M        'm s-1'          N        N           0                 0.0      1.0     V10M         /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_slv_Nx.%y4%m2%d2.nc4
+U2M         'm s-1'          N        N           0                 0.0      1.0     U2M          /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_slv_Nx.%y4%m2%d2.nc4
+V2M         'm s-1'          N        N           0                 0.0      1.0     V2M          /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_slv_Nx.%y4%m2%d2.nc4
+U10N        'm s-1'          N        N           0                 0.0      1.0     U10M         /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_slv_Nx.%y4%m2%d2.nc4
+V10N        'm s-1'          N        N           0                 0.0      1.0     V10M         /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_slv_Nx.%y4%m2%d2.nc4
+TS          'K'              N        N           0                 0.0      1.0     TS           /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_slv_Nx.%y4%m2%d2.nc4
+T2M         'K'              N        N           0                 0.0      1.0     T2M          /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg1_2d_slv_Nx.%y4%m2%d2.nc4
+PHIS        'm+2 s-2'        N        N           0                 0.0      1.0     PHIS         /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.inst3_3d_asm_Nv.%y4%m2%d2.nc4
+
+#---------------------
+# 3D variables at edge
+#---------------------
+PLE         'Pa'             N        N           0                 0.0      1.0     PLE          /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg3_3d_nav_Ne.%y4%m2%d2.nc4
+ZLE         'm'              N        N           0                 0.0      1.0     ZLE          /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg3_3d_nav_Ne.%y4%m2%d2.nc4
+KH          'm+2 s-1'        N        N           0                 0.0      1.0     KH           /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg3_3d_trb_Ne.%y4%m2%d2.nc4
+CNV_MFC     'kg m-2 s-1'     N        N           0                 0.0      1.0     CMFMC        /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg3_3d_mst_Ne.%y4%m2%d2.nc4
+PFI_CN      'kg m-2 s-1'     N        N           0                 0.0      1.0     PFICU        /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg3_3d_mst_Ne.%y4%m2%d2.nc4
+PFL_CN      'kg m-2 s-1'     N        N           0                 0.0      1.0     PFLCU        /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg3_3d_mst_Ne.%y4%m2%d2.nc4
+PFI_LSAN    'kg m-2 s-1'     N        N           0                 0.0      1.0     PFILSAN      /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg3_3d_mst_Ne.%y4%m2%d2.nc4
+PFL_LSAN    'kg m-2 s-1'     N        N           0                 0.0      1.0     PFLLSAN      /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg3_3d_mst_Ne.%y4%m2%d2.nc4
+PFICU       'kg m-2 s-1'     N        N           0                 0.0      1.0     PFICU        /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg3_3d_mst_Ne.%y4%m2%d2.nc4
+PFILSAN     'kg m-2 s-1'     N        N           0                 0.0      1.0     PFILSAN      /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg3_3d_mst_Ne.%y4%m2%d2.nc4
+
+#-----------------------
+# 3D variables at center
+#-----------------------
+T           'K'              N        N           0                 0.0      1.0     T	           /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.inst3_3d_asm_Nv.%y4%m2%d2.nc4
+RH2         '1'              N        N           0                 0.0      1.0     RH            /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.inst3_3d_asm_Nv.%y4%m2%d2.nc4
+Q           'kg kg-1'        N        N           0                 0.0      1.0     QV            /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.inst3_3d_asm_Nv.%y4%m2%d2.nc4
+QL          'kg kg-1'        N        N           0                 0.0      1.0     QL            /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.inst3_3d_asm_Nv.%y4%m2%d2.nc4
+QI          'kg kg-1'        N        N           0                 0.0      1.0     QI            /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.inst3_3d_asm_Nv.%y4%m2%d2.nc4
+QLTOT       'kg kg-1'        N        N           0                 0.0      1.0     QL            /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.inst3_3d_asm_Nv.%y4%m2%d2.nc4
+QITOT       'kg kg-1'        N        N           0                 0.0      1.0     QI            /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.inst3_3d_asm_Nv.%y4%m2%d2.nc4
+FCLD        '1'              N        N           0                 0.0      1.0     CLOUD         /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.inst3_3d_asm_Nv.%y4%m2%d2.nc4
+CNV_MFD     'kg m-2 s-1'     N        N           0                 0.0      1.0     DTRAIN        /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg3_3d_cld_Nv.%y4%m2%d2.nc4
+TAUCLW      '1'              N        N           0                 0.0      1.0     TAUCLW        /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg3_3d_cld_Nv.%y4%m2%d2.nc4
+TAUCLI      '1'              N        N           0                 0.0      1.0     TAUCLI        /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg3_3d_cld_Nv.%y4%m2%d2.nc4
+DQDT        'kg/kg/s'        N        N           0                 0.0      1.0     DQRCU         /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg3_3d_mst_Nv.%y4%m2%d2.nc4
+DQRL        'kg/kg/s'        N        N           0                 0.0      1.0     DQRLSAN       /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg3_3d_mst_Nv.%y4%m2%d2.nc4
+DQRC        'kg/kg/s'        N        N           0                 0.0      1.0     DQRCU         /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg3_3d_mst_Nv.%y4%m2%d2.nc4
+DQIDT       'kg/kg/s'        N        N           0                 0.0      1.0     DQIDTMST      /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg3_3d_mst_Nv.%y4%m2%d2.nc4
+DQLDT       'kg/kg/s'        N        N           0                 0.0      1.0     DQLDTMST      /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg3_3d_mst_Nv.%y4%m2%d2.nc4
+REV_CN      'kg/kg/s'        N        N           0                 0.0      1.0     REEVAPCN      /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.tavg3_3d_mst_Nv.%y4%m2%d2.nc4
+
+QLTOT1      'kg kg-1'        N	      N           0;-3000           0.0      1.0     QL	           /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.inst3_3d_asm_Nv.%y4%m2%d2.nc4
+QITOT1      'kg kg-1'        N	      N           0;-3000           0.0      1.0     QI	           /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.inst3_3d_asm_Nv.%y4%m2%d2.nc4
+U           'm s-1'          N        N           0                 0.0      1.0     U		   /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.inst3_3d_asm_Nv.%y4%m2%d2.nc4
+V           'm s-1'          N        N           0                 0.0      1.0     V		   /discover/nobackup/projects/gmao/merra2/data/products/d5124_m2_jan00/Y%y4/M%m2/MERRA2_300.inst3_3d_asm_Nv.%y4%m2%d2.nc4
+
+#----------------
+#AdvCore Specific
+#----------------
+pressure_at_layer_edges_before_advection        'Pa'             N        N           0                 0.0      1.0     PLE	   /discover/nobackup/jkouatch/TICKETS/forPeggy/MERRA2_300.tavg3_3d_nav_Ne.%y4%m2%d2.nc4
+pressure_at_layer_edges_after_advection         'Pa'             N	      N           0;3000            0.0      1.0     PLE	   /discover/nobackup/jkouatch/TICKETS/forPeggy/MERRA2_300.tavg3_3d_nav_Ne.%y4%m2%d2.nc4
+eastward_wind_on_C-Grid_before_advection;northward_wind_on_C-Grid_before_advection 'm s-1'          N        N           0                 0.0      1.0     U;V /discover/nobackup/jkouatch/TICKETS/forPeggy/MERRA2_300.inst3_3d_asm_Nv.%y4%m2%d2.nc4
+eastward_wind_on_C-Grid_after_advection;northward_wind_on_C-Grid_after_advection     'm s-1'          N	      N           0;3000            0.0      1.0     U;V	   /discover/nobackup/jkouatch/TICKETS/forPeggy/MERRA2_300.inst3_3d_asm_Nv.%y4%m2%d2.nc4
+%%
+
+Masks%%
+# ---------|------------------------------------------------------|
+#  Name    |                  Template File Name                  |
+# ---------|------------------------------------------------------|
+#          |                                                      |
+# ---------|------------------------------------------------------|
+%%
+
+DerivedExports%%
+# ---------|---------|--------------------------------------------|
+#  Export  | Primary |_________________ Mask _____________________|
+#  Name    |  Name   |    Name    |           Expression          |    
+# ---------|---------|------------|-------------------------------|
+# ---------|---------|------------|-------------------------------|
+%%
+

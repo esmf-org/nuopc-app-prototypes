@@ -1,0 +1,153 @@
+How to compile and run GeosCtmProto using Peggy's BASELIB and GEOSctm_lite on discover
+
+Peggy Li, 6/5/2018
+
+1. Load the following modules
+
+module load other/comp/gcc-5.3-sp3
+module load comp/intel-17.0.4.196
+module load mpi/impi-18.0.0.128
+module load lib/mkl-17.0.4.196
+module load other/SIVO-PyD/spd_1.24.0_gcc-5.3-sp3_mkl-16.0.1.150
+module load other/git
+module load other/cmake
+
+2.  Define the following environment variables
+
+setenv BASEDIR /gpfsm/dnb31/pli/ESMA-Baselibs-5.0.5/x86_64-unknown-linux-gnu/ifort_17.0.4.196-intelmpi_18.0.0.128
+setenv ESMADIR /gpfsm/dnb31/pli/GEOSctm_lite
+
+3.  Get GeosCtmProto using
+  % svn co https://svn.code.sf.net/p/esmfcontrib/svn/NUOPC/trunk/GeosCtmProto
+    and compile it in the GeosCtmProto directory by %gmake
+
+4.  Run it using %mpirun -np 6 ./ctmApp
+
+--------------------------------------
+
+How to compile GeosCtmProto with the latest GEOSctm_lite that contains Tom
+Clune's latest MAPL code and the new CubedSphereFactory code
+
+Peggy Li, 1/10/2018
+
+(the first three steps are the same as below)
+
+1. Load the following modules
+
+module load other/comp/gcc-5.3-sp3
+module load comp/intel-17.0.4.196
+module load mpi/impi-18.0.0.128
+module load lib/mkl-17.0.4.196
+module load other/SIVO-PyD/spd_1.24.0_gcc-5.3-sp3_mkl-16.0.1.150
+module load other/git
+module load other/cmake
+
+2.  Build the Baselibs used to compile MAPL following the instruction in
+https://geos5.org/wiki/index.php?title=Building_Baselibs
+
+ 1) use the following command to clone:
+
+   % git clone -b 5.0.5 --recursive git@developer.nasa.gov:mathomp4/ESMA-Baselibs.git ESMA-Baselibs-5.0.5/src
+
+ 2) before building the libraries, replace the ESMF library in ESMA-Baselibs-5.0.5/src/esmf  with the latest esmf library from ESMF git
+ repro
+
+ 3) cd ESMA-Baselibs-5.0.5/src/ and run make:
+
+    % make install ESMF_COMM=intelmpi CONFIG_SETUP=ifort_17.0.4.196-intelmpi_18.0.0.128 |& tee makeinstall.ifort_17.0.4.196-intelmpi_18.0.0.128.log
+
+ 
+3.  Set BASELIB environment variable
+setenv BASEDIR ..../ESMA-Baselibs-5.0.5/x86_64-unknown-linux-gnu/ifort_17.0.4.196-intelmpi_18.0.0.128
+
+4.  Get the latest GOESctm_lite and compile it: 
+
+    %git clone /discover/swdev/adasilva/bridge/GEOSctm_lite
+
+5.  Modify some scripts and compile GOESctm_lite
+
+    First set environment variable ESMADIR to the GEOSctm_lite top directory:
+
+    %setenv ESMADIR /discover/nobackup/pli/GEOSctm_lite
+
+    then cd $ESMADIR/src and edit g5_modules
+    in line 138,replace basedir with my own basedir:
+
+    set basedir = /gpfsm/dnb31/pli/ESMA-Baselibs-5.0.5/x86_64-unknown-linux-gnu/ifort_17.0.4.196-intelmpi_18.0.0.128
+
+    Now, do the following to compile GOESctm_lite:
+
+    % source g5_modules
+    % gmake install
+
+    The default install directory is $ESMADIR/Linux
+
+6.  Check out GeosCtmProto from esmfcontriv svn repro
+
+    % svn co https://svn.code.sf.net/p/esmfcontrib/svn/NUOPC/trunk/GeosCtmProto
+
+7.  Make sure envirment variables ESMADIR and BASEDIR are set, then just cd to
+GeosCtmProto directory to do %gmake
+
+8.  To run the code, do %mpirun -np 6 ./ctmApp 
+    
+------------------------------------------
+
+How to compile GeosCtmProto with Tom Clune's MAPL repro on discover
+
+Peggy Li, 11/17/2017
+
+1. Load the following modules
+
+module load other/comp/gcc-5.3-sp3
+module load comp/intel-17.0.4.196
+module load mpi/impi-18.0.0.128
+module load lib/mkl-17.0.4.196
+module load other/SIVO-PyD/spd_1.24.0_gcc-5.3-sp3_mkl-16.0.1.150
+module load other/git
+module load other/cmake
+
+2.  Build the Baselibs used to compile MAPL following the instruction in
+https://geos5.org/wiki/index.php?title=Building_Baselibs
+
+ 1) use the following command to clone:
+
+   % git clone -b 5.0.5 --recursive git@developer.nasa.gov:mathomp4/ESMA-Baselibs.git ESMA-Baselibs-5.0.5/src
+
+ 2) before building the libraries, replace the ESMF library in ESMA-Baselibs-5.0.5/src/esmf  with the latest esmf library from ESMF git
+ repro
+
+ 3) cd ESMA-Baselibs-5.0.5/src/ and run make:
+
+    % make install ESMF_COMM=intelmpi CONFIG_SETUP=ifort_17.0.4.196-intelmpi_18.0.0.128 |& tee makeinstall.ifort_17.0.4.196-intelmpi_18.0.0.128.log
+
+ 
+3.  Set BASELIB environment variable
+setenv BASEDIR ..../ESMA-Baselibs-5.0.5/x86_64-unknown-linux-gnu/ifort_17.0.4.196-intelmpi_18.0.0.128
+
+4.  Now get MAPL develop branch:
+    
+    % git clone git@developer.nasa.gov:tclune/MAPL.git
+    % cd MAPL
+    % git checkout develop
+
+5.  Make MAPL using the BASEDIR
+
+    create a build directory and cd to build
+    % cmake ../MAPL/src -DBASEDIR=$BASEDIR/Linux
+    % gmake -j MAPL_Base
+
+    MAPL makefile does not have an install target.  The libraries are located
+    in the subdirectories under build.  I created a subdirectory called lib
+    and create a target to copy all the .a files to lib/
+
+6.  Check out GeosCtmProto from esmfcontriv svn repro
+
+    % svn co https://svn.code.sf.net/p/esmfcontrib/svn/NUOPC/trunk/GeosCtmProto
+
+7.  modify MAPL_INSTALL_ROOT in Makefile to point to the MAPL build directory,then do %make
+
+There are some changes to be made in the ESMF library and in the MAPL code in
+order to run ctmApp.  
+
+
