@@ -258,8 +258,8 @@ echo
 # function    # proto directory                           # executable
 TestProto     AsyncIOBlockingProto                        asyncIOApp
 TestProto     AsyncIONonblockingProto                     asyncIOApp
-TestProto     AtmOcnConProto                              esmApp
 TestProto     AtmOcnConOptsProto                          esmApp
+TestProto     AtmOcnConProto                              esmApp
 TestProto     AtmOcnCplListProto                          esmApp
 TestProto     AtmOcnCplSetProto                           esmApp
 TestProto     AtmOcnFDSynoProto                           esmApp
@@ -286,8 +286,8 @@ TestProto     AtmOcnTransferLocStreamProto                esmApp
 TestProto     AtmOcnTransferMeshProto                     esmApp
 TestExplorer  ComponentExplorer                           nuopcExplorerApp
 TestProto     CustomFieldDictionaryProto                  mainApp
-TestProto     DriverInDriverProto                         mainApp
 TestProto     DriverInDriverDataDepProto                  mainApp
+TestProto     DriverInDriverProto                         mainApp
 TestProto     DynPhyProto                                 esmApp
 TestProto     ExternalDriverAPIProto                      externalApp
 TestProto     GenericMediatorProto                        app
