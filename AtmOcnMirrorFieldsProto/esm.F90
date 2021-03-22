@@ -1,9 +1,9 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright 2002-2019, University Corporation for Atmospheric Research, 
-! Massachusetts Institute of Technology, Geophysical Fluid Dynamics 
-! Laboratory, University of Michigan, National Centers for Environmental 
-! Prediction, Los Alamos National Laboratory, Argonne National Laboratory, 
+! Copyright 2002-2021, University Corporation for Atmospheric Research,
+! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
+! Laboratory, University of Michigan, National Centers for Environmental
+! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
 ! NASA Goddard Space Flight Center.
 ! Licensed under the University of Illinois-NCSA License.
 !==============================================================================
@@ -25,20 +25,19 @@ module ESM
   use ESMF
   use NUOPC
   use NUOPC_Driver, &
-    driver_routine_SS             => SetServices, &
-    driver_label_SetModelServices => label_SetModelServices
+    driverSS             => SetServices
 
   use ATM, only: atmSVM => SetVM, atmSS => SetServices
   use OCN, only: ocnSVM => SetVM, ocnSS => SetServices
-  
+
   use NUOPC_Connector, only: cplSS => SetServices
-  
+
   implicit none
-  
+
   private
-  
+
   public SetServices
-  
+
   !-----------------------------------------------------------------------------
   contains
   !-----------------------------------------------------------------------------
@@ -48,16 +47,16 @@ module ESM
     integer, intent(out) :: rc
 
     rc = ESMF_SUCCESS
-    
-    ! NUOPC_Driver registers the generic methods
-    call NUOPC_CompDerive(driver, driver_routine_SS, rc=rc)
+
+    ! derive from NUOPC_Driver
+    call NUOPC_CompDerive(driver, driverSS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
-    ! attach specializing method(s)
-    call NUOPC_CompSpecialize(driver, specLabel=driver_label_SetModelServices, &
+
+    ! specialize driver
+    call NUOPC_CompSpecialize(driver, specLabel=label_SetModelServices, &
       specRoutine=SetModelServices, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -78,7 +77,7 @@ module ESM
   subroutine SetModelServices(driver, rc)
     type(ESMF_GridComp)  :: driver
     integer, intent(out) :: rc
-    
+
     ! local variables
     type(ESMF_Grid)               :: grid
     type(ESMF_Field)              :: field
@@ -93,14 +92,15 @@ module ESM
     type(ESMF_Info)               :: info
 
     rc = ESMF_SUCCESS
-    
+
     ! Create and set the info object that is used to pass hints into methods
     info = ESMF_InfoCreate(rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call ESMF_AttributeSet(info, name="maxPeCountPerPet", value=2, rc=rc)
+    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/MaxCount", value=2, &
+      rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -112,7 +112,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
     ! SetServices for ATM with petList on first half of PETs
     allocate(petList(petCount/2))
     do i=1, petCount/2
@@ -136,9 +136,10 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     deallocate(petList)
-    
+
     ! SetServices for OCN with petList on second half of PETs
-    call ESMF_AttributeSet(info, name="maxPeCountPerPet", value=4, rc=rc)
+    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/MaxCount", value=4, &
+      rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -165,7 +166,7 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     deallocate(petList)
-      
+
     ! SetServices for atm2ocn
     call NUOPC_DriverAddComp(driver, srcCompLabel="ATM", dstCompLabel="OCN", &
       compSetServicesRoutine=cplSS, comp=connector, rc=rc)
@@ -178,7 +179,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     ! SetServices for ocn2atm
     call NUOPC_DriverAddComp(driver, srcCompLabel="OCN", dstCompLabel="ATM", &
       compSetServicesRoutine=cplSS, comp=connector, rc=rc)
@@ -191,7 +192,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     ! set the driver clock
     call ESMF_TimeIntervalSet(timeStep, m=15, rc=rc) ! 15 minute steps
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -219,13 +220,13 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     call ESMF_GridCompSet(driver, clock=internalClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
   end subroutine
 
   !-----------------------------------------------------------------------------

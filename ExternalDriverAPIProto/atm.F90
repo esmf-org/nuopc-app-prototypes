@@ -1,9 +1,9 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright 2002-2019, University Corporation for Atmospheric Research, 
-! Massachusetts Institute of Technology, Geophysical Fluid Dynamics 
-! Laboratory, University of Michigan, National Centers for Environmental 
-! Prediction, Los Alamos National Laboratory, Argonne National Laboratory, 
+! Copyright 2002-2021, University Corporation for Atmospheric Research,
+! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
+! Laboratory, University of Michigan, National Centers for Environmental
+! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
 ! NASA Goddard Space Flight Center.
 ! Licensed under the University of Illinois-NCSA License.
 !==============================================================================
@@ -17,119 +17,67 @@ module ATM
   use ESMF
   use NUOPC
   use NUOPC_Model, &
-    model_routine_SS    => SetServices, &
-    model_label_Advance => label_Advance
-  
+    modelSS      => SetServices
+
   implicit none
-  
+
   private
-  
+
   public SetServices
-  
+
   !-----------------------------------------------------------------------------
   contains
   !-----------------------------------------------------------------------------
-  
+
   subroutine SetServices(model, rc)
     type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
-    
-    rc = ESMF_SUCCESS
-    
-    ! the NUOPC model component will register the generic methods
-    call NUOPC_CompDerive(model, model_routine_SS, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
-    ! -> switching to IPD version that supports realize after connected
-    call ESMF_GridCompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      userRoutine=InitializeP0, phase=0, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
 
-    ! set entry point for methods that require specific implementation
-    call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv01p1"/), userRoutine=InitializeAdvertise, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv01p3"/), userRoutine=InitializeRealize, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
-    ! attach specializing method(s)
-    call NUOPC_CompSpecialize(model, specLabel=model_label_Advance, &
-      specRoutine=ModelAdvance, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call ESMF_MethodRemove(model, label_CheckImport, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_CompSpecialize(model, specLabel=label_CheckImport, &
-      specRoutine=NUOPC_Noop, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
-  end subroutine
-  
-  !-----------------------------------------------------------------------------
-
-  subroutine InitializeP0(model, importState, exportState, clock, rc)
-    type(ESMF_GridComp)   :: model
-    type(ESMF_State)      :: importState, exportState
-    type(ESMF_Clock)      :: clock
-    integer, intent(out)  :: rc
-    
     rc = ESMF_SUCCESS
 
-    ! Switch to IPDv01 by filtering all other phaseMap entries
-    call NUOPC_CompFilterPhaseMap(model, ESMF_METHOD_INITIALIZE, &
-      acceptStringList=(/"IPDv01p"/), rc=rc)
+    ! derive from NUOPC_Model
+    call NUOPC_CompDerive(model, modelSS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
+    ! specialize model
+    call NUOPC_CompSpecialize(model, specLabel=label_Advertise, &
+      specRoutine=Advertise, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompSpecialize(model, specLabel=label_RealizeProvided, &
+      specRoutine=Realize, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompSpecialize(model, specLabel=label_Advance, &
+      specRoutine=Advance, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
   end subroutine
-  
+
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeAdvertise(model, importState, exportState, clock, rc)
+  subroutine Advertise(model, rc)
     type(ESMF_GridComp)  :: model
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
-    
+
     ! local variables
-    character(*), parameter     :: rName="InitializeAdvertise"
-    character(ESMF_MAXSTR)      :: name
-    integer                     :: verbosity
+    type(ESMF_State)        :: importState, exportState
 
     rc = ESMF_SUCCESS
-    
-    ! query the component for info
-    call NUOPC_CompGet(model, name=name, verbosity=verbosity, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
-    ! intro
-    call NUOPC_LogIntro(name, rName, verbosity, rc=rc)
+
+    ! query for importState and exportState
+    call NUOPC_ModelGet(model, importState=importState, &
+      exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -142,7 +90,7 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
     ! importable field: precipitation_flux
     call NUOPC_Advertise(importState, &
       StandardName="precipitation_flux", name="precip", rc=rc)
@@ -150,7 +98,7 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
     ! exportable field: air_pressure_at_sea_level
     call NUOPC_Advertise(exportState, &
       StandardName="air_pressure_at_sea_level", name="pmsl", rc=rc)
@@ -158,7 +106,7 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
     ! exportable field: surface_net_downward_shortwave_flux
     call NUOPC_Advertise(exportState, &
       StandardName="surface_net_downward_longwave_flux", name="rsnl", rc=rc)
@@ -183,49 +131,32 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
-    ! extro
-    call NUOPC_LogExtro(name, rName, verbosity, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
   end subroutine
-  
+
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeRealize(model, importState, exportState, clock, rc)
+  subroutine Realize(model, rc)
     type(ESMF_GridComp)  :: model
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
-    
+
     ! local variables
-    character(*), parameter     :: rName="InitializeRealize"
-    character(ESMF_MAXSTR)      :: name
-    integer                     :: verbosity
+    type(ESMF_State)            :: importState, exportState
     type(ESMF_Field)            :: field
     type(ESMF_Grid)             :: gridIn
     type(ESMF_Grid)             :: gridOut
     real(ESMF_KIND_R8), pointer :: dataPtr(:,:), lonPtr(:), latPtr(:)
     integer                     :: i,j
-    
+
     rc = ESMF_SUCCESS
-    
-    ! query the component for info
-    call NUOPC_CompGet(model, name=name, verbosity=verbosity, rc=rc)
+
+    ! query for importState and exportState
+    call NUOPC_ModelGet(model, importState=importState, &
+      exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
-    ! intro
-    call NUOPC_LogIntro(name, rName, verbosity, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
+
     ! create a Grid object for Fields
 #if 0
     gridIn = ESMF_GridCreate1PeriDimUfrm(maxIndex=(/100, 50/), &
@@ -314,21 +245,14 @@ module ATM
     ! fill export with some data
     call ESMF_FieldFill(field, dataFillScheme="sincos", member=4, rc=rc)
 
-    ! extro
-    call NUOPC_LogExtro(name, rName, verbosity, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
   end subroutine
-  
+
   !-----------------------------------------------------------------------------
 
-  subroutine ModelAdvance(model, rc)
+  subroutine Advance(model, rc)
     type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
-    
+
     ! local variables
     type(ESMF_Clock)            :: clock
     type(ESMF_State)            :: importState, exportState
@@ -340,8 +264,8 @@ module ATM
     integer, save               :: slice=1
 
     rc = ESMF_SUCCESS
-    
-    ! query the Component for its clock, importState and exportState
+
+    ! query for clock, importState and exportState
     call NUOPC_ModelGet(model, modelClock=clock, importState=importState, &
       exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -350,12 +274,12 @@ module ATM
       return  ! bail out
 
     ! HERE THE MODEL ADVANCES: currTime -> currTime + timeStep
-    
+
     ! Because of the way that the internal Clock was set by default,
     ! its timeStep is equal to the parent timeStep. As a consequence the
     ! currTime + timeStep is equal to the stopTime of the internal Clock
-    ! for this call of the ModelAdvance() routine.
-    
+    ! for this call of the Advance() routine.
+
     call ESMF_ClockPrint(clock, options="currTime", &
       preString="------>Advancing ATM from: ", unit=msgString, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -367,7 +291,7 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
     call ESMF_ClockPrint(clock, options="stopTime", &
       preString="---------------------> to: ", unit=msgString, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -404,7 +328,7 @@ module ATM
       enddo
       enddo
     endif
-    
+
     ! update the "rsns" field
     call ESMF_StateGet(exportState, itemName="rsns", itemType=itemType, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -429,7 +353,7 @@ module ATM
       enddo
       enddo
     endif
-    
+
 #if 0
 ! cannot use NUOPC_Write() for fields on cubed sphere grid right now
     ! write out the Fields in the importState
@@ -451,5 +375,7 @@ module ATM
     slice = slice + 1
 
   end subroutine
+
+  !-----------------------------------------------------------------------------
 
 end module

@@ -3,7 +3,7 @@ README for ATM-OCN with petList NUOPC prototype
 
 A simple two model system, where the Model components run on assigned PETs.
 Demonstrate the Driver instructing the Model components to configure their
-VMs according to the "maxPeCountPerPet" hint.
+VMs according to /NUOPC/Hint/PePerPet hints.
 
 Description:
 
@@ -13,7 +13,7 @@ Description:
   The ESM driver uses explicitly constructed petLists when adding the two
   model components.
   
-  The ESM driver constructs an Info object and sets the maxPeCountPerPet" hint.
+  The ESM driver constructs an Info object and sets /NUOPC/Hint/PePerPet hints.
   Passes the Info object into NUOPC_DriverAddComp() when adding the ATM and OCN
   components.
 

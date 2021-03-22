@@ -1,9 +1,9 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright 2002-2019, University Corporation for Atmospheric Research, 
-! Massachusetts Institute of Technology, Geophysical Fluid Dynamics 
-! Laboratory, University of Michigan, National Centers for Environmental 
-! Prediction, Los Alamos National Laboratory, Argonne National Laboratory, 
+! Copyright 2002-2021, University Corporation for Atmospheric Research,
+! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
+! Laboratory, University of Michigan, National Centers for Environmental
+! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
 ! NASA Goddard Space Flight Center.
 ! Licensed under the University of Illinois-NCSA License.
 !==============================================================================
@@ -21,113 +21,90 @@ module ATM
   use ESMF
   use NUOPC
   use NUOPC_Model, &
-    model_routine_SS            => SetServices, &
-    model_label_DataInitialize  => label_DataInitialize, &
-    model_label_Advance         => label_Advance
-  
+    modelSS    => SetServices
+
   implicit none
-  
+
   private
-  
+
   public SetVM, SetServices
-  
+
   !-----------------------------------------------------------------------------
   contains
   !-----------------------------------------------------------------------------
-  
+
   subroutine SetServices(model, rc)
     type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
-    
+
     rc = ESMF_SUCCESS
-    
-    ! the NUOPC model component will register the generic methods
-    call NUOPC_CompDerive(model, model_routine_SS, rc=rc)
+
+    ! derive from NUOPC_Model
+    call NUOPC_CompDerive(model, modelSS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 
-    ! -> switching to IPD version that supports GeomObject transfer
-    call ESMF_GridCompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      userRoutine=InitializeP0, phase=0, rc=rc)
+    ! specialize model
+    call NUOPC_CompSpecialize(model, specLabel=label_Advertise, &
+      specRoutine=Advertise, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-
-    ! set entry point for methods that require specific implementation
-    call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv03p1"/), userRoutine=InitializeP1, rc=rc)
+    call NUOPC_CompSpecialize(model, specLabel=label_RealizeProvided, &
+      specRoutine=RealizeProvided, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv03p3"/), userRoutine=InitializeP3, rc=rc)
+    call NUOPC_CompSpecialize(model, specLabel=label_AcceptTransfer, &
+      specRoutine=AcceptTransfer, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv03p4"/), userRoutine=InitializeP4, rc=rc)
+    call NUOPC_CompSpecialize(model, specLabel=label_RealizeAccepted, &
+      specRoutine=RealizeAccepted, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv03p5"/), userRoutine=InitializeP5, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    ! attach specializing method(s)
-    call NUOPC_CompSpecialize(model, specLabel=model_label_Advance, &
-      specRoutine=ModelAdvance, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_CompSpecialize(model, specLabel=model_label_DataInitialize, &
+    call NUOPC_CompSpecialize(model, specLabel=label_DataInitialize, &
       specRoutine=DataInitialize, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
-  end subroutine
-  
-  !-----------------------------------------------------------------------------
-
-  subroutine InitializeP0(model, importState, exportState, clock, rc)
-    type(ESMF_GridComp)   :: model
-    type(ESMF_State)      :: importState, exportState
-    type(ESMF_Clock)      :: clock
-    integer, intent(out)  :: rc
-    
-    rc = ESMF_SUCCESS
-
-    ! Switch to IPDv03 by filtering all other phaseMap entries
-    call NUOPC_CompFilterPhaseMap(model, ESMF_METHOD_INITIALIZE, &
-      acceptStringList=(/"IPDv03p"/), rc=rc)
+    call NUOPC_CompSpecialize(model, specLabel=label_Advance, &
+      specRoutine=Advance, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
   end subroutine
-  
+
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP1(model, importState, exportState, clock, rc)
+  subroutine Advertise(model, rc)
     type(ESMF_GridComp)  :: model
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
-    
+
+    ! local variables
+    type(ESMF_State)        :: importState, exportState
+
     rc = ESMF_SUCCESS
-    
+
+    ! query for importState and exportState
+    call NUOPC_ModelGet(model, importState=importState, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! importable field: sea_surface_salinity
     ! -> marked as "cannot provide"
     call NUOPC_Advertise(importState, &
@@ -174,7 +151,7 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
     ! exportable field: surface_net_downward_shortwave_flux
     ! -> use default, i.e. marked as "will provide"
     call NUOPC_Advertise(exportState, &
@@ -193,7 +170,7 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
     call ESMF_LogWrite("Done advertising fields in ATM exportState", &
       ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -202,22 +179,29 @@ module ATM
       return  ! bail out
 
   end subroutine
-  
+
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP3(model, importState, exportState, clock, rc)
+  subroutine RealizeProvided(model, rc)
     type(ESMF_GridComp)  :: model
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
-    
-    ! local variables    
-    type(ESMF_Field)                  :: field
-    type(ESMF_Grid)                   :: gridIn, gridOut
-    character(ESMF_MAXSTR)            :: transferAction
-    
+
+    ! local variables
+    type(ESMF_State)        :: importState, exportState
+    type(ESMF_Field)        :: field
+    type(ESMF_Grid)         :: gridIn, gridOut
+    character(ESMF_MAXSTR)  :: transferAction
+
     rc = ESMF_SUCCESS
-    
+
+    ! query for importState and exportState
+    call NUOPC_ModelGet(model, importState=importState, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! create Grid objects for Fields
     gridIn = ESMF_GridCreate1PeriDimUfrm(maxIndex=(/100, 150/), &
       minCornerCoord=(/0._ESMF_KIND_R8, -50._ESMF_KIND_R8/), &
@@ -227,19 +211,19 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     gridOut = gridIn ! for now out same as in
 
     ! importable field: sea_surface_temperature
     ! This Field was marked with TransferOfferGeomObject="can provide", so here
-    ! we need to see what TransferActionGeomObject the Connector determined for
+    ! we need to see what ConsumerTransferAction the Connector determined for
     ! this Field:
     call ESMF_StateGet(importState, field=field, itemName="sst", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_GetAttribute(field, name="TransferActionGeomObject", &
+    call NUOPC_GetAttribute(field, name="ConsumerTransferAction", &
       value=transferAction, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -275,7 +259,7 @@ module ATM
     endif
 
     !NOTE: The sea_surface_salinity (sss) and air_pressure_at_sea_level (pmsl)
-    !NOTE: Fields are not realized here because they were marked with 
+    !NOTE: Fields are not realized here because they were marked with
     !NOTE: TransferOfferGeomObject="cannot provide".
     !NOTE: Expect the Connector to fill in a Grid object for these Fields.
 
@@ -306,16 +290,15 @@ module ATM
       return  ! bail out
 
   end subroutine
-  
+
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP4(model, importState, exportState, clock, rc)
+  subroutine AcceptTransfer(model, rc)
     type(ESMF_GridComp)  :: model
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
-    
+
     ! local variables
+    type(ESMF_State)              :: importState, exportState
     type(ESMF_Field)              :: field
     type(ESMF_Grid)               :: grid
     integer                       :: localDeCount
@@ -331,7 +314,15 @@ module ATM
     logical                       :: regDecompFlag
 
     rc = ESMF_SUCCESS
-    
+
+    ! query for importState and exportState
+    call NUOPC_ModelGet(model, importState=importState, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     !NOTE: The air_pressure_at_sea_level (pmsl) Field should now have the
     !NOTE: accepted Grid available. It is still an empty Field, but with Grid,
     !NOTE: that contains a DistGrid with the provider decomposition.
@@ -346,14 +337,14 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
     ! while this is still an empty field, it does now hold a Grid with DistGrid
     call ESMF_FieldGet(field, grid=grid, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     ! inspect the Grid name
     call ESMF_GridGet(grid, name=name, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -366,25 +357,25 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     ! access localDeCount to show this is a real Grid
     call ESMF_GridGet(grid, localDeCount=localDeCount, distgrid=distgrid, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
     write (msgString,*) "ATM - InitializeP4: localDeCount = ", localDeCount
     call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
-    ! Create a custom DistGrid, based on the minIndex, maxIndex of the 
+
+    ! Create a custom DistGrid, based on the minIndex, maxIndex of the
     ! accepted DistGrid, but with a default regDecomp for the current VM
     ! that leads to 1DE/PET (as long as there are more PETs than tiles).
-    
+
     ! get dimCount and tileCount
     call ESMF_DistGridGet(distgrid, dimCount=dimCount, tileCount=tileCount, &
       connectionCount=connectionCount, rc=rc)
@@ -392,12 +383,12 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
     ! allocate minIndexPTile and maxIndexPTile accord. to dimCount and tileCount
     allocate(minIndexPTile(dimCount, tileCount), &
       maxIndexPTile(dimCount, tileCount))
     allocate(connectionList(connectionCount))
-    
+
     ! get minIndex and maxIndex arrays
     call ESMF_DistGridGet(distgrid, minIndexPTile=minIndexPTile, &
       maxIndexPTile=maxIndexPTile, connectionList=connectionList, rc=rc)
@@ -406,8 +397,8 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
-#if 0      
-    ! report on the connections    
+#if 0
+    ! report on the connections
     print *, "connectionCount=", connectionCount
     do i=1, connectionCount
       call ESMF_DistGridConnectionPrint(connectionList(i))
@@ -433,14 +424,14 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     ! access localDeCount of the final Grid
     call ESMF_GridGet(grid, localDeCount=localDeCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
     write (msgString,*) "ATM - InitializeP4: final Grid localDeCount = ", &
       localDeCount
     call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
@@ -450,12 +441,12 @@ module ATM
       return  ! bail out
 
     ! Swap out the transferred for new Grid in "pmsl" Field
-    call ESMF_FieldEmptySet(field, grid=grid, rc=rc)    
+    call ESMF_FieldEmptySet(field, grid=grid, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     ! -- deal with "precip" field in the exportState
     ! access the field
     call ESMF_StateGet(exportState, field=field, itemName="precip", rc=rc)
@@ -518,7 +509,7 @@ module ATM
       !
       ! Not setting the PRECIP_REGDECOMP macro will default into keeping the
       ! original arbDistr Grid.
-      
+
 #define PRECIP_REGDECOMP
 
 #ifdef PRECIP_REGDECOMP
@@ -554,7 +545,7 @@ module ATM
         file=__FILE__)) &
         return  ! bail out
       ! swap out the transferred grid for the newly created one
-      call ESMF_FieldEmptySet(field, grid=grid, rc=rc)    
+      call ESMF_FieldEmptySet(field, grid=grid, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
@@ -615,7 +606,7 @@ module ATM
           file=__FILE__)) &
           return  ! bail out
         ! swap out the transferred grid for the newly created one
-        call ESMF_FieldEmptySet(field, grid=grid, rc=rc)    
+        call ESMF_FieldEmptySet(field, grid=grid, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
           line=__LINE__, &
           file=__FILE__)) &
@@ -630,7 +621,7 @@ module ATM
         ! entire index space, or also use a deBlock approach to only cover the
         ! exact index space covered by the provider grid.
         ! If a regDecomp scheme is used, Redist() between provider side and
-        ! acceptor side is still possible (both ways). It just means that 
+        ! acceptor side is still possible (both ways). It just means that
         ! not all src/dst index points send/receive data.
         ! Using the regDecomp scheme is identical to the regDecompFlag branch
         ! of this if statement.
@@ -640,24 +631,24 @@ module ATM
         ! Alternatively the DEs could be distributed differently by constructing
         ! a deBlockList out of the minIndexPDe and maxIndexPDe arrays here, and
         ! calling a deBlock DistGridCreate() and then build the Grid on it.
-        ! -> here we just accept the provided Grid without change (same number 
+        ! -> here we just accept the provided Grid without change (same number
         ! of DEs with the same deBlocks).
       endif
     endif
     deallocate(minIndexPTile, maxIndexPTile, connectionList)
-     
+
     !------------------------------------------------------------------------
     ! Also must deal with transferred Grids in the importState
     call ESMF_LogWrite("ATM - InitializeP4: now dealing with importState", &
        ESMF_LOGMSG_INFO, rc=rc)
-    
+
     ! access the "sss" field in the importState and set the Grid
     call ESMF_StateGet(importState, field=field, itemName="sss", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     ! construct a local Grid according to the transferred grid
     call ESMF_FieldGet(field, grid=grid, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -701,7 +692,7 @@ module ATM
         file=__FILE__)) &
         return  ! bail out
       ! swap out the transferred grid for the newly created one
-      call ESMF_FieldEmptySet(field, grid=grid, rc=rc)    
+      call ESMF_FieldEmptySet(field, grid=grid, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
@@ -716,7 +707,7 @@ module ATM
       ! entire index space, or also use a deBlock approach to only cover the
       ! exact index space covered by the provider grid.
       ! If a regDecomp scheme is used, Redist() between provider side and
-      ! acceptor side is still possible (both ways). It just means that 
+      ! acceptor side is still possible (both ways). It just means that
       ! not all src/dst index points send/receive data.
       ! Using the regDecomp scheme is identical to the regDecompFlag branch
       ! of this if statement.
@@ -730,9 +721,9 @@ module ATM
       ! DEs with the same deBlocks).
     endif
     deallocate(minIndexPTile, maxIndexPTile, connectionList)
-  
+
     ! Also must swap the Grid for the "sst" Field in the importState
-    ! if transferAction indicates "accept". Assume that SST is defined on 
+    ! if transferAction indicates "accept". Assume that SST is defined on
     ! the same grid as SSS.
 
     ! access the "sst" field in the importState
@@ -741,7 +732,7 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_GetAttribute(field, name="TransferActionGeomObject", &
+    call NUOPC_GetAttribute(field, name="ConsumerTransferAction", &
       value=transferAction, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -752,7 +743,7 @@ module ATM
       if (regDecompFlag) then
         ! for a regDecomp scheme, definitely the newly constructed Grid on the
         ! acceptor side makes a lot more sense.
-        call ESMF_FieldEmptySet(field, grid=grid, rc=rc)    
+        call ESMF_FieldEmptySet(field, grid=grid, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
           line=__LINE__, &
           file=__FILE__)) &
@@ -760,7 +751,7 @@ module ATM
         call ESMF_LogWrite("ATM - Just set Grid for 'sst' Field", &
           ESMF_LOGMSG_INFO, rc=rc)
       else
-        ! for deBlock scheme, just keep the provided Grid with the same 
+        ! for deBlock scheme, just keep the provided Grid with the same
         ! deBlocks as provider defined.
       endif
     endif
@@ -769,26 +760,33 @@ module ATM
        ESMF_LOGMSG_INFO, rc=rc)
 
   end subroutine
-    
+
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP5(model, importState, exportState, clock, rc)
+  subroutine RealizeAccepted(model, rc)
     type(ESMF_GridComp)  :: model
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
-    
+
     ! local variables
-    type(ESMF_Field)              :: field
-    type(ESMF_Grid)               :: grid
-    type(ESMF_Array)              :: array
-    character(80)                 :: name
-    character(160)                :: msgString
-    integer                       :: staggerEdgeLWidth(2)
-    integer                       :: staggerEdgeUWidth(2)
-    integer                       :: staggerAlign(2)
+    type(ESMF_State)        :: importState, exportState
+    type(ESMF_Field)        :: field
+    type(ESMF_Grid)         :: grid
+    type(ESMF_Array)        :: array
+    character(80)           :: name
+    character(160)          :: msgString
+    integer                 :: staggerEdgeLWidth(2)
+    integer                 :: staggerEdgeUWidth(2)
+    integer                 :: staggerAlign(2)
 
     rc = ESMF_SUCCESS
+
+    ! query for importState and exportState
+    call NUOPC_ModelGet(model, importState=importState, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 
     ! realize the "sss" field in the importState
     call NUOPC_Realize(importState, fieldName="sss", field=field, rc=rc)
@@ -859,7 +857,7 @@ module ATM
         return  ! bail out
     endif
 
-#ifdef TEST_MULTI_TILE_GRID    
+#ifdef TEST_MULTI_TILE_GRID
     ! write cubed sphere grid out to VTK
     call ESMF_FieldGet(field, grid=grid, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -916,7 +914,7 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    ! check the staggerEdgeWidth of the transferred grid 
+    ! check the staggerEdgeWidth of the transferred grid
 #ifdef TEST_GRID_EDGE_WIDTHS
     ! center stagger
     call ESMF_GridGet(grid, staggerloc=ESMF_STAGGERLOC_CENTER, &
@@ -1037,10 +1035,10 @@ module ATM
     !TODO:
     ! Coords are currently written in 2D index space even if there is coordinate
     ! factorization used, e.g. in the Ufrm() GridCreate. Therefore the coord
-    ! arrays have replicated dims, and underlying allocation is only 1D. This 
+    ! arrays have replicated dims, and underlying allocation is only 1D. This
     ! should be changed in the ArrayWrite() where Arrays with replicated dims
-    ! should write out only the non-degenerate data, i.e. according to the 
-    ! actual data allocation. 
+    ! should write out only the non-degenerate data, i.e. according to the
+    ! actual data allocation.
     ! -> here that would be a 1D array for each coordiante dim.
     ! center:
     call ESMF_GridGetCoord(grid, coordDim=1, array=array, rc=rc)
@@ -1224,13 +1222,13 @@ module ATM
       return  ! bail out
 
   end subroutine
-    
+
   !-----------------------------------------------------------------------------
 
   subroutine DataInitialize(model, rc)
     type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
-    
+
     ! local variables
     type(ESMF_State)                  :: exportState
     type(ESMF_Field)                  :: field
@@ -1240,7 +1238,7 @@ module ATM
 
     rc = ESMF_SUCCESS
 
-    ! query the Component for its exportState
+    ! query for exportState
     call NUOPC_ModelGet(model, exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -1284,7 +1282,7 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     ! surface_net_downward_shortwave_flux
     call ESMF_StateGet(exportState, field=field, itemName="rsns", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -1322,7 +1320,7 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     ! precipitation_flux
     call ESMF_StateGet(exportState, field=field, itemName="precip", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -1353,7 +1351,7 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     ! indicate that data initialization is complete (breaking out of init-loop)
     call NUOPC_CompAttributeSet(model, &
       name="InitializeDataComplete", value="true", rc=rc)
@@ -1361,15 +1359,15 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
   end subroutine
 
   !-----------------------------------------------------------------------------
 
-  subroutine ModelAdvance(model, rc)
+  subroutine Advance(model, rc)
     type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
-    
+
     ! local variables
     type(ESMF_Clock)            :: clock
     type(ESMF_State)            :: importState, exportState
@@ -1377,8 +1375,8 @@ module ATM
     character(len=160)          :: msgString
 
     rc = ESMF_SUCCESS
-    
-    ! query the Component for its clock, importState and exportState
+
+    ! query for clock, importState and exportState
     call NUOPC_ModelGet(model, modelClock=clock, importState=importState, &
       exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -1387,12 +1385,12 @@ module ATM
       return  ! bail out
 
     ! HERE THE MODEL ADVANCES: currTime -> currTime + timeStep
-    
+
     ! Because of the way that the internal Clock was set by default,
     ! its timeStep is equal to the parent timeStep. As a consequence the
     ! currTime + timeStep is equal to the stopTime of the internal Clock
-    ! for this call of the ModelAdvance() routine.
-    
+    ! for this call of the Advance() routine.
+
     call ESMF_ClockPrint(clock, options="currTime", &
       preString="------>Advancing ATM from: ", unit=msgString, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -1404,7 +1402,7 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
     call ESMF_ClockPrint(clock, options="stopTime", &
       preString="---------------------> to: ", unit=msgString, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &

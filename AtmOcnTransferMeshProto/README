@@ -45,11 +45,10 @@ Output:
 Code structure:
   - Makefile    - Makefile that is based on the standard esmf.mk mechanism.
   - atm.F90     - The ATM component, specializing generic NUOPC_Model.
-                  * Implements IPDv03 to accept Mesh from OCN component.
+                  * Accept Mesh from OCN component.
                   * Indicates "cannot provide" for some Mesh
                   * Indicates "can provide" for some Mesh
   - ocn.F90     - The OCN component, specializing generic NUOPC_Model.
-                  * Implements IPDv01.
                   * Implicitly indicate "will provide" for all Mesh.
   - esm.F90     - The Earth System Model (ESM) component, specializing generic
                   NUOPC_Driver. Define partial petLists for ATM

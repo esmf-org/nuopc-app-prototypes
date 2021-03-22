@@ -1,9 +1,9 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright 2002-2019, University Corporation for Atmospheric Research, 
-! Massachusetts Institute of Technology, Geophysical Fluid Dynamics 
-! Laboratory, University of Michigan, National Centers for Environmental 
-! Prediction, Los Alamos National Laboratory, Argonne National Laboratory, 
+! Copyright 2002-2021, University Corporation for Atmospheric Research,
+! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
+! Laboratory, University of Michigan, National Centers for Environmental
+! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
 ! NASA Goddard Space Flight Center.
 ! Licensed under the University of Illinois-NCSA License.
 !==============================================================================
@@ -16,67 +16,73 @@ module ModelComp
 
   use ESMF
   use NUOPC
-  use NUOPC_Model, only: &
-    model_routine_SS    => SetServices, &
-    model_label_Advance => label_Advance
-  
+  use NUOPC_Model, &
+    modelSS    => SetServices
+
   implicit none
-  
+
   private
-  
+
   public SetServices
-  
+
   !-----------------------------------------------------------------------------
   contains
   !-----------------------------------------------------------------------------
-  
-  subroutine SetServices(gcomp, rc)
-    type(ESMF_GridComp)  :: gcomp
+
+  subroutine SetServices(model, rc)
+    type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
-    
+
     rc = ESMF_SUCCESS
-    
-    ! the NUOPC model component will register the generic methods
-    call NUOPC_CompDerive(gcomp, model_routine_SS, rc=rc)
+
+    ! derive from NUOPC_Model
+    call NUOPC_CompDerive(model, modelSS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
-    ! set entry point for methods that require specific implementation
-    call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv00p1"/), userRoutine=InitializeP1, rc=rc)
+
+    ! specialize model
+    call NUOPC_CompSpecialize(model, specLabel=label_Advertise, &
+      specRoutine=Advertise, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv00p2"/), userRoutine=InitializeP2, rc=rc)
+    call NUOPC_CompSpecialize(model, specLabel=label_RealizeProvided, &
+      specRoutine=Realize, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
-    ! attach specializing method(s)
-    call NUOPC_CompSpecialize(gcomp, specLabel=model_label_Advance, &
-      specRoutine=ModelAdvance, rc=rc)
+    call NUOPC_CompSpecialize(model, specLabel=label_Advance, &
+      specRoutine=Advance, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
   end subroutine
-  
+
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP1(gcomp, importState, exportState, clock, rc)
-    type(ESMF_GridComp)  :: gcomp
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
+  subroutine Advertise(model, rc)
+    type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
-    
+
+    ! local variables
+    type(ESMF_State)        :: importState, exportState
+
     rc = ESMF_SUCCESS
-    
+
+    ! query for importState and exportState
+    call NUOPC_ModelGet(model, importState=importState, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! exportable field: air_pressure_at_sea_level
     call NUOPC_Advertise(exportState, &
       StandardName="air_pressure_at_sea_level", name="pmsl", rc=rc)
@@ -84,18 +90,17 @@ module ModelComp
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
   end subroutine
-  
+
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP2(gcomp, importState, exportState, clock, rc)
-    type(ESMF_GridComp)  :: gcomp
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
+  subroutine Realize(model, rc)
+    type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
-    
-    ! local variables    
+
+    ! local variables
+    type(ESMF_State)              :: importState, exportState
     type(ESMF_Field)              :: field
     type(ESMF_Grid)               :: gridOut
     real(ESMF_KIND_R8), pointer   :: dataPtr(:,:), lonPtr(:), latPtr(:)
@@ -104,7 +109,15 @@ module ModelComp
     integer                       :: gridDims(2)
 
     rc = ESMF_SUCCESS
-    
+
+    ! query for importState and exportState
+    call NUOPC_ModelGet(model, importState=importState, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! create and open the config
     config = ESMF_ConfigCreate(rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -127,7 +140,7 @@ module ModelComp
       gridDims(1) = 10
       gridDims(2) = 20
     endif
-   
+
     ! create a Grid object for Fields
     gridOut = ESMF_GridCreate1PeriDimUfrm(maxIndex=gridDims, &
       minCornerCoord=(/0._ESMF_KIND_R8, -60._ESMF_KIND_R8/), &
@@ -174,13 +187,13 @@ module ModelComp
     enddo
 
   end subroutine
-  
+
   !-----------------------------------------------------------------------------
 
-  subroutine ModelAdvance(gcomp, rc)
-    type(ESMF_GridComp)  :: gcomp
+  subroutine Advance(model, rc)
+    type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
-    
+
     ! local variables
     type(ESMF_Clock)            :: clock
     type(ESMF_State)            :: exportState
@@ -188,15 +201,15 @@ module ModelComp
     type(ESMF_Grid)             :: grid
     type(ESMF_StateItem_Flag)   :: itemType
     real(ESMF_KIND_R8), pointer :: dataPtr(:,:), lonPtr(:), latPtr(:)
-    integer                     :: i,j, k
+    integer                     :: i,j,k
     character(len=160)          :: msgString
     integer, save               :: slice=1
     integer, parameter          :: kWaste=40
 
     rc = ESMF_SUCCESS
-    
-    ! query the Component for its clock, exportState
-    call ESMF_GridCompGet(gcomp, clock=clock, &
+
+    ! query for clock, importState and exportState
+    call ESMF_GridCompGet(model, clock=clock, &
       exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -215,7 +228,7 @@ module ModelComp
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
     call ESMF_ClockPrint(clock, options="stopTime", &
       preString="---------------------> to: ", unit=msgString, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -270,12 +283,14 @@ module ModelComp
       enddo
       enddo
       enddo
-      
+
     endif
-    
+
     ! advance the time slice counter
     slice = slice + 1
 
   end subroutine
+
+  !-----------------------------------------------------------------------------
 
 end module

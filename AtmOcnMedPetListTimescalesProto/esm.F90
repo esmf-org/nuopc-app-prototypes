@@ -1,9 +1,9 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright 2002-2019, University Corporation for Atmospheric Research, 
-! Massachusetts Institute of Technology, Geophysical Fluid Dynamics 
-! Laboratory, University of Michigan, National Centers for Environmental 
-! Prediction, Los Alamos National Laboratory, Argonne National Laboratory, 
+! Copyright 2002-2021, University Corporation for Atmospheric Research,
+! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
+! Laboratory, University of Michigan, National Centers for Environmental
+! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
 ! NASA Goddard Space Flight Center.
 ! Licensed under the University of Illinois-NCSA License.
 !==============================================================================
@@ -17,22 +17,20 @@ module ESM
   use ESMF
   use NUOPC
   use NUOPC_Driver, &
-    driver_routine_SS             => SetServices, &
-    driver_label_SetModelServices => label_SetModelServices, &
-    driver_label_SetRunSequence   => label_SetRunSequence
-  
+    driverSS             => SetServices
+
   use ATM, only: atmSS => SetServices
   use OCN, only: ocnSS => SetServices
   use MED, only: medSS => SetServices
-  
+
   use NUOPC_Connector, only: cplSS => SetServices
-  
+
   implicit none
-  
+
   private
-  
+
   public SetServices
-  
+
   !-----------------------------------------------------------------------------
   contains
   !-----------------------------------------------------------------------------
@@ -40,30 +38,37 @@ module ESM
   subroutine SetServices(driver, rc)
     type(ESMF_GridComp)  :: driver
     integer, intent(out) :: rc
-    
+
     rc = ESMF_SUCCESS
-    
-    ! NUOPC_Driver registers the generic methods
-    call NUOPC_CompDerive(driver, driver_routine_SS, rc=rc)
+
+    ! derive from NUOPC_Driver
+    call NUOPC_CompDerive(driver, driverSS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
-    ! attach specializing method(s)
-    call NUOPC_CompSpecialize(driver, specLabel=driver_label_SetModelServices, &
+
+    ! specialize driver
+    call NUOPC_CompSpecialize(driver, specLabel=label_SetModelServices, &
       specRoutine=SetModelServices, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSpecialize(driver, specLabel=driver_label_SetRunSequence, &
+    call NUOPC_CompSpecialize(driver, specLabel=label_SetRunSequence, &
       specRoutine=SetRunSequence, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
+    ! set driver verbosity
+    call NUOPC_CompAttributeSet(driver, name="Verbosity", value="high", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
   end subroutine
 
   !-----------------------------------------------------------------------------
@@ -71,7 +76,7 @@ module ESM
   subroutine SetModelServices(driver, rc)
     type(ESMF_GridComp)  :: driver
     integer, intent(out) :: rc
-    
+
     ! local variables
     character(ESMF_MAXSTR)        :: name
     type(ESMF_Time)               :: startTime
@@ -85,7 +90,7 @@ module ESM
     character(len=160)            :: msgString
 
     rc = ESMF_SUCCESS
-    
+
     ! query the driver for its name and petCount
     call ESMF_GridCompGet(driver, name=name, petCount=petCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -104,7 +109,7 @@ module ESM
     call NUOPC_CompAttributeSet(child, name="Verbosity", value="1", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
-      
+
     ! SetServices for OCN
     allocate(petList(petCount/2-1))
     do i=1, petCount/2-1
@@ -150,7 +155,7 @@ module ESM
     call ESMF_GridCompSet(driver, clock=internalClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
-    
+
     ! log the timeStep interval
     call ESMF_TimeIntervalGet(timeStep, m=minutes, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -160,7 +165,7 @@ module ESM
     call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
-    
+
   end subroutine
 
   !-----------------------------------------------------------------------------
@@ -168,7 +173,7 @@ module ESM
   subroutine SetRunSequence(driver, rc)
     type(ESMF_GridComp)  :: driver
     integer, intent(out) :: rc
-    
+
     ! local variables
     character(ESMF_MAXSTR)        :: name
     type(NUOPC_FreeFormat)        :: runSeqFF
@@ -180,12 +185,12 @@ module ESM
     character(len=160)            :: msgString
 
     rc = ESMF_SUCCESS
-    
+
     ! query the driver for its name
     call ESMF_GridCompGet(driver, name=name, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
-    
+
     ! set up free format run sequence
     runSeqFF = NUOPC_FreeFormatCreate(stringList=(/ &
       " @*                    ",    &
@@ -235,7 +240,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     ! log the timeStep interval
     call ESMF_TimeIntervalGet(timeStep/2, m=minutes, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &

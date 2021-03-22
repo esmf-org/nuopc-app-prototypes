@@ -1,9 +1,9 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright 2002-2019, University Corporation for Atmospheric Research, 
-! Massachusetts Institute of Technology, Geophysical Fluid Dynamics 
-! Laboratory, University of Michigan, National Centers for Environmental 
-! Prediction, Los Alamos National Laboratory, Argonne National Laboratory, 
+! Copyright 2002-2021, University Corporation for Atmospheric Research,
+! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
+! Laboratory, University of Michigan, National Centers for Environmental
+! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
 ! NASA Goddard Space Flight Center.
 ! Licensed under the University of Illinois-NCSA License.
 !==============================================================================
@@ -18,7 +18,7 @@ program explorerApp
   use NUOPC
 
   use nuopcExplorerDriver,      only: explorerDriverSS => SetServices
-  
+
   use NUOPC_Compliance_Driver,  only: registerIC
 
   implicit none
@@ -27,7 +27,7 @@ program explorerApp
   type(ESMF_GridComp)     :: driver
   type(ESMF_VM)           :: vm
   integer                 :: localPet, petCount
-  
+
   type(ESMF_Config)       :: config
   integer                 :: start_year
   integer                 :: start_month
@@ -42,18 +42,18 @@ program explorerApp
   integer                 :: stop_minute
   integer                 :: stop_second
   integer                 :: step_seconds
-  
+
   type(ESMF_Time)         :: startTime
   type(ESMF_Time)         :: stopTime
   type(ESMF_TimeInterval) :: timeStep
   type(ESMF_Clock)        :: clock
-  
+
   character(len=80)       :: enable_run_string
   logical                 :: enable_run
-  
+
   character(len=80)       :: enable_finalize_string
   logical                 :: enable_finalize
-  
+
   type(ESMF_State) :: importState, exportState
 
   ! Initialize ESMF
@@ -63,7 +63,7 @@ program explorerApp
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    
+
   call ESMF_LogSet(flush=.true., rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
@@ -75,13 +75,13 @@ program explorerApp
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  
+
   call ESMF_LogWrite("explorerApp STARTING", ESMF_LOGMSG_INFO, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    
+
   if (localPet==0) then
     print *
     print *, "NUOPC Component Explorer App executing on ", petCount, "PETs"
@@ -89,11 +89,11 @@ program explorerApp
   endif
 
   ! Set the clock according to the explorer.config file
-  
+
   if (localPet==0) then
     print *, "Accessing start, stop, and step time info from 'explorer.config':"
   endif
-  
+
   config = ESMF_ConfigCreate(rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
@@ -104,7 +104,7 @@ program explorerApp
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
-  
+
   call ESMF_ConfigGetAttribute(config, start_year, label="start_year:", &
     rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -195,7 +195,7 @@ program explorerApp
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
-  
+
   call ESMF_TimeSet(startTime, &
     yy = start_year, &
     mm = start_month, &
@@ -234,7 +234,7 @@ program explorerApp
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    
+
   if (localPet==0) then
     print *, "  start_year:   ", start_year
     print *, "  start_month:  ", start_month
@@ -252,7 +252,7 @@ program explorerApp
     print *, "  - "
     print *, "  step_seconds: ", step_seconds
   endif
-  
+
 #if 0
   call ESMF_ClockPrint(clock, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -267,31 +267,31 @@ program explorerApp
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
-  
+
   enable_run = .false.  ! initialize
   if (trim(enable_run_string)=="yes") then
     enable_run = .true.
   endif
-  
+
   call ESMF_ConfigGetAttribute(config, enable_finalize_string, &
     label="enable_finalize:", rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
-  
+
   enable_finalize = .false.  ! initialize
   if (trim(enable_finalize_string)=="yes") then
     enable_finalize = .true.
   endif
-  
+
   ! Create the Driver Component
   driver = ESMF_GridCompCreate(name="explorerDriver", config=config, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  
+
   ! SetServices
   call ESMF_GridCompSetServices(driver, explorerDriverSS, userRc=urc, &
     rc=rc)
@@ -310,7 +310,7 @@ program explorerApp
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  
+
   ! Call 0 phase Initialize
   call ESMF_GridCompInitialize(driver, phase=0, userRc=urc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -360,16 +360,16 @@ program explorerApp
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    
+
   ! Change timeStep in Clock to be only a single timeStep from start to stop
   call ESMF_ClockSet(clock, timeStep=stopTime-startTime, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    
+
   if (enable_run) then
-    ! Call Driver Run, 
+    ! Call Driver Run,
     ! with Clock that steps from start to stop in one single timeStep
     if (localPet==0) print *, "Calling into Run()..."
     call ESMF_GridCompRun(driver, importState=importState, &
@@ -383,7 +383,7 @@ program explorerApp
       file=__FILE__)) &
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
   endif
-  
+
   if (enable_finalize) then
     ! Call Driver Finalize
     if (localPet==0) print *, "Calling into Finalize()..."
@@ -412,21 +412,21 @@ program explorerApp
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)  ! bail out
-  
+
   ! Destroy the importState
   call ESMF_StateDestroy(importState, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  
+
   ! Destroy the importState
   call ESMF_StateDestroy(ExportState, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  
+
   ! Log
   call ESMF_LogWrite("explorerApp FINISHED", ESMF_LOGMSG_INFO, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -439,8 +439,8 @@ program explorerApp
     print *, "See PET*.ESMF_LogFile's for additional information."
     print *, "------------------------------------------------------------"
   endif
-  
+
   ! Finalize ESMF
   call ESMF_Finalize()
-  
-end program  
+
+end program

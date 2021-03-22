@@ -1,9 +1,9 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright 2002-2019, University Corporation for Atmospheric Research, 
-! Massachusetts Institute of Technology, Geophysical Fluid Dynamics 
-! Laboratory, University of Michigan, National Centers for Environmental 
-! Prediction, Los Alamos National Laboratory, Argonne National Laboratory, 
+! Copyright 2002-2021, University Corporation for Atmospheric Research,
+! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
+! Laboratory, University of Michigan, National Centers for Environmental
+! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
 ! NASA Goddard Space Flight Center.
 ! Licensed under the University of Illinois-NCSA License.
 !==============================================================================
@@ -13,80 +13,74 @@ module CON
   !-----------------------------------------------------------------------------
   ! Connector Component.
   !-----------------------------------------------------------------------------
-  
+
   ! Enabling the followng macro, i.e. setting it to WITHSTATEUSE_on,
   ! will activate sections of code that demonstrate how
   ! the "state" member inside the NUOPC_Connector is used. The
   ! example creates an FieldBundle that's a duplicate of dstFields inside the
-  ! connector, and precomputes two RouteHandles. The first is a Regrid, while 
+  ! connector, and precomputes two RouteHandles. The first is a Regrid, while
   ! the second is simply an identity operation using FieldRedist() to show the
   ! principle.
 #define WITHSTATEUSE_on
 
   use ESMF
   use NUOPC
-  use NUOPC_Connector, only: &
-    con_routine_SS      => SetServices, &
-#ifdef WITHSTATEUSE_on
-    con_label_ExecuteRH => label_ExecuteRouteHandle, &
-    con_label_ReleaseRH => label_ReleaseRouteHandle, &
-#endif
-    con_label_ComputeRH => label_ComputeRouteHandle, &
-    NUOPC_ConnectorGet, NUOPC_ConnectorSet
-  
+  use NUOPC_Connector, &
+    conSS      => SetServices
+
   implicit none
-  
+
   private
-  
+
   public SetServices
-  
+
   !-----------------------------------------------------------------------------
   contains
   !-----------------------------------------------------------------------------
-  
+
   subroutine SetServices(connector, rc)
     type(ESMF_CplComp)  :: connector
     integer, intent(out) :: rc
-    
+
     rc = ESMF_SUCCESS
-    
-    ! the NUOPC connector component will register the generic methods
-    call NUOPC_CompDerive(connector, con_routine_SS, rc=rc)
+
+    ! derive from NUOPC_Connector
+    call NUOPC_CompDerive(connector, conSS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
-    ! attach specializing method to compute the connection RouteHandle
-    call NUOPC_CompSpecialize(connector, specLabel=con_label_ComputeRH, &
+
+    ! specialize connector
+    call NUOPC_CompSpecialize(connector, specLabel=label_ComputeRouteHandle, &
       specRoutine=ComputeRH, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 #ifdef WITHSTATEUSE_on
-    call NUOPC_CompSpecialize(connector, specLabel=con_label_ExecuteRH, &
+    call NUOPC_CompSpecialize(connector, specLabel=label_ExecuteRouteHandle, &
       specRoutine=ExecuteRH, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSpecialize(connector, specLabel=con_label_ReleaseRH, &
+    call NUOPC_CompSpecialize(connector, specLabel=label_ReleaseRouteHandle, &
       specRoutine=ReleaseRH, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 #endif
-      
+
   end subroutine
-  
+
   !-----------------------------------------------------------------------------
 
   subroutine ComputeRH(connector, rc)
     type(ESMF_CplComp)  :: connector
     integer, intent(out) :: rc
-    
+
     ! local variables
     type(ESMF_State)              :: state
     type(ESMF_FieldBundle)        :: dstFields, srcFields
@@ -95,7 +89,7 @@ module CON
     type(ESMF_Field), allocatable :: fields(:)
     integer                       :: fieldCount, i
     type(ESMF_Grid)               :: Grid
-    type(ESMF_TypeKind_Flag)      :: typekind    
+    type(ESMF_TypeKind_Flag)      :: typekind
     type(ESMF_Field)              :: field
     type(ESMF_RouteHandle)        :: rh1, rh2
 #else
@@ -103,7 +97,7 @@ module CON
 #endif
 
     rc = ESMF_SUCCESS
-    
+
     call NUOPC_ConnectorGet(connector, srcFields=srcFields, &
       dstFields=dstFields, state=state, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -122,7 +116,7 @@ module CON
     ! - pull out fields in list form
     ! - !!!! MUST specify itemorderflag=ESMF_ITEMORDER_ADDORDER in order to
     !   !!!! preserve the same order as the original FieldBundle, or else the
-    !   !!!! FieldBundle communication methods will incorrectly map from 
+    !   !!!! FieldBundle communication methods will incorrectly map from
     !   !!!! src -> dst!
     allocate(fields(fieldCount))
     call ESMF_FieldBundleGet(dstFields, fieldList=fields, &
@@ -192,7 +186,7 @@ module CON
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-#else      
+#else
     ! specialize with Redist, instead of the default Regrid
     call ESMF_FieldBundleRedistStore(srcFields, dstFields, &
       routehandle=rh, rc=rc)
@@ -206,9 +200,9 @@ module CON
       file=__FILE__)) &
       return  ! bail out
 #endif
- 
+
   end subroutine
-  
+
   !-----------------------------------------------------------------------------
 
 #ifdef WITHSTATEUSE_on
@@ -216,7 +210,7 @@ module CON
   subroutine ExecuteRH(connector, rc)
     type(ESMF_CplComp)  :: connector
     integer, intent(out) :: rc
-    
+
     ! local variables
     type(ESMF_FieldBundle)        :: interDstFields
     type(ESMF_RouteHandle)        :: rh1, rh2
@@ -226,14 +220,14 @@ module CON
     character(len=160)            :: msgString
 
     rc = ESMF_SUCCESS
-    
+
     call NUOPC_ConnectorGet(connector, srcFields=srcFields, &
       dstFields=dstFields, state=state, driverClock=clock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-     
+
     ! test the parent clock
     call ESMF_ClockPrint(clock, options="currTime", &
       preString="Testing parentClock from conn.F90 ExecuteRH(): ", &
@@ -247,7 +241,7 @@ module CON
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     ! retrieve interDstFields FieldBundle from state member
     call ESMF_StateGet(state, "interDstFields", interDstFields, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -280,27 +274,28 @@ module CON
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
- 
+
   end subroutine
+
   !-----------------------------------------------------------------------------
 
   subroutine ReleaseRH(connector, rc)
     type(ESMF_CplComp)  :: connector
     integer, intent(out) :: rc
-    
+
     ! local variables
     type(ESMF_State)              :: state
     type(ESMF_FieldBundle)        :: interDstFields
     type(ESMF_RouteHandle)        :: rh1, rh2
 
     rc = ESMF_SUCCESS
-    
+
     call NUOPC_ConnectorGet(connector, state=state, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     ! retrieve interDstFields FieldBundle from state member
     call ESMF_StateGet(state, "interDstFields", interDstFields, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -331,14 +326,16 @@ module CON
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     ! Could destroy intermediate Fields and interDstFields FieldBundle here,
     ! but it is more convenient to let ESMF automatic garbage collection take
     ! care of them.
-      
+
   end subroutine
 
-#endif 
-  
+#endif
+
+  !-----------------------------------------------------------------------------
+
 end module
 

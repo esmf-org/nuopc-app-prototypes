@@ -1,9 +1,9 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright 2002-2019, University Corporation for Atmospheric Research, 
-! Massachusetts Institute of Technology, Geophysical Fluid Dynamics 
-! Laboratory, University of Michigan, National Centers for Environmental 
-! Prediction, Los Alamos National Laboratory, Argonne National Laboratory, 
+! Copyright 2002-2021, University Corporation for Atmospheric Research,
+! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
+! Laboratory, University of Michigan, National Centers for Environmental
+! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
 ! NASA Goddard Space Flight Center.
 ! Licensed under the University of Illinois-NCSA License.
 !==============================================================================
@@ -14,7 +14,7 @@
 #ifdef TEST_FIELD_MIRRORING
 ! By default mirroring triggers TransferOffer="cannot provide" if the other
 ! side of the mirror will or can provide.
-! This can be overwritten my unsetting the macro below:
+! This can be overwritten by unsetting the macro below:
 #define TEST_ACCEPTING
 #endif
 
@@ -34,16 +34,14 @@ module ATM
   use ESMF
   use NUOPC
   use NUOPC_Model, &
-    model_routine_SS            => SetServices, &
-    model_label_DataInitialize  => label_DataInitialize, &
-    model_label_Advance         => label_Advance
-  
+    modelSS    => SetServices
+
   implicit none
-  
+
   private
-  
+
   public SetVM, SetServices
-  
+
   !-----------------------------------------------------------------------------
   contains
   !-----------------------------------------------------------------------------
@@ -54,60 +52,50 @@ module ATM
     
     rc = ESMF_SUCCESS
     
-    ! the NUOPC model component will register the generic methods
-    call NUOPC_CompDerive(model, model_routine_SS, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
-    ! -> switching to IPD version that supports field mirroring
-    call ESMF_GridCompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      userRoutine=InitializeP0, phase=0, rc=rc)
+    ! derive from NUOPC_Model
+    call NUOPC_CompDerive(model, modelSS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 
-    ! set entry point for methods that require specific implementation
-    call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv05p1"/), userRoutine=InitializeP1, rc=rc)
+    ! specialize model
+    call NUOPC_CompSpecialize(model, specLabel=label_Advertise, &
+      specRoutine=Advertise, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 #ifdef TEST_FIELD_MIRRORING
-    call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv05p2"/), userRoutine=InitializeP2, rc=rc)
+    call NUOPC_CompSpecialize(model, specLabel=label_ModifyAdvertised, &
+      specRoutine=ModifyAdvertised, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 #endif
-    call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv05p4"/), userRoutine=InitializeP4, rc=rc)
+    call NUOPC_CompSpecialize(model, specLabel=label_RealizeProvided, &
+      specRoutine=RealizeProvided, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 #ifdef TEST_ACCEPTING  
-    call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv05p6"/), userRoutine=InitializeP6, rc=rc)
+    call NUOPC_CompSpecialize(model, specLabel=label_RealizeAccepted, &
+      specRoutine=RealizeAccepted, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 #endif
-    
-    ! attach specializing method(s)
-    call NUOPC_CompSpecialize(model, specLabel=model_label_Advance, &
-      specRoutine=ModelAdvance, rc=rc)
+    call NUOPC_CompSpecialize(model, specLabel=label_DataInitialize, &
+      specRoutine=DataInitialize, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSpecialize(model, specLabel=model_label_DataInitialize, &
-      specRoutine=DataInitialize, rc=rc)
+    call NUOPC_CompSpecialize(model, specLabel=label_Advance, &
+      specRoutine=Advance, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -117,33 +105,22 @@ module ATM
   
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP0(model, importState, exportState, clock, rc)
-    type(ESMF_GridComp)   :: model
-    type(ESMF_State)      :: importState, exportState
-    type(ESMF_Clock)      :: clock
-    integer, intent(out)  :: rc
-    
+  subroutine Advertise(model, rc)
+    type(ESMF_GridComp)  :: model
+    integer, intent(out) :: rc
+
+    ! local variables
+    type(ESMF_State)        :: importState, exportState
+
     rc = ESMF_SUCCESS
 
-    ! Switch to IPDv05 by filtering all other phaseMap entries
-    call NUOPC_CompFilterPhaseMap(model, ESMF_METHOD_INITIALIZE, &
-      acceptStringList=(/"IPDv05p"/), rc=rc)
+    ! query for importState and exportState
+    call NUOPC_ModelGet(model, importState=importState, &
+      exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
-  end subroutine
-
-  !-----------------------------------------------------------------------------
-
-  subroutine InitializeP1(model, importState, exportState, clock, rc)
-    type(ESMF_GridComp)  :: model
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
-    integer, intent(out) :: rc
-    
-    rc = ESMF_SUCCESS
     
     ! importable field: sea_surface_temperature
     call NUOPC_Advertise(importState, &
@@ -182,33 +159,39 @@ module ATM
   
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP2(model, importState, exportState, clock, rc)
+  subroutine ModifyAdvertised(model, rc)
     type(ESMF_GridComp)  :: model
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
-    
+
     ! local variables
-    type(ESMF_Field)                  :: field
+    type(ESMF_State)        :: importState, exportState
+    type(ESMF_Field)        :: field
 
     rc = ESMF_SUCCESS
     
+    ! query for importState and exportState
+    call NUOPC_ModelGet(model, importState=importState, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 #ifndef TEST_ACCEPTING
-    ! Field mirroring was requested on a the component's exportState by 
+    ! Field mirroring was requested on the component's exportState by
     ! setting the "FieldTransferPolicy" attribute to "transferAll" during
     ! the Advertise phase. This triggers the Connector to automatically 
     ! advertised all the fields in the exportState for the component that it
     ! finds on the other side of the connection (i.e. in the Connector's
     ! importState).
     ! Mirrored fields are automatically advertised with the 
-    ! "TransferOfferGeomObject" attribute set to be "opposite" to what the
+    ! "TransferOffer" attribute set to be "opposite" to what the
     ! original field was advertised with. Here this means that the
-    ! TransferOfferGeomObject attribute is set to "cannot provide" for all of
+    ! TransferOffer attribute is set to "cannot provide" for all of
     ! the mirrored fields (because the OCN component was advertising with the 
     ! default of "will provide"). 
-    ! However, the automatically set "TransferOfferGeomObject" attribute can be
+    ! However, the automatically set "TransferOffer" attribute can be
     ! overwritten here. E.g. explicitly setting 
-    ! TransferOfferGeomObject = "will provide" here allows the component to set
+    ! TransferOffer = "will provide" here allows the component to set
     ! its own grid for the mirrored fields.
 
     ! air_pressure_at_sea_level
@@ -218,8 +201,8 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    ! set TransferOfferGeomObject = "will provide"
-    call NUOPC_SetAttribute(field, name="TransferOfferGeomObject", &
+    ! set ProducerTransferOffer = "will provide"
+    call NUOPC_SetAttribute(field, name="ProducerTransferOffer", &
       value="will provide", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -233,8 +216,8 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    ! set TransferOfferGeomObject = "will provide"
-    call NUOPC_SetAttribute(field, name="TransferOfferGeomObject", &
+    ! set ProducerTransferOffer = "will provide"
+    call NUOPC_SetAttribute(field, name="ProducerTransferOffer", &
       value="will provide", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -292,19 +275,26 @@ module ATM
   
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP4(model, importState, exportState, clock, rc)
+  subroutine RealizeProvided(model, rc)
     type(ESMF_GridComp)  :: model
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
-    
-    ! local variables    
+
+    ! local variables
+    type(ESMF_State)        :: importState, exportState
     type(ESMF_Field)        :: field
     type(ESMF_Grid)         :: gridIn
     type(ESMF_Grid)         :: gridOut
     
     rc = ESMF_SUCCESS
     
+    ! query for importState and exportState
+    call NUOPC_ModelGet(model, importState=importState, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! create a Grid object for Fields
     gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/10, 100/), &
       minCornerCoord=(/10._ESMF_KIND_R8, 20._ESMF_KIND_R8/), &
@@ -364,13 +354,12 @@ module ATM
   
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP6(model, importState, exportState, clock, rc)
+  subroutine RealizeAccepted(model, rc)
     type(ESMF_GridComp)  :: model
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
-    
-    ! local variables    
+
+    ! local variables
+    type(ESMF_State)          :: importState, exportState
     type(ESMF_Field)          :: field
     integer                   :: tk, count
     type(ESMF_TypeKind_Flag)  :: tkf
@@ -380,6 +369,14 @@ module ATM
     
     rc = ESMF_SUCCESS
     
+    ! query for importState and exportState
+    call NUOPC_ModelGet(model, importState=importState, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
 #ifdef TEST_ACCEPTING
     ! With GeomTransfer, all empty fields already have the Grid set. Just need
     ! to complete them here.
@@ -531,7 +528,7 @@ module ATM
 
     rc = ESMF_SUCCESS
 
-    ! query the Component for its exportState
+    ! query for exportState
     call NUOPC_ModelGet(model, exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -588,7 +585,7 @@ module ATM
 
   !-----------------------------------------------------------------------------
 
-  subroutine ModelAdvance(model, rc)
+  subroutine Advance(model, rc)
 !$  use omp_lib
     type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
@@ -597,13 +594,13 @@ module ATM
     type(ESMF_Clock)            :: clock
     type(ESMF_State)            :: importState, exportState
     type(ESMF_VM)               :: vm
-    integer                     :: localPet, localPeCount
+    integer                     :: currentSsiPe
     integer, save               :: slice=1
     character(len=160)          :: msgString
 
     rc = ESMF_SUCCESS
     
-    ! query the Component for its clock, importState and exportState
+    ! query for clock, importState and exportState
     call NUOPC_ModelGet(model, modelClock=clock, importState=importState, &
       exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -618,24 +615,15 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call ESMF_VMGet(vm, localPet=localPet, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call ESMF_VMGet(vm, pet=localPet, peCount=localPeCount, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-!$  call omp_set_num_threads(localPeCount)
 
     ! Now can use OpenMP for fine grained parallelism...
     ! Here just write info about the PET-local OpenMP threads to Log.
-!$omp parallel private(msgString)
+!$omp parallel private(msgString, currentSsiPe)
 !$omp critical
-!$    write(msgString,'(A,I4,A,I4,A,I4,A,I4)') &
+!$    call ESMF_VMGet(vm, currentSsiPe=currentSsiPe)
+!$    write(msgString,'(A,I4,A,I4,A,I4,A,I4,A,I4)') &
 !$      "thread_num=", omp_get_thread_num(), &
+!$      "   currentSsiPe=", currentSsiPe, &
 !$      "   num_threads=", omp_get_num_threads(), &
 !$      "   max_threads=", omp_get_max_threads(), &
 !$      "   num_procs=", omp_get_num_procs()
@@ -648,7 +636,7 @@ module ATM
     ! Because of the way that the internal Clock was set by default,
     ! its timeStep is equal to the parent timeStep. As a consequence the
     ! currTime + timeStep is equal to the stopTime of the internal Clock
-    ! for this call of the ModelAdvance() routine.
+    ! for this call of the Advance() routine.
     
     call ESMF_ClockPrint(clock, options="currTime", &
       preString="------>Advancing ATM from: ", unit=msgString, rc=rc)
@@ -690,5 +678,7 @@ module ATM
     slice = slice+1
 
   end subroutine
+
+  !-----------------------------------------------------------------------------
 
 end module

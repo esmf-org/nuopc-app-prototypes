@@ -1,9 +1,9 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright 2002-2019, University Corporation for Atmospheric Research, 
-! Massachusetts Institute of Technology, Geophysical Fluid Dynamics 
-! Laboratory, University of Michigan, National Centers for Environmental 
-! Prediction, Los Alamos National Laboratory, Argonne National Laboratory, 
+! Copyright 2002-2021, University Corporation for Atmospheric Research,
+! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
+! Laboratory, University of Michigan, National Centers for Environmental
+! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
 ! NASA Goddard Space Flight Center.
 ! Licensed under the University of Illinois-NCSA License.
 !==============================================================================
@@ -13,13 +13,10 @@ module advectDiffComp
   use ESMF
   use NUOPC
   use NUOPC_Model, &
-    model_routine_SS        => SetServices, &
-    model_label_SetClock    => label_SetClock, &
-    model_label_Advance     => label_Advance, &
-    model_label_CheckImport => label_CheckImport
-  
+    modelSS    => SetServices
+
   implicit none
-  
+
   private
 
   ! private module data --> ONLY PARAMETERS
@@ -72,71 +69,77 @@ module advectDiffComp
   subroutine SetServices(model, rc)
     type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
-    
+
     rc = ESMF_SUCCESS
-    
-    ! the NUOPC model component will register the generic methods
-    call NUOPC_CompDerive(model, model_routine_SS, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
-    ! set entry point for methods that require specific implementation
-    call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv00p1"/), userRoutine=InitializeP1, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv00p2"/), userRoutine=InitializeP2, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_FINALIZE, &
-      phaseLabelList=(/""/), userRoutine=Finalize, rc=rc)
+
+    ! derive from NUOPC_Model
+    call NUOPC_CompDerive(model, modelSS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 
-    ! attach specializing method(s)
-    call NUOPC_CompSpecialize(model, specLabel=model_label_Advance, &
-      specRoutine=ModelAdvance, rc=rc)
+    ! specialize model
+    call NUOPC_CompSpecialize(model, specLabel=label_Advertise, &
+      specRoutine=Advertise, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSpecialize(model, specLabel=model_label_SetClock, &
+    call NUOPC_CompSpecialize(model, specLabel=label_RealizeProvided, &
+      specRoutine=RealizeProvided, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompSpecialize(model, specLabel=label_SetClock, &
       specRoutine=SetClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSpecialize(model, specLabel=model_label_CheckImport, &
-      specPhaseLabel="RunPhase1", specRoutine=CheckImport, rc=rc)
+    call NUOPC_CompSpecialize(model, specLabel=label_Advance, &
+      specRoutine=Advance, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+    call NUOPC_CompSpecialize(model, specLabel=label_CheckImport, &
+      specRoutine=CheckImport, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompSpecialize(model, specLabel=label_Finalize, &
+      specRoutine=Finalize, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
   end subroutine
 
   !-----------------------------------------------------------------------------
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP1(model, importState, exportState, clock, rc)
+  subroutine Advertise(model, rc)
     type(ESMF_GridComp)  :: model
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
-    
-    integer :: nestingGeneration
+
+    ! local variables
+    type(ESMF_State)        :: importState, exportState
+    integer                 :: nestingGeneration
     
     rc = ESMF_SUCCESS
     
+    ! query for importState and exportState
+    call NUOPC_ModelGet(model, importState=importState, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! look at the "NestingGeneration" Attribute of this instance
     call NUOPC_CompAttributeGet(model, name="NestingGeneration", &
       value=nestingGeneration, rc=rc)
@@ -168,12 +171,12 @@ module advectDiffComp
     
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP2(model, importState, exportState, clock, rc)
+  subroutine RealizeProvided(model, rc)
     type(ESMF_GridComp)  :: model
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
-    
+
+    ! local variables
+    type(ESMF_State)              :: importState, exportState
     type(InternalState)           :: is
     real(ESMF_KIND_R8), pointer   :: coordPtr(:)
     real(ESMF_KIND_R8), pointer   :: dataPtr(:,:)
@@ -183,6 +186,14 @@ module advectDiffComp
     character(len=80)             :: name
 
     rc = ESMF_SUCCESS
+
+    ! query for importState and exportState
+    call NUOPC_ModelGet(model, importState=importState, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 
     ! look at the "NestingGeneration" Attribute of this instance
     call NUOPC_CompAttributeGet(model, name="NestingGeneration", &
@@ -552,57 +563,6 @@ module advectDiffComp
 
   !-----------------------------------------------------------------------------
 
-  subroutine Finalize(model, importState, exportState, clock, rc)
-    type(ESMF_GridComp)  :: model
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
-    integer, intent(out) :: rc
-    
-    type(InternalState)  :: is
-    integer              :: stat
-
-    rc = ESMF_SUCCESS
-  
-    ! -> get internal state from Component
-    nullify(is%wrap)
-    call ESMF_GridCompGetInternalState(model, is, rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-      
-    ! -> destroy objects inside of internal state
-
-    call ESMF_FieldHaloRelease(routehandle=is%wrap%haloHandle, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return
-      
-    call ESMF_FieldDestroy(is%wrap%field, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return
-    
-    call ESMF_GridDestroy(is%wrap%grid, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return
-      
-    ! -> deallocate internal state memory  
-    deallocate(is%wrap, stat=stat)
-    if (ESMF_LogFoundDeallocError(statusToCheck=stat, &
-      msg="Deallocation of internal state memory failed.", &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-      
-  end subroutine
-
-  !-----------------------------------------------------------------------------
-
   subroutine SetClock(model, rc)
     type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
@@ -740,7 +700,7 @@ module advectDiffComp
 
   !-----------------------------------------------------------------------------
 
-  subroutine ModelAdvance(model, rc)
+  subroutine Advance(model, rc)
     type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
     
@@ -765,7 +725,7 @@ module advectDiffComp
     ! timeStep than the parent's timeStep on the incoming Clock, which is
     ! equal to the coupling timeStep.
     
-    ! access exportState
+    ! query for exportState
     call NUOPC_ModelGet(model, exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -983,6 +943,56 @@ module advectDiffComp
       
     endif
     
+  end subroutine
+
+  !-----------------------------------------------------------------------------
+
+  subroutine Finalize(model, rc)
+    type(ESMF_GridComp)  :: model
+    integer, intent(out) :: rc
+
+    ! local variables
+    type(InternalState)  :: is
+    integer              :: stat
+
+    rc = ESMF_SUCCESS
+  
+    ! -> get internal state from Component
+    nullify(is%wrap)
+    call ESMF_GridCompGetInternalState(model, is, rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
+    ! -> destroy objects inside of internal state
+
+    call ESMF_FieldHaloRelease(routehandle=is%wrap%haloHandle, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return
+      
+    call ESMF_FieldDestroy(is%wrap%field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return
+    
+    call ESMF_GridDestroy(is%wrap%grid, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return
+      
+    ! -> deallocate internal state memory  
+    deallocate(is%wrap, stat=stat)
+    if (ESMF_LogFoundDeallocError(statusToCheck=stat, &
+      msg="Deallocation of internal state memory failed.", &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+      
   end subroutine
 
   !-----------------------------------------------------------------------------

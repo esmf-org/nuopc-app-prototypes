@@ -1,9 +1,9 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright 2002-2019, University Corporation for Atmospheric Research, 
-! Massachusetts Institute of Technology, Geophysical Fluid Dynamics 
-! Laboratory, University of Michigan, National Centers for Environmental 
-! Prediction, Los Alamos National Laboratory, Argonne National Laboratory, 
+! Copyright 2002-2021, University Corporation for Atmospheric Research,
+! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
+! Laboratory, University of Michigan, National Centers for Environmental
+! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
 ! NASA Goddard Space Flight Center.
 ! Licensed under the University of Illinois-NCSA License.
 !==============================================================================
@@ -16,126 +16,88 @@ module Mediator
 
   use ESMF
   use NUOPC
-  use NUOPC_Mediator, only: &
-    mediator_routine_SS            => SetServices, &
-    mediator_label_DataInitialize  => label_DataInitialize, &
-    mediator_label_Advance         => label_Advance
-  
+  use NUOPC_Mediator, &
+    mediatorSS             => SetServices
+
   implicit none
-  
+
   private
-  
+
   type(ESMF_State), save  :: frModelA, toModelA
   type(ESMF_State), save  :: frModelB, toModelB
-  
+
   public SetServices
-  
+
   !-----------------------------------------------------------------------------
   contains
   !-----------------------------------------------------------------------------
-  
+
   subroutine SetServices(mediator, rc)
     type(ESMF_GridComp)  :: mediator
     integer, intent(out) :: rc
-    
-    rc = ESMF_SUCCESS
-    
-    ! the NUOPC mediator component will register the generic methods
-    call NUOPC_CompDerive(mediator, mediator_routine_SS, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
-    ! --- Initialization phases --------------------------------------
 
-    ! Provide InitializeP0 to switch from default IPDv00 to IPDv03
-    call ESMF_GridCompSetEntryPoint(mediator, ESMF_METHOD_INITIALIZE, &
-      userRoutine=InitializeP0, phase=0, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    ! IPDv03p1: advertise Fields
-    call NUOPC_CompSetEntryPoint(mediator, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv03p1"/), userRoutine=InitializeP1, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    ! IPDv03p3: realize connected Fields with transfer action "provide"
-    call NUOPC_CompSetEntryPoint(mediator, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv03p3"/), userRoutine=InitializeP3, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    ! IPDv03p4: optionally modify the decomp/distr of transferred Grid/Mesh
-    call NUOPC_CompSetEntryPoint(mediator, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv03p4"/), userRoutine=InitializeP4, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    ! IPDv03p5: realize all Fields with transfer action "accept"
-    call NUOPC_CompSetEntryPoint(mediator, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv03p5"/), userRoutine=InitializeP5, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    ! attach specializing method(s)
-    call NUOPC_CompSpecialize(mediator, specLabel=mediator_label_Advance, &
-      specRoutine=MediatorAdvance, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_CompSpecialize(mediator, specLabel=mediator_label_DataInitialize, &
-      specRoutine=DataInitialize, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
-  end subroutine
-  
-  !-----------------------------------------------------------------------------
-
-  subroutine InitializeP0(mediator, importState, exportState, clock, rc)
-    type(ESMF_GridComp)   :: mediator
-    type(ESMF_State)      :: importState, exportState
-    type(ESMF_Clock)      :: clock
-    integer, intent(out)  :: rc
-    
     rc = ESMF_SUCCESS
 
-    ! Switch to IPDv03 by filtering all other phaseMap entries
-    call NUOPC_CompFilterPhaseMap(mediator, ESMF_METHOD_INITIALIZE, &
-      acceptStringList=(/"IPDv03p"/), rc=rc)
+    ! derive from NUOPC_Mediator
+    call NUOPC_CompDerive(mediator, mediatorSS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
+    ! specialize mediator
+    call NUOPC_CompSpecialize(mediator, specLabel=label_Advertise, &
+      specRoutine=Advertise, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompSpecialize(mediator, specLabel=label_RealizeProvided, &
+      specRoutine=RealizeProvided, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompSpecialize(mediator, specLabel=label_AcceptTransfer, &
+      specRoutine=AcceptTransfer, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompSpecialize(mediator, specLabel=label_RealizeAccepted, &
+      specRoutine=RealizeAccepted, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompSpecialize(mediator, specLabel=label_Advance, &
+      specRoutine=Advance, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
   end subroutine
-  
+
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP1(mediator, importState, exportState, clock, rc)
-    ! IPDv03p1: advertise Fields
+  subroutine Advertise(mediator, rc)
     type(ESMF_GridComp)  :: mediator
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
-    
+
+    ! local variables
+    type(ESMF_State)        :: importState, exportState
+
     rc = ESMF_SUCCESS
-    
+
+    ! query for importState and exportState
+    call NUOPC_MediatorGet(mediator, importState=importState, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! Fields from ModelA
     !   use namespace in the importState
     call NUOPC_AddNamespace(importState, namespace="ModelA", &
@@ -153,7 +115,7 @@ module Mediator
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
     ! Fields to ModelA
     !   use namespace in the exportState
     call NUOPC_AddNamespace(exportState, namespace="ModelA", &
@@ -173,7 +135,7 @@ module Mediator
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
     ! Fields from ModelB
     !   use namespace in the importState
     call NUOPC_AddNamespace(importState, namespace="ModelB", &
@@ -193,7 +155,7 @@ module Mediator
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
     ! Fields to ModelB
     !   use namespace in the exportState
     call NUOPC_AddNamespace(exportState, namespace="ModelB", &
@@ -211,21 +173,28 @@ module Mediator
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
   end subroutine
-  
+
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP3(mediator, importState, exportState, clock, rc)
-    ! IPDv03p3: realize connected Fields with transfer action "provide"
-    ! and remove Fields that are not connected
+  subroutine RealizeProvided(mediator, rc)
     type(ESMF_GridComp)  :: mediator
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
-    
+
+    ! local variables
+    type(ESMF_State)        :: importState, exportState
+
     rc = ESMF_SUCCESS
-    
+
+    ! query for importState and exportState
+    call NUOPC_MediatorGet(mediator, importState=importState, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     call checkConnectedFlagProvide(importState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -239,10 +208,10 @@ module Mediator
       return  ! bail out
 
     contains ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    
+
     subroutine checkConnectedFlagProvide(state, rc)
       ! Look at all of the fields in state, including in nested states. Error
-      ! out if a connected field is found for which geom object must be 
+      ! out if a connected field is found for which geom object must be
       ! provided here. Remove all not connected fields.
       type(ESMF_State)  :: state
       integer, optional :: rc
@@ -254,18 +223,39 @@ module Mediator
       character(len=20)                       :: transferAction
       character(len=80), allocatable          :: itemNameList(:)
       type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
-    
+      type(ESMF_StateIntent_Flag)             :: stateIntent
+      character(len=80)                       :: transferActionAttr
+
       if (present(rc)) rc = ESMF_SUCCESS
-    
+
+      call ESMF_StateGet(state, stateIntent=stateIntent, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+      if (stateIntent==ESMF_STATEINTENT_EXPORT) then
+        transferActionAttr="ProducerTransferAction"
+      elseif (stateIntent==ESMF_STATEINTENT_IMPORT) then
+        transferActionAttr="ConsumerTransferAction"
+      else
+        call ESMF_LogSetError(ESMF_RC_ARG_BAD, &
+          msg="The stateIntent must either be IMPORT or EXPORT here.", &
+          line=__LINE__, &
+          file=__FILE__, &
+          rcToReturn=rc)
+        return  ! bail out
+      endif
+
       call ESMF_StateGet(state, name=stateName, nestedFlag=.true., &
         itemCount=itemCount, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-    
+
       allocate(itemNameList(itemCount), itemTypeList(itemCount))
-    
+
       call ESMF_StateGet(state, nestedFlag=.true., &
         itemNameList=itemNameList, itemTypeList=itemTypeList, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -296,7 +286,7 @@ module Mediator
               file=__FILE__)) &
               return  ! bail out
           else
-            call NUOPC_GetAttribute(field, name="TransferActionGeomObject", &
+            call NUOPC_GetAttribute(field, name=transferActionAttr, &
               value=transferAction, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
               line=__LINE__, &
@@ -315,23 +305,31 @@ module Mediator
           endif
         endif
       enddo
-      
+
       deallocate(itemNameList, itemTypeList)
-    
+
     end subroutine
 
   end subroutine
-  
+
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP4(mediator, importState, exportState, clock, rc)
-    ! IPDv03p4: optionally modify the decomp/distr of transferred Grid/Mesh
+  subroutine AcceptTransfer(mediator, rc)
     type(ESMF_GridComp)  :: mediator
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
-    
+
+    ! local variables
+    type(ESMF_State)              :: importState, exportState
+
     rc = ESMF_SUCCESS
+
+    ! query for importState and exportState
+    call NUOPC_MediatorGet(mediator, importState=importState, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 
     call adjustAcceptedGeom(importState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -346,7 +344,7 @@ module Mediator
       return  ! bail out
 
     contains ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    
+
     subroutine adjustAcceptedGeom(state, rc)
       ! Look at all of the fields in state, including in nested states. Adjust
       ! the distribution of the accepted geom object to a 1 DE/PET distribution.
@@ -365,17 +363,38 @@ module Mediator
       type(ESMF_DistGrid)                     :: distgrid
       integer                                 :: dimCount, tileCount
       integer, allocatable                    :: minIndexPTile(:,:), maxIndexPTile(:,:)
-    
+      type(ESMF_StateIntent_Flag)             :: stateIntent
+      character(len=80)                       :: transferActionAttr
+
       if (present(rc)) rc = ESMF_SUCCESS
-      
+
+      call ESMF_StateGet(state, stateIntent=stateIntent, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+      if (stateIntent==ESMF_STATEINTENT_EXPORT) then
+        transferActionAttr="ProducerTransferAction"
+      elseif (stateIntent==ESMF_STATEINTENT_IMPORT) then
+        transferActionAttr="ConsumerTransferAction"
+      else
+        call ESMF_LogSetError(ESMF_RC_ARG_BAD, &
+          msg="The stateIntent must either be IMPORT or EXPORT here.", &
+          line=__LINE__, &
+          file=__FILE__, &
+          rcToReturn=rc)
+        return  ! bail out
+      endif
+
       call ESMF_StateGet(state, nestedFlag=.true., itemCount=itemCount, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-    
+
       allocate(itemNameList(itemCount), itemTypeList(itemCount))
-    
+
       call ESMF_StateGet(state, nestedFlag=.true., &
         itemNameList=itemNameList, itemTypeList=itemTypeList, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -392,7 +411,7 @@ module Mediator
             line=__LINE__, &
             file=__FILE__)) &
             return  ! bail out
-          call NUOPC_GetAttribute(field, name="TransferActionGeomObject", &
+          call NUOPC_GetAttribute(field, name=transferActionAttr, &
             value=transferAction, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
@@ -419,7 +438,7 @@ module Mediator
                 line=__LINE__, &
                 file=__FILE__)) &
                 return  ! bail out
-              ! Create a custom DistGrid, based on the minIndex, maxIndex of the 
+              ! Create a custom DistGrid, based on the minIndex, maxIndex of the
               ! accepted DistGrid, but with a default regDecomp for the current VM
               ! that leads to 1DE/PET.
               ! get dimCount and tileCount
@@ -453,7 +472,7 @@ module Mediator
                 line=__LINE__, &
                 file=__FILE__)) &
                 return  ! bail out
-              call ESMF_FieldEmptySet(field, grid=grid, rc=rc)    
+              call ESMF_FieldEmptySet(field, grid=grid, rc=rc)
               if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                 line=__LINE__, &
                 file=__FILE__)) &
@@ -473,7 +492,7 @@ module Mediator
                 line=__LINE__, &
                 file=__FILE__)) &
                 return  ! bail out
-              ! Create a custom DistGrid, based on the minIndex, maxIndex of the 
+              ! Create a custom DistGrid, based on the minIndex, maxIndex of the
               ! accepted DistGrid, but with a default regDecomp for the current VM
               ! that leads to 1DE/PET.
               ! get dimCount and tileCount
@@ -507,7 +526,7 @@ module Mediator
                 line=__LINE__, &
                 file=__FILE__)) &
                 return  ! bail out
-              call ESMF_FieldEmptySet(field, mesh=mesh, rc=rc)    
+              call ESMF_FieldEmptySet(field, mesh=mesh, rc=rc)
               if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                 line=__LINE__, &
                 file=__FILE__)) &
@@ -526,23 +545,31 @@ module Mediator
           endif
         endif
       enddo
-      
+
       deallocate(itemNameList, itemTypeList)
-    
+
     end subroutine
-    
+
   end subroutine
-    
+
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeP5(mediator, importState, exportState, clock, rc)
-    ! IPDv03p5: realize all Fields with transfer action "accept"
+  subroutine RealizeAccepted(mediator, rc)
     type(ESMF_GridComp)  :: mediator
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
-    
+
+    ! local variables
+    type(ESMF_State)        :: importState, exportState
+
     rc = ESMF_SUCCESS
+
+    ! query for importState and exportState
+    call NUOPC_MediatorGet(mediator, importState=importState, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 
     call realizeWithAcceptedGeom(importState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -555,9 +582,9 @@ module Mediator
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
     contains ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    
+
     subroutine realizeWithAcceptedGeom(state, rc)
       ! Look at all of the fields in state, including in nested states. Realize
       ! with the accepted and adjusted geom object.
@@ -567,9 +594,9 @@ module Mediator
       integer                                 :: itemCount, item
       character(len=80), allocatable          :: itemNameList(:)
       type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
-    
+
       if (present(rc)) rc = ESMF_SUCCESS
-      
+
       ! query info about the items in the state
       call ESMF_StateGet(state, nestedFlag=.true., itemCount=itemCount, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -595,36 +622,19 @@ module Mediator
             return  ! bail out
         endif
       enddo
-      
+
       deallocate(itemNameList, itemTypeList)
-    
+
     end subroutine
 
   end subroutine
-    
-  !-----------------------------------------------------------------------------
-
-  subroutine DataInitialize(mediator, rc)
-    type(ESMF_GridComp)  :: mediator
-    integer, intent(out) :: rc
-    
-    rc = ESMF_SUCCESS
-
-    ! indicate that data initialization is complete (breaking out of init-loop)
-    call NUOPC_CompAttributeSet(mediator, &
-      name="InitializeDataComplete", value="true", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    
-  end subroutine
 
   !-----------------------------------------------------------------------------
-  subroutine MediatorAdvance(mediator, rc)
+
+  subroutine Advance(mediator, rc)
     type(ESMF_GridComp)  :: mediator
     integer, intent(out) :: rc
-    
+
     ! local variables
     type(ESMF_Clock)            :: clock
     type(ESMF_State)            :: importState, exportState
@@ -632,8 +642,8 @@ module Mediator
     character(len=160)          :: msgString
 
     rc = ESMF_SUCCESS
-    
-    ! query the Component for its clock, importState and exportState
+
+    ! query for clock, importState and exportState
     call ESMF_GridCompGet(mediator, clock=clock, importState=importState, &
       exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -642,7 +652,7 @@ module Mediator
       return  ! bail out
 
     ! HERE THE MEDIATOR ADVANCES: currTime -> currTime + timeStep
-    
+
     call ESMF_ClockPrint(clock, options="currTime", &
       preString="------>Advancing MED from: ", unit=msgString, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -654,7 +664,7 @@ module Mediator
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
     call ESMF_ClockPrint(clock, options="stopTime", &
       preString="---------------------> to: ", unit=msgString, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -666,7 +676,7 @@ module Mediator
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     call ESMF_StateGet(frModelA, itemCount=itemCount(1), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -698,7 +708,9 @@ module Mediator
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
   end subroutine
+
+  !-----------------------------------------------------------------------------
 
 end module

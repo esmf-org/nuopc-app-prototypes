@@ -1,9 +1,9 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright 2002-2019, University Corporation for Atmospheric Research, 
-! Massachusetts Institute of Technology, Geophysical Fluid Dynamics 
-! Laboratory, University of Michigan, National Centers for Environmental 
-! Prediction, Los Alamos National Laboratory, Argonne National Laboratory, 
+! Copyright 2002-2021, University Corporation for Atmospheric Research,
+! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
+! Laboratory, University of Michigan, National Centers for Environmental
+! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
 ! NASA Goddard Space Flight Center.
 ! Licensed under the University of Illinois-NCSA License.
 !==============================================================================
@@ -25,10 +25,9 @@ module ESM
   use ESMF
   use NUOPC
   use NUOPC_Driver, &
-    driver_routine_SS             => SetServices, &
-    driver_label_SetModelServices => label_SetModelServices
+    driverSS             => SetServices
 
-  !- select exactly one ATM component 
+  !- select exactly one ATM component
 #if (defined FRONT_ATMA && !defined FRONT_ATMB && !defined FRONT_ATMC && !defined FRONT_ATMD && !defined FRONT_ATME && !defined FRONT_SO_ATME && !defined FRONT_ATMF && !defined FRONT_H_ATMF )
   use FRONT_ATMA, only: atmSS => SetServices
 #elif (!defined FRONT_ATMA && defined FRONT_ATMB && !defined FRONT_ATMC && !defined FRONT_ATMD && !defined FRONT_ATME && !defined FRONT_SO_ATME && !defined FRONT_ATMF && !defined FRONT_H_ATMF )
@@ -56,15 +55,15 @@ module ESM
 #ifdef FRONT_OCNB
   use FRONT_OCNB, only: ocnB_SS => SetServices
 #endif
-  
+
   use NUOPC_Connector, only: cplSS => SetServices
-  
+
   implicit none
-  
+
   private
-  
+
   public SetServices
-  
+
   !-----------------------------------------------------------------------------
   contains
   !-----------------------------------------------------------------------------
@@ -72,24 +71,31 @@ module ESM
   subroutine SetServices(driver, rc)
     type(ESMF_GridComp)  :: driver
     integer, intent(out) :: rc
-    
+
     rc = ESMF_SUCCESS
-    
-    ! NUOPC_Driver registers the generic methods
-    call NUOPC_CompDerive(driver, driver_routine_SS, rc=rc)
+
+    ! derive from NUOPC_Driver
+    call NUOPC_CompDerive(driver, driverSS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
-    ! attach specializing method(s)
-    call ESMF_MethodAdd(driver, label=driver_label_SetModelServices, &
-      userRoutine=SetModelServices, rc=rc)
+
+    ! specialize driver
+    call NUOPC_CompSpecialize(driver, specLabel=label_SetModelServices, &
+      specRoutine=SetModelServices, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
+    ! set driver verbosity
+    call NUOPC_CompAttributeSet(driver, name="Verbosity", value="high", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
   end subroutine
 
   !-----------------------------------------------------------------------------
@@ -97,7 +103,7 @@ module ESM
   subroutine SetModelServices(driver, rc)
     type(ESMF_GridComp)  :: driver
     integer, intent(out) :: rc
-    
+
     ! local variables
     type(ESMF_Grid)               :: grid
     type(ESMF_Field)              :: field
@@ -135,7 +141,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     ! SetServices for ATM
 #ifndef ATM_FRONT_SO
     call NUOPC_DriverAddComp(driver, "ATM", atmSS, comp=child, rc=rc)
@@ -197,7 +203,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     ! SetServices for atm2ocn
     call NUOPC_DriverAddComp(driver, srcCompLabel="ATM", dstCompLabel="OCN", &
       compSetServicesRoutine=cplSS, comp=connector, rc=rc)
@@ -210,7 +216,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     ! SetServices for ocn2atm
     call NUOPC_DriverAddComp(driver, srcCompLabel="OCN", dstCompLabel="ATM", &
       compSetServicesRoutine=cplSS, comp=connector, rc=rc)
@@ -223,7 +229,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     ! set the driver clock
     call ESMF_TimeIntervalSet(timeStep, m=15, rc=rc) ! 15 minute steps
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -251,13 +257,15 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     call ESMF_GridCompSet(driver, clock=internalClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
   end subroutine
+
+  !-----------------------------------------------------------------------------
 
 end module

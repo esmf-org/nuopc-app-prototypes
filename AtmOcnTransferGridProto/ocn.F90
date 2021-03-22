@@ -1,9 +1,9 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright 2002-2019, University Corporation for Atmospheric Research, 
-! Massachusetts Institute of Technology, Geophysical Fluid Dynamics 
-! Laboratory, University of Michigan, National Centers for Environmental 
-! Prediction, Los Alamos National Laboratory, Argonne National Laboratory, 
+! Copyright 2002-2021, University Corporation for Atmospheric Research,
+! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
+! Laboratory, University of Michigan, National Centers for Environmental
+! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
 ! NASA Goddard Space Flight Center.
 ! Licensed under the University of Illinois-NCSA License.
 !==============================================================================
@@ -22,73 +22,78 @@ module OCN
   use ESMF
   use NUOPC
   use NUOPC_Model, &
-    model_routine_SS      => SetServices, &
-    model_label_SetClock  => label_SetClock, &
-    model_label_Advance   => label_Advance
-  
+    modelSS    => SetServices
+
   implicit none
-  
+
   private
-  
+
   public SetVM, SetServices
-  
+
   !-----------------------------------------------------------------------------
   contains
   !-----------------------------------------------------------------------------
-  
+
   subroutine SetServices(model, rc)
     type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
-    
+
     rc = ESMF_SUCCESS
-    
-    ! the NUOPC model component will register the generic methods
-    call NUOPC_CompDerive(model, model_routine_SS, rc=rc)
+
+    ! derive from NUOPC_Model
+    call NUOPC_CompDerive(model, modelSS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
-    ! set entry point for methods that require specific implementation
-    call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv00p1"/), userRoutine=InitializeAdvertise, rc=rc)
+
+    ! specialize model
+    call NUOPC_CompSpecialize(model, specLabel=label_Advertise, &
+      specRoutine=Advertise, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSetEntryPoint(model, ESMF_METHOD_INITIALIZE, &
-      phaseLabelList=(/"IPDv00p2"/), userRoutine=InitializeRealize, rc=rc)
+    call NUOPC_CompSpecialize(model, specLabel=label_RealizeProvided, &
+      specRoutine=Realize, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
-    ! attach specializing method(s)
-    call NUOPC_CompSpecialize(model, specLabel=model_label_SetClock, &
+    call NUOPC_CompSpecialize(model, specLabel=label_SetClock, &
       specRoutine=SetClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSpecialize(model, specLabel=model_label_Advance, &
-      specRoutine=ModelAdvance, rc=rc)
+    call NUOPC_CompSpecialize(model, specLabel=label_Advance, &
+      specRoutine=Advance, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 
   end subroutine
-  
+
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeAdvertise(model, importState, exportState, clock, rc)
+  subroutine Advertise(model, rc)
     type(ESMF_GridComp)  :: model
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
-    
+
+    ! local variables
+    type(ESMF_State)        :: importState, exportState
+
     rc = ESMF_SUCCESS
-    
+
+    ! query for importState and exportState
+    call NUOPC_ModelGet(model, importState=importState, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! importable field: air_pressure_at_sea_level
     ! -> use default, i.e. marked as "will provide"
     call NUOPC_Advertise(importState, &
@@ -97,7 +102,7 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
     ! importable field: surface_net_downward_shortwave_flux
     ! -> use default, i.e. marked as "will provide"
     call NUOPC_Advertise(importState, &
@@ -158,16 +163,15 @@ module OCN
       return  ! bail out
 
   end subroutine
-  
+
   !-----------------------------------------------------------------------------
 
-  subroutine InitializeRealize(model, importState, exportState, clock, rc)
+  subroutine Realize(model, rc)
     type(ESMF_GridComp)  :: model
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
-    
-    ! local variables    
+
+    ! local variables
+    type(ESMF_State)      :: importState, exportState
     type(ESMF_Grid)       :: gridIn, gridOut, gridArb, gridAux
     type(ESMF_DistGrid)   :: distgrid
     integer               :: deBlockList(2,2,0:1) ! 2 DEs
@@ -186,12 +190,21 @@ module OCN
     integer               :: dimCount, rank
     integer               :: coordDimMap(2,2)
     character(160)        :: msgString
+    character(80)         :: name
 #ifdef TEST_MULTI_TILE_GRID
     type(ESMF_GridComp)   :: ioComp
 #endif
 
     rc = ESMF_SUCCESS
-    
+
+    ! query for importState and exportState
+    call NUOPC_ModelGet(model, importState=importState, &
+      exportState=exportState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     !--- regDecomp Grid -------------------------------------------------------
     ! create Grid objects for import Fields
     gridIn = ESMF_GridCreate1PeriDimUfrm(maxIndex=(/100, 150/), &
@@ -202,20 +215,20 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
 #ifdef TEST_GRID_EDGE_WIDTHS
     ! Test Grid created from DG -> test transfer of various pieces of info
     ! Note that the DG holds the topology info of the original GridCreate()
     ! short-cut, so here simple periodic connection along dim=1.
-    
+
     gridAux = gridIn  ! hold on to original gridIn
-    
+
     call ESMF_GridGet(gridAux, distgrid=distgrid, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
 #ifdef TEST_GRID_EDGE_WIDTHS_KEEP_FACTORIZED_COORDS
     coordDimMap(1,1) = 1
     coordDimMap(1,2) = 1
@@ -236,7 +249,7 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
 #ifdef TEST_GRID_EDGE_WIDTHS_KEEP_FACTORIZED_COORDS
     call ESMF_GridGetCoord(gridAux, coordDim=1, array=array, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -317,16 +330,16 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
 #endif
-  
+
 #if 1
     ! testing the output of coord arrays
     !TODO:
     ! Coords are currently written in 2D index space even if there is coordinate
     ! factorization used, e.g. in the Ufrm() GridCreate. Therefore the coord
-    ! arrays have replicated dims, and underlying allocation is only 1D. This 
+    ! arrays have replicated dims, and underlying allocation is only 1D. This
     ! should be changed in the ArrayWrite() where Arrays with replicated dims
-    ! should write out only the non-degenerate data, i.e. according to the 
-    ! actual data allocation. 
+    ! should write out only the non-degenerate data, i.e. according to the
+    ! actual data allocation.
     ! -> here that would be a 1D array for each coordiante dim.
     ! center:
     call ESMF_GridGetCoord(gridIn, coordDim=1, array=array, rc=rc)
@@ -421,7 +434,7 @@ module OCN
       return  ! bail out
 #endif
 #endif
-   
+
 #if 1
     ! write out the Grid into VTK file for inspection
     call ESMF_GridWriteVTK(gridIn, staggerloc=ESMF_STAGGERLOC_CENTER, &
@@ -432,6 +445,21 @@ module OCN
       return  ! bail out
     call ESMF_LogWrite("Done writing OCN-GridIn_centers VTK", &
       ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
+#if 1
+    ! analyze the Grid and log some info
+    call ESMF_GridGet(gridIn, name=name, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_PointerLog(gridIn%this, &
+      prefix="OCN gridIn:   name="//trim(name)//": ", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -470,7 +498,7 @@ module OCN
       return  ! bail out
 #define WITH_FORMAL_REALIZE
 #ifdef WITH_FORMAL_REALIZE
-    ! There is not need to formally call Realize() when completing the 
+    ! There is not need to formally call Realize() when completing the
     ! adverised field directly. However, calling Realize() also works.
     call NUOPC_Realize(importState, field=field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -479,7 +507,7 @@ module OCN
       return  ! bail out
 #endif
 #endif
-    
+
     ! importable field: surface_net_downward_shortwave_flux
     call NUOPC_Realize(importState, gridIn, fieldName="rsns", &
       typekind=ESMF_TYPEKIND_R8, selection="realize_connected_remove_others", &
@@ -506,7 +534,7 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
 #if 0
     ! write out the Grid into VTK file for inspection
     ! -> This currently only works if there are no holes in the index space
@@ -520,6 +548,21 @@ module OCN
       return  ! bail out
     call ESMF_LogWrite("Done writing OCN-GridOut_centers VTK", &
       ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
+#if 1
+    ! analyze the Grid and log some info
+    call ESMF_GridGet(gridOut, name=name, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_PointerLog(gridOut%this, &
+      prefix="OCN gridOut:  name="//trim(name)//": ", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -543,8 +586,8 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
-#ifdef TEST_MULTI_TILE_GRID    
+
+#ifdef TEST_MULTI_TILE_GRID
     !--- 6-tile cubed-sphere Grid: for ssh field below ------------------------
     gridOut = ESMF_GridCreateCubedSphere(tileSize=16, name="OCN-CubedSphere", &
       staggerLocList=(/ESMF_STAGGERLOC_CENTER/), &
@@ -560,8 +603,22 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#if 1
+    ! analyze the Grid and log some info
+    call ESMF_GridGet(gridOut, name=name, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_PointerLog(gridOut%this, &
+      prefix="OCN gridOut:  name="//trim(name)//": ", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 #endif
-    
+#endif
+
     ! exportable field: sea_surface_height_above_sea_level
     call NUOPC_Realize(exportState, gridOut, fieldName="ssh", &
       typekind=ESMF_TYPEKIND_R8, selection="realize_connected_remove_others", &
@@ -602,7 +659,7 @@ module OCN
         ind = ind + 1
       enddo
     endif
-    
+
     ! create the grid
     gridArb = ESMF_GridCreate1PeriDim(maxIndex=(/iCount, jCount/), &
       arbIndexCount=arbIndexCount, arbIndexList=arbIndexList, &
@@ -628,7 +685,7 @@ module OCN
     do i=lbound(fptr,1),ubound(fptr,1)
       fptr(i) = real((arbIndexList(i,1)-1)) * 360.0 / real(iCount)
     enddo
-      
+
     ! fill latitudes
     call ESMF_GridGetCoord(gridArb, coordDim=2, farrayPtr=fptr, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -638,7 +695,22 @@ module OCN
     do i=lbound(fptr,1),ubound(fptr,1)
       fptr(i) = real((arbIndexList(i,2)-1)) * 160.0 / real(jCount) - 80.0
     enddo
-    
+
+#if 1
+    ! analyze the Grid and log some info
+    call ESMF_GridGet(gridArb, name=name, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_PointerLog(gridArb%this, &
+      prefix="OCN gridArb:  name="//trim(name)//": ", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
     ! create a field on the grid
     fieldArb = ESMF_FieldCreate(gridArb, typekind=ESMF_TYPEKIND_R8, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -663,7 +735,7 @@ module OCN
     ! create an auxiliary regDecomp grid with the same index space as gridArb
     ! periodic along i (must set here explicitly to match the gridArb
     ! ESMF_GridCreate1PeriDim() from above). In the long run,
-    ! an arbDistr Grid will actually store a regDecomp auxiliary DistGrid 
+    ! an arbDistr Grid will actually store a regDecomp auxiliary DistGrid
     ! internally which holds the correct connections.
     allocate(connectionList(1))
     call ESMF_DistGridConnectionSet(connection=connectionList(1), &
@@ -730,7 +802,7 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
     ! now use the regrid sparse matrix (factorList and factorIndexList) from
     ! above to precompute the routehandle for the arbDistr case. This works
     ! because the index space is identical.
@@ -815,26 +887,26 @@ module OCN
       return  ! bail out
 
   end subroutine
-  
+
   !-----------------------------------------------------------------------------
 
   subroutine SetClock(model, rc)
     type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
-    
+
     ! local variables
     type(ESMF_Clock)              :: clock
     type(ESMF_TimeInterval)       :: stabilityTimeStep
 
     rc = ESMF_SUCCESS
-    
-    ! query the Component for its clock, importState and exportState
+
+    ! query for clock
     call NUOPC_ModelGet(model, modelClock=clock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     ! initialize internal clock
     ! here: parent Clock and stability timeStep determine actual model timeStep
     !TODO: stabilityTimeStep should be read in from configuation
@@ -849,27 +921,29 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
   end subroutine
 
   !-----------------------------------------------------------------------------
 
-  subroutine ModelAdvance(model, rc)
+  subroutine Advance(model, rc)
     type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
-    
+
     ! local variables
     type(ESMF_Clock)            :: clock
     type(ESMF_State)            :: importState, exportState
     type(ESMF_Field)            :: field
+    type(ESMF_Grid)             :: grid
     type(ESMF_Time)             :: currTime
     type(ESMF_TimeInterval)     :: timeStep
     integer, save               :: slice=1
     character(len=160)          :: msgString
+    character(80)               :: fieldName, gridName
 
     rc = ESMF_SUCCESS
-    
-    ! query the Component for its clock, importState and exportState
+
+    ! query for clock, importState and exportState
     call NUOPC_ModelGet(model, modelClock=clock, importState=importState, &
       exportState=exportState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -878,14 +952,14 @@ module OCN
       return  ! bail out
 
     ! HERE THE MODEL ADVANCES: currTime -> currTime + timeStep
-    
+
     ! Because of the way that the internal Clock was set in SetClock(),
     ! its timeStep is likely smaller than the parent timeStep. As a consequence
-    ! the time interval covered by a single parent timeStep will result in 
-    ! multiple calls to the ModelAdvance() routine. Every time the currTime
+    ! the time interval covered by a single parent timeStep will result in
+    ! multiple calls to the Advance() routine. Every time the currTime
     ! will come in by one internal timeStep advanced. This goes until the
     ! stopTime of the internal Clock has been reached.
-    
+
     call ESMF_ClockPrint(clock, options="currTime", &
       preString="------>Advancing OCN from: ", unit=msgString, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -897,13 +971,13 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
     call ESMF_ClockGet(clock, currTime=currTime, timeStep=timeStep, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
     call ESMF_TimePrint(currTime + timeStep, &
       preString="---------------------> to: ", unit=msgString, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -928,6 +1002,26 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#if 1
+    ! analyze the Grid on which this field is created
+    call ESMF_FieldGet(field, grid=grid, name=fieldName, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_GridGet(grid, name=gridName, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_PointerLog(grid%this, &
+      prefix="OCN Grid: fieldName="//trim(fieldName)// &
+      " gridName="//trim(gridName)//": ", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif 
     call ESMF_StateGet(exportState, itemName="sst", field=field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -939,6 +1033,26 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#if 1
+    ! analyze the Grid on which this field is created
+    call ESMF_FieldGet(field, grid=grid, name=fieldName, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_GridGet(grid, name=gridName, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_PointerLog(grid%this, &
+      prefix="OCN Grid: fieldName="//trim(fieldName)// &
+      " gridName="//trim(gridName)//": ", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif 
 
     ! write out the Fields in the importState and exportState
     call NUOPC_Write(importState, fileNamePrefix="field_ocn_import_", &

@@ -1,9 +1,9 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright 2002-2019, University Corporation for Atmospheric Research, 
-! Massachusetts Institute of Technology, Geophysical Fluid Dynamics 
-! Laboratory, University of Michigan, National Centers for Environmental 
-! Prediction, Los Alamos National Laboratory, Argonne National Laboratory, 
+! Copyright 2002-2021, University Corporation for Atmospheric Research,
+! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
+! Laboratory, University of Michigan, National Centers for Environmental
+! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
 ! NASA Goddard Space Flight Center.
 ! Licensed under the University of Illinois-NCSA License.
 !==============================================================================
@@ -25,10 +25,8 @@ module nuopcExplorerDriver
   use ESMF
   use NUOPC
   use NUOPC_Driver, &
-    driver_routine_SS                     => SetServices, &
-    driver_label_SetModelServices         => label_SetModelServices, &
-    driver_label_SetRunSequence           => label_SetRunSequence
-  
+    driverSS             => SetServices
+
 #if defined(__GFORTRAN__) || defined(NAGFOR)
 # define STRINGIFY_START(X) "&
 # define STRINGIFY_END(X) &X"
@@ -41,7 +39,7 @@ module nuopcExplorerDriver
 #ifdef FRONT_COMP
   use FRONT_COMP, only: compSS => SetServices
 #ifndef FRONT_COMP_LABEL
-#define FRONT_COMP_LABEL FRONT_COMP    
+#define FRONT_COMP_LABEL FRONT_COMP
 #endif
 #elif (defined FRONT_H_COMP)
   use compFront, only: compSS => SetServices
@@ -69,7 +67,8 @@ module nuopcExplorerDriver
 
     rc = ESMF_SUCCESS
 
-    call NUOPC_CompDerive(driver, driver_routine_SS, rc=rc)
+    ! derive from NUOPC_Driver
+    call NUOPC_CompDerive(driver, driverSS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -96,13 +95,13 @@ module nuopcExplorerDriver
       return  ! bail out
 
     ! attach specializing method(s)
-    call NUOPC_CompSpecialize(driver, specLabel=driver_label_SetModelServices, &
+    call NUOPC_CompSpecialize(driver, specLabel=label_SetModelServices, &
       specRoutine=SetModelServices, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSpecialize(driver, specLabel=driver_label_SetRunSequence, &
+    call NUOPC_CompSpecialize(driver, specLabel=label_SetRunSequence, &
       specRoutine=SetRunSequence, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -124,7 +123,7 @@ module nuopcExplorerDriver
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     ! set HierarchyProtocol on the driver
     call NUOPC_CompAttributeSet(driver, name="HierarchyProtocol", &
       value="Explorer", rc=rc)
@@ -156,7 +155,7 @@ module nuopcExplorerDriver
     character(len=160)            :: soName
 #endif
     type(ESMF_GridComp)           :: child
-    character(len=80)             :: compName        
+    character(len=80)             :: compName
     type(ESMF_Config)             :: config
     type(NUOPC_FreeFormat)        :: attrFF
 
@@ -289,7 +288,7 @@ module nuopcExplorerDriver
     type(ESMF_GridComp), pointer  :: compList(:)
 
     rc = ESMF_SUCCESS
-  
+
     ! query Driver for localPet
     call ESMF_GridCompGet(driver, localPet=localPet, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -299,7 +298,7 @@ module nuopcExplorerDriver
 
     ! query Driver for child components
     nullify(compList)
-    call NUOPC_DriverGetComp(driver, compList, rc=rc)    
+    call NUOPC_DriverGetComp(driver, compList, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -311,10 +310,10 @@ module nuopcExplorerDriver
         ! Models
         if (i > 0) then
           if (NUOPC_CompAreServicesSet(compList(i))) then
-      
+
             write(iString, *) i
             comp = compList(i) ! alias to the component to be explored
-      
+
             ! report name of the ESMF_GridComp object
             call ESMF_GridCompGet(comp, name=name, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -349,7 +348,7 @@ module nuopcExplorerDriver
               print *, "  "//trim(name)//": <LongName>    : "// &
                 "Attribute is NOT present!"
             endif
-      
+
             ! report GridComp level attribute: ShortName
             call ESMF_AttributeGet(comp, name="ShortName", &
               itemCount=guardCount, isPresent=isPresent, &
@@ -401,7 +400,7 @@ module nuopcExplorerDriver
               print *, "  "//trim(name)//": <Description> : "// &
                 "Attribute is NOT present!"
             endif
-  
+
             ! report GridComp level attribute: Kind
             call ESMF_AttributeGet(comp, name="Kind", &
               itemCount=guardCount, isPresent=isPresent, &
@@ -427,7 +426,7 @@ module nuopcExplorerDriver
               print *, "  "//trim(name)//": <Kind> : "// &
                 "Attribute is NOT present!"
             endif
-  
+
             ! report GridComp level attribute: CompLabel
             call ESMF_AttributeGet(comp, name="CompLabel", &
               itemCount=guardCount, isPresent=isPresent, &
@@ -453,7 +452,7 @@ module nuopcExplorerDriver
               print *, "  "//trim(name)//": <CompLabel> : "// &
                 "Attribute is NOT present!"
             endif
-  
+
             ! report GridComp level attribute: InitializePhaseMap
             call ESMF_AttributeGet(comp, name="InitializePhaseMap", &
               itemCount=guardCount, isPresent=isPresent, &
@@ -483,7 +482,7 @@ module nuopcExplorerDriver
               print *, "  "//trim(name)//": <InitializePhaseMap> : "// &
                 "Attribute is NOT present!"
             endif
-  
+
             ! report GridComp level attribute: RunPhaseMap
             call ESMF_AttributeGet(comp, name="RunPhaseMap", &
               itemCount=guardCount, isPresent=isPresent, &
@@ -513,7 +512,7 @@ module nuopcExplorerDriver
               print *, "  "//trim(name)//": <RunPhaseMap> : "// &
                 "Attribute is NOT present!"
             endif
-  
+
             ! report GridComp level attribute: FinalizePhaseMap
             call ESMF_AttributeGet(comp, name="FinalizePhaseMap", &
               itemCount=guardCount, isPresent=isPresent, &
@@ -543,7 +542,7 @@ module nuopcExplorerDriver
               print *, "  "//trim(name)//": <FinalizePhaseMap> : "// &
                 "Attribute is NOT present!"
             endif
-  
+
             ! obtain import and export state
             call ESMF_GridCompGet(comp, importState=iState, &
               exportState=eState, rc=rc)
@@ -571,7 +570,7 @@ module nuopcExplorerDriver
               line=__LINE__, &
               file=__FILE__)) &
               return  ! bail out
-      
+
           endif
         endif
         ! Connectors
@@ -583,7 +582,7 @@ module nuopcExplorerDriver
 
     ! clean-up
     deallocate(compList)
-  
+
   end subroutine
 
   !-----------------------------------------------------------------------------
@@ -765,7 +764,7 @@ module nuopcExplorerDriver
             trim(adjustl(valueString))//" // [NOTFOUND] name = "// &
             trim(itemNameList(item))
         endif
-      enddo  
+      enddo
     endif
   end subroutine
 
@@ -774,7 +773,7 @@ module nuopcExplorerDriver
   subroutine SetRunSequence(driver, rc)
     type(ESMF_GridComp)  :: driver
     integer, intent(out) :: rc
-    
+
     ! local variables
     character(ESMF_MAXSTR)        :: name
     type(NUOPC_FreeFormat)        :: runSeqFF
@@ -782,7 +781,7 @@ module nuopcExplorerDriver
     integer                       :: localPet
 
     rc = ESMF_SUCCESS
-    
+
     compName = STRINGIFY_START(FRONT_COMP_LABEL)
       STRINGIFY_END(FRONT_COMP_LABEL)
 
@@ -790,7 +789,7 @@ module nuopcExplorerDriver
     call ESMF_GridCompGet(driver, name=name, localPet=localPet, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
-    
+
     ! set up free format run sequence
     runSeqFF = NUOPC_FreeFormatCreate(stringList=(/"@* "/), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -813,13 +812,13 @@ module nuopcExplorerDriver
     call NUOPC_FreeFormatAdd(runSeqFF, stringList=(/"@ " /), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
-     
+
     if (localPet==0) then
       call NUOPC_FreeFormatPrint(runSeqFF, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
     endif
-    
+
     ! ingest FreeFormat run sequence
     call NUOPC_DriverIngestRunSequence(driver, runSeqFF, &
       autoAddConnectors=.true., rc=rc)
@@ -830,7 +829,7 @@ module nuopcExplorerDriver
     call NUOPC_FreeFormatDestroy(runSeqFF, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
-      
+
   end subroutine
 
   !-----------------------------------------------------------------------------
@@ -840,24 +839,24 @@ module nuopcExplorerDriver
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: clock
     integer, intent(out)    :: rc
-    
+
     type(ESMF_Clock)        :: internalClock
     type(ESMF_Time)         :: time
     type(ESMF_TimeInterval) :: timeStep
 
     rc = ESMF_SUCCESS
-    
+
     ! update timestamp on all the import & export Fields
     call ESMF_GridCompGet(driver, clock=internalClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=__FILE__)) &
       return  ! bail out
-     
+
     call ESMF_ClockGet(internalClock, currTime=time, timeStep=timeStep, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=__FILE__)) &
       return  ! bail out
-     
+
     ! must timestamp the fields in importState for the next timeStep
     time = time+timeStep
     call NUOPC_SetTimestamp(importState, time, rc=rc)

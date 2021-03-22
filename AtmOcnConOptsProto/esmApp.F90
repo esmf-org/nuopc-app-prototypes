@@ -1,98 +1,108 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright 2002-2019, University Corporation for Atmospheric Research, 
-! Massachusetts Institute of Technology, Geophysical Fluid Dynamics 
-! Laboratory, University of Michigan, National Centers for Environmental 
-! Prediction, Los Alamos National Laboratory, Argonne National Laboratory, 
+! Copyright 2002-2021, University Corporation for Atmospheric Research,
+! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
+! Laboratory, University of Michigan, National Centers for Environmental
+! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
 ! NASA Goddard Space Flight Center.
 ! Licensed under the University of Illinois-NCSA License.
 !==============================================================================
 
-program mainApp
+program esmApp
 
   !-----------------------------------------------------------------------------
-  ! Generic ESMF Main
+  ! Generic ESM application driver
   !-----------------------------------------------------------------------------
 
   use ESMF
-
-  use driverParentComp, only: &
-    driver_SS => SetServices
+  use NUOPC
+  use ESM, only: esmSS => SetServices
 
   implicit none
-  
-  integer                       :: rc, userRc
-  type(ESMF_GridComp)           :: driver
+
+  integer                 :: rc, urc
+  type(ESMF_GridComp)     :: esmComp
 
   ! Initialize ESMF
-  call ESMF_Initialize(defaultCalkind=ESMF_CALKIND_GREGORIAN, rc=rc)
+  call ESMF_Initialize(logkindflag=ESMF_LOGKIND_MULTI, &
+    defaultCalkind=ESMF_CALKIND_GREGORIAN, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-    line=__LINE__, &
-    file=__FILE__)) &
-    call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    
-  call ESMF_LogWrite("mainApp STARTING", ESMF_LOGMSG_INFO, rc=rc)
-  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-    line=__LINE__, &
-    file=__FILE__)) &
-    call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    
-  !-----------------------------------------------------------------------------
-  
-  ! -> CREATE THE DRIVER
-  driver = ESMF_GridCompCreate(name="driverParent", rc=rc)
-  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-    line=__LINE__, &
-    file=__FILE__)) &
-    call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    
-  ! -> SET DRIVER SERVICES
-  call ESMF_GridCompSetServices(driver, driver_SS, userRc=userRc, rc=rc)
-  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-    line=__LINE__, &
-    file=__FILE__)) &
-    call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  if (ESMF_LogFoundError(rcToCheck=userRc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-  ! INITIALIZE THE DRIVER
-  call ESMF_GridCompInitialize(driver, userRc=userRc, rc=rc)
+  call ESMF_LogWrite("esmApp STARTING", ESMF_LOGMSG_INFO, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-    line=__LINE__, &
-    file=__FILE__)) &
-    call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  if (ESMF_LogFoundError(rcToCheck=userRc, msg=ESMF_LOGERR_PASSTHRU, &
-    line=__LINE__, &
-    file=__FILE__)) &
-    call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      
-  ! RUN THE DRIVER
-  call ESMF_GridCompRun(driver, userRc=userRc, rc=rc)
-  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-    line=__LINE__, &
-    file=__FILE__)) &
-    call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  if (ESMF_LogFoundError(rcToCheck=userRc, msg=ESMF_LOGERR_PASSTHRU, &
-    line=__LINE__, &
-    file=__FILE__)) &
-    call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  
-  ! FINALIZE THE DRIVER
-  call ESMF_GridCompFinalize(driver, userRc=userRc, rc=rc)
-  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-    line=__LINE__, &
-    file=__FILE__)) &
-    call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  if (ESMF_LogFoundError(rcToCheck=userRc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-  !-----------------------------------------------------------------------------
-  
-  call ESMF_LogWrite("mainApp FINISHED", ESMF_LOGMSG_INFO, rc=rc)
+  ! Create the earth system Component
+  esmComp = ESMF_GridCompCreate(name="esm", rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+  ! SetServices for the earth system Component
+  call ESMF_GridCompSetServices(esmComp, esmSS, userRc=urc, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+  ! Set Profiling Attribute
+  call NUOPC_CompAttributeSet(esmComp, name="Profiling", value="0", rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+  ! Call Initialize for the earth system Component
+  call ESMF_GridCompInitialize(esmComp, userRc=urc, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+  ! Call Run  for earth the system Component
+  call ESMF_GridCompRun(esmComp, userRc=urc, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+  ! Call Finalize for the earth system Component
+  call ESMF_GridCompFinalize(esmComp, userRc=urc, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+  ! Destroy the earth system Component
+  call ESMF_GridCompDestroy(esmComp, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+  call ESMF_LogWrite("esmApp FINISHED", ESMF_LOGMSG_INFO, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
@@ -100,5 +110,5 @@ program mainApp
 
   ! Finalize ESMF
   call ESMF_Finalize()
-  
-end program  
+
+end program
