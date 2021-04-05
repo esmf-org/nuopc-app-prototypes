@@ -148,7 +148,7 @@ module OCN
 
     ! --- IMPORT -------------------------------------------------------------
 #define READ_MESHIN_FROM_FILE
-#ifdef READ_MESHIN_FROM_FILE
+#if (defined READ_MESHIN_FROM_FILE && defined ESMF_NETCDF)
     ! create from file
     meshIn = ESMF_MeshCreate("./gx3v7_unstructured.nc", &
       fileformat=ESMF_FILEFORMAT_ESMFMESH, name="OCN-MeshIn", rc=rc)
@@ -263,7 +263,7 @@ module OCN
 
     ! --- EXPORT -------------------------------------------------------------
 #define READ_MESHOUT_FROM_FILE
-#ifdef READ_MESHOUT_FROM_FILE
+#if (defined READ_MESHOUT_FROM_FILE && defined ESMF_NETCDF)
     ! create from file
     meshOut = ESMF_MeshCreate("./fv1.9x2.5_unstructured.nc", &
       fileformat=ESMF_FILEFORMAT_ESMFMESH, name="OCN-GridOut", rc=rc)

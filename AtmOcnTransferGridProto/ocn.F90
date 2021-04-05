@@ -347,21 +347,25 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_OCN-gridIn_center_coord1.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     call ESMF_GridGetCoord(gridIn, coordDim=2, array=array, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_OCN-gridIn_center_coord2.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 #ifdef TEST_GRID_EDGE_WIDTHS
     ! corner:
     call ESMF_GridGetCoord(gridIn, staggerloc=ESMF_STAGGERLOC_CORNER, &
@@ -370,22 +374,26 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_OCN-gridIn_corner_coord1.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     call ESMF_GridGetCoord(gridIn, staggerloc=ESMF_STAGGERLOC_CORNER, &
       coordDim=2, array=array, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_OCN-gridIn_corner_coord2.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     ! edge1:
     call ESMF_GridGetCoord(gridIn, staggerloc=ESMF_STAGGERLOC_EDGE1, &
       coordDim=1, array=array, rc=rc)
@@ -393,22 +401,26 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_OCN-gridIn_edge1_coord1.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     call ESMF_GridGetCoord(gridIn, staggerloc=ESMF_STAGGERLOC_EDGE1, &
       coordDim=2, array=array, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_OCN-gridIn_edge1_coord2.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     ! edge2:
     call ESMF_GridGetCoord(gridIn, staggerloc=ESMF_STAGGERLOC_EDGE2, &
       coordDim=1, array=array, rc=rc)
@@ -416,22 +428,26 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_OCN-gridIn_edge2_coord1.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     call ESMF_GridGetCoord(gridIn, staggerloc=ESMF_STAGGERLOC_EDGE2, &
       coordDim=2, array=array, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_OCN-gridIn_edge2_coord2.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 #endif
 #endif
 
@@ -726,11 +742,13 @@ module OCN
       return  ! bail out
 
     ! write the field out to file, which will be 1d and with the arbitrary order
+#ifdef ESMF_NETCDF      
     call ESMF_FieldWrite(fieldArb, fileName="field_gridArb.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 
     ! create an auxiliary regDecomp grid with the same index space as gridArb
     ! periodic along i (must set here explicitly to match the gridArb
@@ -780,11 +798,13 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_FieldWrite(fieldAux, fileName="field_gridAux.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 #endif
 
     ! pull out the sst field from exportState for testing regridding to it
@@ -839,12 +859,14 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMFIO_Write(ioComp, "fields_ocn_init_export.nc", &
       (/field/), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 #if 0
     ! Currently do not destroy the ioComp here, because it will trigger
     ! an issue in StateReconcile(), which looks like a bug to me.

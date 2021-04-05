@@ -1046,21 +1046,25 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_ATM-grid_center_coord1.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     call ESMF_GridGetCoord(grid, coordDim=2, array=array, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_ATM-grid_center_coord2.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 #ifdef TEST_GRID_EDGE_WIDTHS
     ! corner:
     call ESMF_GridGetCoord(grid, staggerloc=ESMF_STAGGERLOC_CORNER, &
@@ -1069,22 +1073,26 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_ATM-grid_corner_coord1.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     call ESMF_GridGetCoord(grid, staggerloc=ESMF_STAGGERLOC_CORNER, &
       coordDim=2, array=array, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_ATM-grid_corner_coord2.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     ! edge1:
     call ESMF_GridGetCoord(grid, staggerloc=ESMF_STAGGERLOC_EDGE1, &
       coordDim=1, array=array, rc=rc)
@@ -1092,22 +1100,26 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_ATM-grid_edge1_coord1.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     call ESMF_GridGetCoord(grid, staggerloc=ESMF_STAGGERLOC_EDGE1, &
       coordDim=2, array=array, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_ATM-grid_edge1_coord2.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     ! edge2:
     call ESMF_GridGetCoord(grid, staggerloc=ESMF_STAGGERLOC_EDGE2, &
       coordDim=1, array=array, rc=rc)
@@ -1115,22 +1127,26 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_ATM-grid_edge2_coord1.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     call ESMF_GridGetCoord(grid, staggerloc=ESMF_STAGGERLOC_EDGE2, &
       coordDim=2, array=array, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_ATM-grid_edge2_coord2.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 #endif
 #endif
 

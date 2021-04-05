@@ -267,8 +267,13 @@ module ESM
             .or. trim(cplList(j))=="air_pressure_at_sea_level") then
             tempString = trim(cplList(j))//":REMAPMETHOD=redist"
           else
+#ifdef ESMF_NETCDF
             tempString = trim(cplList(j))//":REMAPMETHOD=bilinear"//&
             ":SrcTermProcessing=1:DUMPWEIGHTS=true:TermOrder=SrcSeq"
+#else
+            tempString = trim(cplList(j))//":REMAPMETHOD=bilinear"//&
+            ":SrcTermProcessing=1:TermOrder=SrcSeq"
+#endif
           endif
           cplList(j) = trim(tempString)
           write (msg,*) "Modified: "//trim(cplList(j))
