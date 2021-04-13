@@ -104,12 +104,6 @@ module driver
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/MinStackSize", &
-      value=16*1024*1024, rc=rc)  ! stack size no less than 16MiB
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
 #if 1
     call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/OpenMpHandling", &
       value="SET", rc=rc)
@@ -121,6 +115,20 @@ module driver
 #if 1
     call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/OpenMpNumThreads", &
       value=4, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+#if 0
+    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/ForceChildPthreads", &
+      value=.true., rc=rc)  ! force child PETs to execute as Pthreads
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/PthreadMinStackSize", &
+      value=16*1024*1024, rc=rc)  ! stack size no less than 16MiB
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
