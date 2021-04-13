@@ -949,6 +949,7 @@ module OCN
   !-----------------------------------------------------------------------------
 
   subroutine Advance(model, rc)
+!$  use omp_lib
     type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
 
@@ -960,6 +961,8 @@ module OCN
     type(ESMF_Time)             :: currTime
     type(ESMF_TimeInterval)     :: timeStep
     integer, save               :: slice=1
+    type(ESMF_VM)               :: vm
+    integer                     :: currentSsiPe, i, tid, unit, localPet
     character(len=160)          :: msgString
     character(80)               :: fieldName, gridName
 
@@ -972,6 +975,47 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    call ESMF_GridCompGet(model, vm=vm, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_VMGet(vm, localPet=localPet, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! Now can use OpenMP for fine grained parallelism...
+    ! Here just write info about the PET-local OpenMP threads to Log.
+!$omp parallel private(msgString, currentSsiPe)
+!$omp critical
+!$    call ESMF_VMGet(vm, currentSsiPe=currentSsiPe)
+!$    write(msgString,'(A,I4,A,I4,A,I4,A,I4,A,I4)') &
+!$      "thread_num=", omp_get_thread_num(), &
+!$      "   currentSsiPe=", currentSsiPe, &
+!$      "   num_threads=", omp_get_num_threads(), &
+!$      "   max_threads=", omp_get_max_threads(), &
+!$      "   num_procs=", omp_get_num_procs()
+!$    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+!$omp end critical
+!$omp end parallel
+
+#define STDOUT_off
+#ifdef STDOUT
+    unit = 6
+#else
+    unit = localPet + 200
+#endif
+!$omp parallel private(tid)
+    tid = -1 ! initialize to obvious value if building without OpenMP
+!$  tid = omp_get_thread_num()
+!$omp do
+    do i=1, 100
+      write(unit,*) "OCN test write, localPet=", localPet, "  tid=", tid, &
+        "  slice=", slice, "  i=", i
+    enddo
+!$omp end parallel
 
     ! HERE THE MODEL ADVANCES: currTime -> currTime + timeStep
 
