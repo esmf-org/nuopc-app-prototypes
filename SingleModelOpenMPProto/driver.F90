@@ -104,7 +104,7 @@ module driver
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-#if 1
+#if 0
     call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/OpenMpHandling", &
       value="SET", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -112,7 +112,7 @@ module driver
       file=__FILE__)) &
       return  ! bail out
 #endif
-#if 1
+#if 0
     call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/OpenMpNumThreads", &
       value=4, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
