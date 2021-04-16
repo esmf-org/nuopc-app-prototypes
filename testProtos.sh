@@ -298,6 +298,8 @@ TestProto     NestingSingleProto                          mainApp
 TestProto     NestingTelescopeMultipleProto               mainApp
 TestProto     SingleModelProto                            mainApp
 TestProto     SingleModelOpenMPProto                      mainApp
+export OMP_NUM_THREADS=3
+TestProto     SingleModelOpenMPUnawareProto               mainApp
 
 echo "== TEST SUMMARY START =="
 i=1
