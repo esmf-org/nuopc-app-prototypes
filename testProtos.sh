@@ -23,8 +23,8 @@ testList[count]=$1
 echo ---------------------------------------------------------------------------
 echo STARTING: $1
 cd $1
-gmake distclean
-gmake
+make distclean
+make
 set -x
 $MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
 local result=$?
@@ -53,8 +53,8 @@ read -ra ARGS <<< "$3"
 echo ---------------------------------------------------------------------------
 echo STARTING: $1
 cd $1
-gmake distclean
-gmake
+make distclean
+make
 for arg in "${ARGS[@]}"; do
 set -x
 $MPIRUN 4 $TOOLRUN ./$2 $arg > $2.$arg.stdout 2>&1
@@ -81,8 +81,8 @@ function TestSelectProto {
 echo ---------------------------------------------------------------------------
 echo STARTING: $1
 cd $1
-gmake distclean
-gmake ATM=A OCN=A,B
+make distclean
+make ATM=A OCN=A,B
 echo "OCN_SELECT: A" > esm.config
 ((count++))
 testList[count]=$1
@@ -97,8 +97,8 @@ else
 testResult[count]="FAIL"
 fi
 echo
-gmake clean
-gmake ATM=B OCN=A,B
+make clean
+make ATM=B OCN=A,B
 echo "OCN_SELECT: A" > esm.config
 ((count++))
 testList[count]=$1
@@ -113,8 +113,8 @@ else
 testResult[count]="FAIL"
 fi
 echo
-gmake clean
-gmake ATM=A OCN=B
+make clean
+make ATM=A OCN=B
 echo "OCN_SELECT: B" > esm.config
 ((count++))
 testList[count]=$1
@@ -138,10 +138,10 @@ function TestSelectExternalProto {
 echo ---------------------------------------------------------------------------
 echo STARTING: $1
 cd $1
-gmake distclean
+make distclean
 ./cleanSubs.csh
 ./buildSubs.csh
-gmake ATM=A OCN=A,B,C
+make ATM=A OCN=A,B,C
 echo "OCN_SELECT: A" > esm.config
 ((count++))
 testList[count]=$1
@@ -156,8 +156,8 @@ else
 testResult[count]="FAIL"
 fi
 echo
-gmake clean
-gmake ATM=B OCN=A,B,C
+make clean
+make ATM=B OCN=A,B,C
 echo "OCN_SELECT: B" > esm.config
 ((count++))
 testList[count]=$1
@@ -172,8 +172,8 @@ else
 testResult[count]="FAIL"
 fi
 echo
-gmake clean
-gmake ATM=C OCN=A,B,C
+make clean
+make ATM=C OCN=A,B,C
 echo "OCN_SELECT: C" > esm.config
 ((count++))
 testList[count]=$1
@@ -188,8 +188,8 @@ else
 testResult[count]="FAIL"
 fi
 echo
-gmake clean
-gmake ATM=D OCN=A,B,C
+make clean
+make ATM=D OCN=A,B,C
 echo "OCN_SELECT: A" > esm.config
 ((count++))
 testList[count]=$1
@@ -205,8 +205,8 @@ testResult[count]="FAIL"
 fi
 echo FINISHED: $1
 echo
-gmake clean
-gmake ATM=E OCN=A,B,C
+make clean
+make ATM=E OCN=A,B,C
 echo "OCN_SELECT: B" > esm.config
 ((count++))
 testList[count]=$1
@@ -221,8 +221,8 @@ else
 testResult[count]="FAIL"
 fi
 echo
-gmake clean
-gmake ATM=F OCN=A,B,C
+make clean
+make ATM=F OCN=A,B,C
 echo "OCN_SELECT: C" > esm.config
 #$MPIRUN 4 ./$2   --- cannot run this because atmF is not fully implemented
 echo FINISHED: $1
@@ -237,7 +237,7 @@ testList[count]=$1
 echo ---------------------------------------------------------------------------
 echo STARTING: $1
 cd $1
-gmake distclean
+make distclean
 set -x
 ./nuopcExplorerScript ../AtmOcnSelectExternalProto/ATM-A/atmA.mk
 $MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
