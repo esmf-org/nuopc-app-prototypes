@@ -21,8 +21,7 @@ module driver
     driverSS             => SetServices
 
   use MODEL, only: &
-    modelSS     => SetServices, &
-    modelSVM    => SetVM
+    modelSS     => SetServices
 
   implicit none
 
@@ -82,7 +81,6 @@ module driver
     type(ESMF_Time)               :: stopTime
     type(ESMF_TimeInterval)       :: timeStep
     type(ESMF_Clock)              :: internalClock
-    type(ESMF_Info)               :: info
 
     ! - diagnostics -
     type(ESMF_VM)                 :: vm
@@ -92,55 +90,8 @@ module driver
 
     rc = ESMF_SUCCESS
 
-    ! Create and set the info object that is used to pass hints into methods
-    info = ESMF_InfoCreate(rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-#if 1
-    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/MaxCount", value=2, &
-      rc=rc)  ! expect 2 PEs per PET in the child VM
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-#endif
-
-#if 0
-    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/OpenMpHandling", &
-      value="SET", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-#endif
-#if 0
-    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/OpenMpNumThreads", &
-      value=4, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-#endif
-#if 0
-    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/ForceChildPthreads", &
-      value=.true., rc=rc)  ! force child PETs to execute as Pthreads
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/PthreadMinStackSize", &
-      value=16*1024*1024, rc=rc)  ! stack size no less than 16MiB
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-#endif
-
     ! SetServices for MODEL component
-    call NUOPC_DriverAddComp(driver, "MODEL", modelSS, modelSVM, info=info, &
-      comp=child, rc=rc)
+    call NUOPC_DriverAddComp(driver, "MODEL", modelSS, comp=child, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
