@@ -802,6 +802,17 @@ SingleModelOpenMPProto/mainApp.o
 SingleModelOpenMPProto/mainApp.stdout
 SingleModelOpenMPProto/model.mod
 SingleModelOpenMPProto/model.o
+SingleModelOpenMPUnawareProto/PET0.ESMF_LogFile
+SingleModelOpenMPUnawareProto/PET1.ESMF_LogFile
+SingleModelOpenMPUnawareProto/PET2.ESMF_LogFile
+SingleModelOpenMPUnawareProto/PET3.ESMF_LogFile
+SingleModelOpenMPUnawareProto/driver.mod
+SingleModelOpenMPUnawareProto/driver.o
+SingleModelOpenMPUnawareProto/mainApp
+SingleModelOpenMPUnawareProto/mainApp.o
+SingleModelOpenMPUnawareProto/mainApp.stdout
+SingleModelOpenMPUnawareProto/model.mod
+SingleModelOpenMPUnawareProto/model.o
 SingleModelProto/PET0.ESMF_LogFile
 SingleModelProto/PET1.ESMF_LogFile
 SingleModelProto/PET2.ESMF_LogFile
