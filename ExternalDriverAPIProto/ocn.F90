@@ -143,8 +143,6 @@ module OCN
     type(ESMF_Field)            :: field
     type(ESMF_Grid)             :: gridIn
     type(ESMF_Grid)             :: gridOut
-    real(ESMF_KIND_R8), pointer :: dataPtr(:,:), lonPtr(:), latPtr(:)
-    integer                     :: i,j
 
     rc = ESMF_SUCCESS
 
@@ -219,40 +217,14 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
 
-    ! exportable field: sea_surface_temperature
-    field = ESMF_FieldCreate(name="sst", grid=gridOut, &
-      typekind=ESMF_TYPEKIND_R8, rc=rc)
+    ! exportable field: sea_surface_temperature, realize conditionally and fill
+    call NUOPC_Realize(exportState, grid=gridOut, fieldName="sst", &
+      typekind=ESMF_TYPEKIND_R8, selection="realize_connected_remove_others", &
+      dataFillScheme="sincos", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_Realize(exportState, field=field, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    ! fill export with some data
-    call ESMF_GridGetCoord(gridOut, coordDim=1, farrayPtr=lonPtr, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call ESMF_GridGetCoord(gridOut, coordDim=2, farrayPtr=latPtr, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call ESMF_FieldGet(field, farrayPtr=dataPtr, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    do j=lbound(dataPtr,2),ubound(dataPtr,2)
-    do i=lbound(dataPtr,1),ubound(dataPtr,1)
-      dataPtr(i,j) = sin(3.1416*lonPtr(i)/180.) * cos(3.1416*latPtr(j)/180.)
-    enddo
-    enddo
 
   end subroutine
 

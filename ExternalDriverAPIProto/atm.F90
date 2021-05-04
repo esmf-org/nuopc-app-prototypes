@@ -61,6 +61,12 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    call NUOPC_CompSpecialize(model, specLabel=label_CheckImport, &
+      specRoutine=NUOPC_NoOp, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 
   end subroutine
 
@@ -83,6 +89,7 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
+#if 1
     ! importable field: sea_surface_temperature
     call NUOPC_Advertise(importState, &
       StandardName="sea_surface_temperature", name="sst", rc=rc)
@@ -90,7 +97,9 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 
+#if 1
     ! importable field: precipitation_flux
     call NUOPC_Advertise(importState, &
       StandardName="precipitation_flux", name="precip", rc=rc)
@@ -98,6 +107,7 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 
     ! exportable field: air_pressure_at_sea_level
     call NUOPC_Advertise(exportState, &
@@ -158,7 +168,8 @@ module ATM
       return  ! bail out
 
     ! create a Grid object for Fields
-#if 0
+#define LAT_LON_GRID
+#ifdef LAT_LON_GRID
     gridIn = ESMF_GridCreate1PeriDimUfrm(maxIndex=(/100, 50/), &
       minCornerCoord=(/0._ESMF_KIND_R8, -60._ESMF_KIND_R8/), &
       maxCornerCoord=(/360._ESMF_KIND_R8, 80._ESMF_KIND_R8/), &
@@ -354,8 +365,7 @@ module ATM
       enddo
     endif
 
-#if 0
-! cannot use NUOPC_Write() for fields on cubed sphere grid right now
+#ifdef LAT_LON_GRID
     ! write out the Fields in the importState
     call NUOPC_Write(importState, fileNamePrefix="field_atm_import_", &
       timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
