@@ -20,7 +20,7 @@ module ocnDA
 
   use nuopc_da, only: &
     nuopc_da_connect => connect, &
-    nuopc_da_drive   => drive
+    nuopc_da_step    => step
 
   implicit none
 
@@ -51,13 +51,37 @@ module ocnDA
       file=__FILE__)) &
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    !TODO: implement an explicit time loop here...
-    !TODO: call into component specific step
-    call nuopc_da_drive(rc=rc)
+  !--> explicitly unrolled time loop to demonstrate stepping more clearly
+
+    call nuopc_da_step(tStart="2010-06-01T00:00:00", &
+                       tFinal="2010-06-01T00:15:00", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    call nuopc_da_step(tStart="2010-06-01T00:15:00", &
+                       tFinal="2010-06-01T00:30:00", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    call nuopc_da_step(tStart="2010-06-01T00:30:00", &
+                       tFinal="2010-06-01T00:45:00", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    call nuopc_da_step(tStart="2010-06-01T00:45:00", &
+                       tFinal="2010-06-01T01:00:00", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+  !<-- end of explicitly unrolled time loop
 
     call ESMF_LogWrite("Finished with OCN DA code", ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &

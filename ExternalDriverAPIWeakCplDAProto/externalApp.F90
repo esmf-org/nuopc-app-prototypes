@@ -29,7 +29,7 @@ program externalApp
 
   implicit none
 
-  integer                 :: rc, urc
+  integer                 :: rc
   integer                 :: size, rank
   integer                 :: splitComm
 

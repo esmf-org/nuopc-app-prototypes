@@ -26,7 +26,7 @@ module nuopc_da
   type(ESMF_State)    :: toNuopcTop, fmNuopcTop
   type(ESMF_Clock)    :: clock
 
-  public init, connect, drive, final
+  public init, connect, step, final
 
   !-----------------------------------------------------------------------------
   contains
@@ -237,51 +237,74 @@ module nuopc_da
 
   !-----------------------------------------------------------------------------
 
-  subroutine drive(rc)
-    integer,      intent(out)           :: rc
+  subroutine step(tStart, tFinal, rc)
+    ! Take a step forward from start time to final time.
+    ! Different MPI ranks are allowed to call with different values for times.
+    ! On each MPI rank the method will block until tFinal has been reached by
+    ! the underlying coupled NUOPC system.
+    character(*), intent(in)    :: tStart ! start time
+    character(*), intent(in)    :: tFinal ! final time
+    integer,      intent(out)   :: rc
 
-    integer                 :: urc, phase, i
+    type(ESMF_Time)         :: startTime, stopTime
+    type(ESMF_TimeInterval) :: timeStep
+    integer                 :: urc, i
     integer, save           :: slice=1
 
-    ! Explicit time stepping loop on the external level, here based on ESMF_Clock
-    do while (.not.ESMF_ClockIsStopTime(clock, rc=rc))
-      ! Timestamp the fields in the toNuopcTop state
-      call NUOPC_SetTimestamp(toNuopcTop, clock, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__, rcToReturn=rc)) return
-      ! Run the earth system Component: i.e. step nuopcTop forward by timestep
-      call ESMF_GridCompRun(nuopcTop, clock=clock, &
-        importState=toNuopcTop, exportState=fmNuopcTop, &
-        userRc=urc, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) return
-      if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__, rcToReturn=rc)) return
-      ! Write out the Fields in the toNuopcTop
-      call NUOPC_Write(toNuopcTop, &
-        fileNamePrefix="field_toNuopcTop_", &
-        timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__, rcToReturn=rc)) return
-      ! Write out the Fields in the fmNuopcTop after initialize
-      call NUOPC_Write(fmNuopcTop, &
-        fileNamePrefix="field_fmNuopcTop_", &
-        timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__, rcToReturn=rc)) return
-      ! Increment the time slice counter
-      slice = slice + 1
-      ! Advance the clock
-      call ESMF_ClockAdvance(clock, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__, rcToReturn=rc)) return
-    end do
+    call ESMF_TimeSet(startTime, timeString=tStart, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__, rcToReturn=rc)) return
+
+    call ESMF_TimeSet(stopTime, timeString=tFinal, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__, rcToReturn=rc)) return
+
+    timeStep = stopTime - startTime
+
+    call ESMF_ClockSet(clock, currTime=startTime, stopTime=stopTime, &
+      timeStep=timeStep, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__, rcToReturn=rc)) return
+
+    ! Timestamp the fields in the toNuopcTop state
+    call NUOPC_SetTimestamp(toNuopcTop, clock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__, rcToReturn=rc)) return
+    ! Run the earth system Component: i.e. step nuopcTop forward by timestep
+    call ESMF_GridCompRun(nuopcTop, clock=clock, &
+      importState=toNuopcTop, exportState=fmNuopcTop, &
+      userRc=urc, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) return
+    if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__, rcToReturn=rc)) return
+    ! Write out the Fields in the toNuopcTop
+    call NUOPC_Write(toNuopcTop, &
+      fileNamePrefix="field_toNuopcTop_", &
+      timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__, rcToReturn=rc)) return
+    ! Write out the Fields in the fmNuopcTop after initialize
+    call NUOPC_Write(fmNuopcTop, &
+      fileNamePrefix="field_fmNuopcTop_", &
+      timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__, rcToReturn=rc)) return
+    ! Increment the time slice counter
+    slice = slice + 1
+    ! Advance the clock
+    call ESMF_ClockAdvance(clock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__, rcToReturn=rc)) return
 
   end subroutine
 
@@ -290,7 +313,7 @@ module nuopc_da
   subroutine final(rc)
     integer,      intent(out)           :: rc
 
-    integer                   :: urc, phase, i
+    integer                   :: urc, i
 
     ! Finalize the nuopcTop Component
     call ESMF_GridCompFinalize(nuopcTop, &
