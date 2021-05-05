@@ -1,8 +1,10 @@
 README for External Driver API NUOPC for weakly coupled DA prototype
 --------------------------------------------------------------------
 
-A simple two model coupled system with a driver. Layered with the nuopc-da
-interface layer, accessed independently by two DA systems: for ATM and OCN.
+A simple two model coupled system with a driver, layered with the nuopc-da
+interface, allowing access by two DA components (for ATM and OCN).
+The time step method implemented by the nuopc-da layer supports independent
+time steps on different MPI ranks.
 The nuopc-da interface is using the "External" Driver API to drive the coupled
 system. Fields are connected between the coupled system and the DA components.
 
