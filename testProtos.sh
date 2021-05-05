@@ -290,6 +290,7 @@ TestProto     DriverInDriverDataDepProto                  mainApp
 TestProto     DriverInDriverProto                         mainApp
 TestProto     DynPhyProto                                 esmApp
 TestProto     ExternalDriverAPIProto                      externalApp
+TestProto     ExternalDriverAPIWeakCplDAProto             externalApp
 TestProto     GenericMediatorProto                        app
 TestProto     HierarchyProto                              esmApp
 TestProto     NamespaceProto                              mainApp
