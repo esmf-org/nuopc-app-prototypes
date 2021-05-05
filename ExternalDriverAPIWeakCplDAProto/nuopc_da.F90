@@ -248,7 +248,8 @@ module nuopc_da
 
     type(ESMF_Time)         :: startTime, stopTime, currTime
     type(ESMF_TimeInterval) :: timeStep
-    integer                 :: urc, i, timeStepSec(1), timeStepSecMin(1)
+    integer                 :: urc, i
+    integer(ESMF_KIND_I8)   :: sec(1), secMin(1)
     type(ESMF_VM)           :: vm
     integer, save           :: slice=1
 
@@ -257,48 +258,71 @@ module nuopc_da
       line=__LINE__, &
       file=__FILE__, rcToReturn=rc)) return
 
+    ! Convert string to ESMF_Time
     call ESMF_TimeSet(startTime, timeString=tStart, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__, rcToReturn=rc)) return
 
+    ! Convert string to ESMF_Time
     call ESMF_TimeSet(stopTime, timeString=tFinal, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__, rcToReturn=rc)) return
 
+    ! Set the currTime and stopTime on Clock
     call ESMF_ClockSet(clock, currTime=startTime, stopTime=stopTime, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__, rcToReturn=rc)) return
 
+    ! Loop until the current MPI rank has reached the local stopTime, taking
+    ! time steps that are coordinated across all MPI ranks.
     do while (.not.ESMF_ClockIsStopTime(clock, rc=rc))
 
+      ! Get the currTime as the basis for the next step
       call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__, rcToReturn=rc)) return
 
-      !TODO: would be good to check consistentcy of currTime across all ranks
-
-      timeStep = stopTime - currTime
-
-      call ESMF_TimeIntervalGet(timeStep, s=timeStepSec(1), rc=rc)
+      ! Check for consistency of currTime across all MPI ranks
+      call ESMF_TimeGet(currTime, s_i8=sec(1), rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__, rcToReturn=rc)) return
-
-      call ESMF_VMAllReduce(vm, sendData=timeStepSec, recvData=timeStepSecMin, &
+      call ESMF_VMAllReduce(vm, sendData=sec, recvData=secMin, &
         count=1, reduceflag=ESMF_REDUCE_MIN, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__, rcToReturn=rc)) return
+      if (sec(1) > secMin(1)) then
+        call ESMF_LogSetError(ESMF_RC_INTNRL_INCONS, &
+          msg="Inconsistent currTime detected arcoss MPI ranks!", &
+          line=__LINE__, &
+          file=__FILE__, rcToReturn=rc)
+        return  ! bail out
+      endif
 
-      call ESMF_TimeIntervalSet(timeStep, s=timeStepSecMin(1), rc=rc)
+      ! Determine local timeStep
+      timeStep = stopTime - currTime
+
+      ! Determine consistent timeStep across all MPI ranks
+      call ESMF_TimeIntervalGet(timeStep, s_i8=sec(1), rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__, rcToReturn=rc)) return
+      call ESMF_VMAllReduce(vm, sendData=sec, recvData=secMin, &
+        count=1, reduceflag=ESMF_REDUCE_MIN, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__, rcToReturn=rc)) return
+      call ESMF_TimeIntervalSet(timeStep, s_i8=secMin(1), rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__, rcToReturn=rc)) return
 
+      ! Set the consistent timeStep in Clock for the next step
       call ESMF_ClockSet(clock, timeStep=timeStep, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
