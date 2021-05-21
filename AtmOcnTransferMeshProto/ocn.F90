@@ -266,7 +266,7 @@ module OCN
 #if (defined READ_MESHOUT_FROM_FILE && defined ESMF_NETCDF)
     ! create from file
     meshOut = ESMF_MeshCreate("./fv1.9x2.5_unstructured.nc", &
-      fileformat=ESMF_FILEFORMAT_ESMFMESH, name="OCN-GridOut", rc=rc)
+      fileformat=ESMF_FILEFORMAT_ESMFMESH, name="OCN-MeshOut", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

@@ -230,6 +230,12 @@ module ATM
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
+      ! destroy the grid actually not needed
+      call ESMF_GridDestroy(gridIn, noGarbage=.true., rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
     endif
 
     !NOTE: The air_pressure_at_sea_level (pmsl) Field is not realized here
@@ -387,21 +393,23 @@ module ATM
 #if (defined USE_NODAL_DG && defined USE_ELEMENT_DG)
     ! Create a new Mesh on both new DistGrid
     mesh = ESMF_MeshEmptyCreate(nodalDistGrid=newNodalDG, &
-      elementDistGrid=newElementDG, name=name, rc=rc)
+      elementDistGrid=newElementDG, name="ATM-custom-"//trim(name), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 #elif (defined USE_NODAL_DG)
     ! Create a new Mesh on new nodal DistGrid
-    mesh = ESMF_MeshEmptyCreate(nodalDistGrid=newNodalDG, name=name, rc=rc)
+    mesh = ESMF_MeshEmptyCreate(nodalDistGrid=newNodalDG, &
+      name="ATM-custom-"//trim(name), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 #elif (defined USE_ELEMENT_DG)
     ! Create a new Mesh on new element DistGrid
-    mesh = ESMF_MeshEmptyCreate(elementDistGrid=newElementDG, name=name, rc=rc)
+    mesh = ESMF_MeshEmptyCreate(elementDistGrid=newElementDG, &
+      name="ATM-custom-"//trim(name), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -452,7 +460,7 @@ module ATM
 
 #undef USE_NODAL_DG
 #undef USE_ELEMENT_DG
-#define USE_NODAL_DG_off
+#define USE_NODAL_DG
 #define USE_ELEMENT_DG
 
 #ifdef USE_NODAL_DG
@@ -532,21 +540,23 @@ module ATM
 #if (defined USE_NODAL_DG && defined USE_ELEMENT_DG)
     ! Create a new Mesh on both new DistGrid
     mesh = ESMF_MeshEmptyCreate(nodalDistGrid=newNodalDG, &
-      elementDistGrid=newElementDG, name=name, rc=rc)
+      elementDistGrid=newElementDG, name="ATM-custom-"//trim(name), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 #elif (defined USE_NODAL_DG)
     ! Create a new Mesh on new nodal DistGrid
-    mesh = ESMF_MeshEmptyCreate(nodalDistGrid=newNodalDG, name=name, rc=rc)
+    mesh = ESMF_MeshEmptyCreate(nodalDistGrid=newNodalDG, &
+      name="ATM-custom-"//trim(name), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 #elif (defined USE_ELEMENT_DG)
     ! Create a new Mesh on new element DistGrid
-    mesh = ESMF_MeshEmptyCreate(elementDistGrid=newElementDG, name=name, rc=rc)
+    mesh = ESMF_MeshEmptyCreate(elementDistGrid=newElementDG, &
+      name="ATM-custom-"//trim(name), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -722,6 +732,13 @@ module ATM
 
     ! test a regrid between to fields that were created on transferred Meshes
     call ESMF_FieldRegridStore(fieldIn, fieldOut, routehandle=rh, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! release the RouteHandle
+    call ESMF_FieldRegridRelease(rh, noGarbage=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

@@ -407,7 +407,7 @@ module ATM
 
     ! create the new DistGrid with the same minIndexPTile and maxIndexPTile,
     ! but use default multi-tile regDecomp
-    ! If the default regDecomp is not suitable, a custome one could be set
+    ! If the default regDecomp is not suitable, a custom one could be set
     ! up here and used.
     distgrid = ESMF_DistGridCreate(minIndexPTile=minIndexPTile, &
       maxIndexPTile=maxIndexPTile, connectionList=connectionList, rc=rc)
@@ -419,7 +419,7 @@ module ATM
     deallocate(minIndexPTile, maxIndexPTile, connectionList)
 
     ! Create a new Grid on the new DistGrid
-    grid = ESMF_GridCreate(distgrid, rc=rc)
+    grid = ESMF_GridCreate(distgrid, name="ATM-custom-"//trim(name), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -539,7 +539,7 @@ module ATM
         file=__FILE__)) &
         return  ! bail out
       ! Create default regDecomp Grid
-      grid = ESMF_GridCreate(distgrid, rc=rc)
+      grid = ESMF_GridCreate(distgrid, name="ATM-custom-"//trim(name), rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
