@@ -86,7 +86,7 @@ module ATM
     ! Disabling the following macro, e.g. renaming to WITHIMPORTFIELDS_disable,
     ! will result in a model component that does not advertise any importable
     ! Fields. Use this if you want to drive the model independently.
-#define WITHIMPORTFIELDS
+#define WITHIMPORTFIELDS__off
 #ifdef WITHIMPORTFIELDS
     ! importable field: sea_surface_temperature
     call NUOPC_Advertise(importState, &
@@ -138,7 +138,7 @@ module ATM
       return  ! bail out
 
     ! create a Grid object for Fields
-    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/10, 100/), &
+    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/100, 800/), &
       minCornerCoord=(/10._ESMF_KIND_R8, 20._ESMF_KIND_R8/), &
       maxCornerCoord=(/100._ESMF_KIND_R8, 200._ESMF_KIND_R8/), &
       coordSys=ESMF_COORDSYS_CART, staggerLocList=(/ESMF_STAGGERLOC_CENTER/), &
@@ -268,6 +268,8 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+call ESMF_VMLogMemInfo("ATM-log1", logMsgFlag=ESMF_LOGMSG_DEBUG)
 
   end subroutine
 

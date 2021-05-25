@@ -55,12 +55,14 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#if 0
     call NUOPC_CompSpecialize(model, specLabel=label_SetClock, &
       specRoutine=SetClock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     call NUOPC_CompSpecialize(model, specLabel=label_Advance, &
       specRoutine=Advance, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -145,7 +147,7 @@ module OCN
       return  ! bail out
 
     ! create a Grid object for Fields
-    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/100, 20/), &
+    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/800, 100/), &
       minCornerCoord=(/10._ESMF_KIND_R8, 20._ESMF_KIND_R8/), &
       maxCornerCoord=(/100._ESMF_KIND_R8, 200._ESMF_KIND_R8/), &
       coordSys=ESMF_COORDSYS_CART, staggerLocList=(/ESMF_STAGGERLOC_CENTER/), &
@@ -303,6 +305,10 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+call ESMF_VMWTimeDelay(1.0_ESMF_KIND_R8, rc=rc)
+
+call ESMF_VMLogMemInfo(logMsgFlag=ESMF_LOGMSG_DEBUG)
 
     call ESMF_ClockGet(clock, currTime=currTime, timeStep=timeStep, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
