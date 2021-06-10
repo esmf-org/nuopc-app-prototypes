@@ -138,7 +138,7 @@ module ATM
       return  ! bail out
 
     ! create a Grid object for Fields
-    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/100, 800/), &
+    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/100, 40/), &
       minCornerCoord=(/10._ESMF_KIND_R8, 20._ESMF_KIND_R8/), &
       maxCornerCoord=(/100._ESMF_KIND_R8, 200._ESMF_KIND_R8/), &
       coordSys=ESMF_COORDSYS_CART, staggerLocList=(/ESMF_STAGGERLOC_CENTER/), &
@@ -257,6 +257,8 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
+call ESMF_VMWTimeDelay(.05_ESMF_KIND_R8, rc=rc)
+
     call ESMF_ClockPrint(clock, options="stopTime", &
       preString="---------------------> to: ", unit=msgString, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -269,7 +271,7 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
-call ESMF_VMLogMemInfo("ATM-log1", logMsgFlag=ESMF_LOGMSG_DEBUG)
+call ESMF_VMLogMemInfo("ATM: ", logMsgFlag=ESMF_LOGMSG_DEBUG)
 
   end subroutine
 

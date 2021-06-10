@@ -135,6 +135,7 @@ module OCN
     type(ESMF_Field)        :: field
     type(ESMF_Grid)         :: gridIn
     type(ESMF_Grid)         :: gridOut
+    integer                 :: petCount
 
     rc = ESMF_SUCCESS
 
@@ -147,7 +148,13 @@ module OCN
       return  ! bail out
 
     ! create a Grid object for Fields
-    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/800, 100/), &
+    call ESMF_GridCompGet(model, petCount=petCount, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/40, 100/), &
+      regDecomp=(/1, petCount/), &
       minCornerCoord=(/10._ESMF_KIND_R8, 20._ESMF_KIND_R8/), &
       maxCornerCoord=(/100._ESMF_KIND_R8, 200._ESMF_KIND_R8/), &
       coordSys=ESMF_COORDSYS_CART, staggerLocList=(/ESMF_STAGGERLOC_CENTER/), &
@@ -252,6 +259,7 @@ module OCN
     type(ESMF_VM)               :: vm
     integer                     :: currentSsiPe
     character(len=160)          :: msgString
+    logical, save               :: firstTime = .true.
 
     rc = ESMF_SUCCESS
 
@@ -305,10 +313,13 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+      
+!if (firstTime) then
+call ESMF_VMWTimeDelay(.1_ESMF_KIND_R8, rc=rc)
+!firstTime=.false.
+!endif
 
-call ESMF_VMWTimeDelay(1.0_ESMF_KIND_R8, rc=rc)
-
-call ESMF_VMLogMemInfo(logMsgFlag=ESMF_LOGMSG_DEBUG)
+call ESMF_VMLogMemInfo("OCN: ", logMsgFlag=ESMF_LOGMSG_DEBUG)
 
     call ESMF_ClockGet(clock, currTime=currTime, timeStep=timeStep, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
