@@ -1,0 +1,3 @@
+globalResourceControl:  .true.
+logKindFlag:            ESMF_LOGKIND_MULTI
+logAppendFlag:          .true.

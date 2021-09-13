@@ -100,7 +100,13 @@ module ESM
       return  ! bail out
 
     ! get the petCount
-    call ESMF_GridCompGet(driver, petCount=petCount, rc=rc)
+    call ESMF_GridCompGet(driver, petCount=petCount, vm=vm, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call ESMF_VMLog(vm, "ESM SetModelServices() enter: ", ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -200,14 +206,17 @@ module ESM
     do i=1, petCount/2
       petList(i) = petCount/2 + i-1 ! PET labeling goes from 0 to petCount-1
     enddo
-    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/MaxCount", value=2, &
+    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/MaxCount", value=3, &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_DriverAddComp(driver, "OCN", ocnSS, ocnSVM, info=info, &
-      petList=petList, comp=child, rc=rc)
+    call NUOPC_DriverAddComp(driver, "OCN", ocnSS, &
+      ocnSVM, &
+      info=info, &
+!      petList=petList, &
+      comp=child, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -318,6 +327,17 @@ module ESM
       return  ! bail out
 
     call ESMF_GridCompSet(driver, clock=internalClock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call ESMF_GridCompGet(driver, vm=vm, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_VMLog(vm, "ESM SetModelServices() exit: ", ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

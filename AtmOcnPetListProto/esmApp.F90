@@ -21,16 +21,25 @@ program esmApp
 
   integer                 :: rc, urc
   type(ESMF_GridComp)     :: esmComp
+  type(ESMF_VM)           :: vm
 
   ! Initialize ESMF
-  call ESMF_Initialize(logkindflag=ESMF_LOGKIND_MULTI, &
-    defaultCalkind=ESMF_CALKIND_GREGORIAN, rc=rc)
+  call ESMF_Initialize(&
+    defaultConfigFileName="nuopc.configure", &
+    defaultCalkind=ESMF_CALKIND_GREGORIAN, &
+    vm=vm, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
   call ESMF_LogWrite("esmApp STARTING", ESMF_LOGMSG_INFO, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+  call ESMF_VMLog(vm, "esmApp VM init: ", ESMF_LOGMSG_INFO, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
@@ -65,6 +74,12 @@ program esmApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
+  call ESMF_VMLog(vm, "esmApp VM: ", ESMF_LOGMSG_INFO, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
   ! Call Run  for earth the system Component
   call ESMF_GridCompRun(esmComp, userRc=urc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -89,6 +104,12 @@ program esmApp
 
   ! Destroy the earth system Component
   call ESMF_GridCompDestroy(esmComp, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+  call ESMF_VMLog(vm, "esmApp VM final: ", ESMF_LOGMSG_INFO, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
