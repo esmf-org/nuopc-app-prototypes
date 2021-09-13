@@ -95,6 +95,22 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+    ! importable field: sea_surface_salinity
+    call NUOPC_Advertise(importState, &
+      StandardName="sea_surface_salinity", name="sss", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! importable field: sea_surface_height_above_sea_level
+    call NUOPC_Advertise(importState, &
+      StandardName="sea_surface_height_above_sea_level", name="ssh", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 #endif
 
     ! exportable field: air_pressure_at_sea_level
@@ -113,6 +129,14 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
+    ! exportable field: precipitation_flux
+    call NUOPC_Advertise(exportState, &
+      StandardName="precipitation_flux", name="precip", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
   end subroutine
 
   !-----------------------------------------------------------------------------
@@ -124,8 +148,15 @@ module ATM
     ! local variables
     type(ESMF_State)        :: importState, exportState
     type(ESMF_Field)        :: field
-    type(ESMF_Grid)         :: gridIn
-    type(ESMF_Grid)         :: gridOut
+    type(ESMF_Grid)         :: gridIn, gridOut
+    type(ESMF_Mesh)         :: meshIn, meshOut
+    type(ESMF_LocStream)    :: locsIn, locsOut
+
+    integer, parameter              :: totalNumPoints=100
+    integer(ESMF_KIND_I4), pointer  :: mask(:)
+    real(ESMF_KIND_R8), pointer     :: lon(:), lat(:)
+    real(ESMF_KIND_R8), pointer     :: fptr(:)
+    integer                         :: clb(1), cub(1), i
 
     rc = ESMF_SUCCESS
 
@@ -137,11 +168,12 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
-    ! create a Grid object for Fields
+    ! create Grid objects for Fields
     gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/10, 100/), &
       minCornerCoord=(/10._ESMF_KIND_R8, 20._ESMF_KIND_R8/), &
       maxCornerCoord=(/100._ESMF_KIND_R8, 200._ESMF_KIND_R8/), &
-      coordSys=ESMF_COORDSYS_CART, staggerLocList=(/ESMF_STAGGERLOC_CENTER/), &
+      coordSys=ESMF_COORDSYS_CART, &
+      staggerLocList=(/ESMF_STAGGERLOC_CENTER, ESMF_STAGGERLOC_CORNER/), &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -149,8 +181,87 @@ module ATM
       return  ! bail out
     gridOut = gridIn ! for now out same as in
 
+    ! create Mesh objects for Fields
+    meshIn = ESMF_MeshCreate(grid=gridIn, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    meshOut = ESMF_MeshCreate(grid=gridOut, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! create LocStream objects for Fields
+    locsIn=ESMF_LocStreamCreate(name="Equatorial Measurements", &
+        maxIndex=totalNumPoints, coordSys=ESMF_COORDSYS_SPH_DEG, &
+        indexFlag=ESMF_INDEX_GLOBAL, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! Add key data (internally allocating memory).
+    call ESMF_LocStreamAddKey(locsIn,                 &
+         keyName="ESMF:Lat",           &
+         KeyTypeKind=ESMF_TYPEKIND_R8, &
+         keyUnits="Degrees",           &
+         keyLongName="Latitude", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LocStreamAddKey(locsIn,                 &
+         keyName="ESMF:Lon",           &
+         KeyTypeKind=ESMF_TYPEKIND_R8, &
+         keyUnits="Degrees",           &
+         keyLongName="Longitude", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LocStreamAddKey(locsIn,                 &
+         keyName="ESMF:Mask",           &
+         KeyTypeKind=ESMF_TYPEKIND_I4, &
+         keyUnits="none",           &
+         keyLongName="mask values", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! Get coordinate memory
+    call ESMF_LocStreamGetKey(locsIn,                 &
+         localDE=0,                    &
+         keyName="ESMF:Lat",           &
+         farray=lat,                   &
+         rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_LocStreamGetKey(locsIn,                 &
+         localDE=0,                    &
+         keyName="ESMF:Lon",           &
+         farray=lon,                   &
+         rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! Get mask memory
+    call ESMF_LocStreamGetKey(locsIn,                 &
+         localDE=0,                    &
+         keyName="ESMF:Mask",           &
+         farray=mask,                   &
+         rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    locsOut = locsIn ! for now out same as in
+
 #ifdef WITHIMPORTFIELDS
-    ! importable field: sea_surface_temperature
+    ! importable field on Grid: sea_surface_temperature
     field = ESMF_FieldCreate(name="sst", grid=gridIn, &
       typekind=ESMF_TYPEKIND_R8, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -162,9 +273,51 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+    ! importable field on Grid: sea_surface_salinity
+    field = ESMF_FieldCreate(name="sss", mesh=meshIn, &
+      typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_Realize(importState, field=field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! importable field on LocStream: sea_surface_height_above_sea_level
+    field = ESMF_FieldCreate(name="ssh", locstream=locsIn, &
+      typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_Realize(importState, field=field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! Get Field memory
+    call ESMF_FieldGet(field, localDe=0, farrayPtr=fptr, &
+      computationalLBound=clb, computationalUBound=cub, rc=rc)
+    ! Set coordinate data and field data
+    do i=clb(1),cub(1)
+       lon(i)=(i-1)*360.0/REAL(totalNumPoints)
+       lat(i)=0.0
+       fptr(i)=0.0 ! Init to 0.0
+       mask(i)=0
+       ! Mask out range
+       ! (Same range as in ocn.F90)
+       if ((lon(i) > 10.0) .and. (lon(i) < 20.0)) then
+          mask(i)=2
+       endif
+    enddo
+
 #endif
 
-    ! exportable field: air_pressure_at_sea_level
+    ! exportable field on Grid: air_pressure_at_sea_level
     field = ESMF_FieldCreate(name="pmsl", grid=gridOut, &
       typekind=ESMF_TYPEKIND_R8, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -177,8 +330,21 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
-    ! exportable field: surface_net_downward_shortwave_flux
+    ! exportable field on Grid: surface_net_downward_shortwave_flux
     field = ESMF_FieldCreate(name="rsns", grid=gridOut, &
+      typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_Realize(exportState, field=field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! exportable field on Grid: precipitation_flux
+    field = ESMF_FieldCreate(name="precip", mesh=meshOut, &
       typekind=ESMF_TYPEKIND_R8, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
