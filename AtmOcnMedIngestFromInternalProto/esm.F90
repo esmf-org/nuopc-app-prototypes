@@ -94,8 +94,8 @@ module ESM
 
     ! set up free format driver attributes
     attrFF = NUOPC_FreeFormatCreate(stringList=(/ &
-      "Verbosity = 1",    &
-      "Profiling = 0" /), &
+      "Verbosity = high",    &
+      "Profiling = 0   " /), &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -273,10 +273,16 @@ module ESM
       "   MED         ",    &
       "   MED -> ATM  ",    &
       "   MED -> OCN  ",    &
-      "   ATM         ",    &
-      "   OCN         ",    &
-      "   ATM -> MED  ",    &
+      "   @@3600      ",    &
+      "    ATM        ",    &
+      "    OCN        ",    &
+      "    @1800      ",    &
+      "    ATM -> MED ",    &
+      "    @          ",    &
+      "   @@          ",    &
+      "   @@3600      ",    &
       "   OCN -> MED  ",    &
+      "   @@          ",    &
       "   MED         ",    &
       " @             " /), &
       rc=rc)
@@ -298,7 +304,7 @@ module ESM
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
 
-#if 0
+#if 1
     ! Diagnostic output
     call NUOPC_DriverPrint(driver, orderflag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
