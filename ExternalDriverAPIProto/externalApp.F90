@@ -207,14 +207,14 @@ program externalApp
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
-    return  ! bail out
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
   if (itemType /= ESMF_STATEITEM_NOTFOUND) then
     call ESMF_StateGet(externalExportState, itemName="precipitation_flux", &
       field=field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
-      return  ! bail out
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_FieldFill(field, dataFillScheme="sincos", member=1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
