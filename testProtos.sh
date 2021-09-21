@@ -10,8 +10,9 @@
 # Licensed under the University of Illinois-NCSA License.
 #==============================================================================
 
-MPIRUN="mpirun -np"
-#MPIRUN="srun -n"
+# Obtain ESMF_INTERNAL_MPIRUN from esmf.mk
+command=`grep ESMF_INTERNAL_MPIRUN $ESMFMKFILE`
+eval $command
 
 #TOOLRUN="valgrind --leak-check=full"
 
@@ -26,7 +27,7 @@ cd $1
 make distclean
 make
 set -x
-$MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
 local result=$?
 set +x
 if [ $result -eq 0 ]
@@ -57,7 +58,7 @@ make distclean
 make
 for arg in "${ARGS[@]}"; do
 set -x
-$MPIRUN 4 $TOOLRUN ./$2 $arg > $2.$arg.stdout 2>&1
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./$2 $arg > $2.$arg.stdout 2>&1
 local result=$?
 set +x
 if [ $result -ne 0 ]
@@ -87,7 +88,7 @@ echo "OCN_SELECT: A" > esm.config
 ((count++))
 testList[count]=$1
 set -x
-$MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
 local result=$?
 set +x
 if [ $result -eq 0 ]
@@ -103,7 +104,7 @@ echo "OCN_SELECT: A" > esm.config
 ((count++))
 testList[count]=$1
 set -x
-$MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
 local result=$?
 set +x
 if [ $result -eq 0 ]
@@ -119,7 +120,7 @@ echo "OCN_SELECT: B" > esm.config
 ((count++))
 testList[count]=$1
 set -x
-$MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
 local result=$?
 set +x
 if [ $result -eq 0 ]
@@ -146,7 +147,7 @@ echo "OCN_SELECT: A" > esm.config
 ((count++))
 testList[count]=$1
 set -x
-$MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
 local result=$?
 set +x
 if [ $result -eq 0 ]
@@ -162,7 +163,7 @@ echo "OCN_SELECT: B" > esm.config
 ((count++))
 testList[count]=$1
 set -x
-$MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
 local result=$?
 set +x
 if [ $result -eq 0 ]
@@ -178,7 +179,7 @@ echo "OCN_SELECT: C" > esm.config
 ((count++))
 testList[count]=$1
 set -x
-$MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
 local result=$?
 set +x
 if [ $result -eq 0 ]
@@ -194,7 +195,7 @@ echo "OCN_SELECT: A" > esm.config
 ((count++))
 testList[count]=$1
 set -x
-$MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
 local result=$?
 set +x
 if [ $result -eq 0 ]
@@ -211,7 +212,7 @@ echo "OCN_SELECT: B" > esm.config
 ((count++))
 testList[count]=$1
 set -x
-$MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
 local result=$?
 set +x
 if [ $result -eq 0 ]
@@ -224,7 +225,7 @@ echo
 make clean
 make ATM=F OCN=A,B,C
 echo "OCN_SELECT: C" > esm.config
-#$MPIRUN 4 ./$2   --- cannot run this because atmF is not fully implemented
+#$ESMF_INTERNAL_MPIRUN -np 4 ./$2   --- cannot run this because atmF is not fully implemented
 echo FINISHED: $1
 cd ..
 echo ---------------------------------------------------------------------------
@@ -240,7 +241,7 @@ cd $1
 make distclean
 set -x
 ./nuopcExplorerScript ../AtmOcnSelectExternalProto/ATM-A/atmA.mk
-$MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
 local result=$?
 set +x
 if [ $result -eq 0 ]
@@ -313,4 +314,4 @@ echo "== TEST SUMMARY STOP =="
 
 echo
 echo ---------------------------------------------------------------------------
-grep ERROR */PET*.ESMF_LogFile
+grep " ERROR " */PET*.ESMF_LogFile
