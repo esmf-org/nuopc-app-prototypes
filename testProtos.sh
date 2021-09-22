@@ -22,6 +22,7 @@ function TestProto {
 ((count++))
 testList[count]=$1
 echo ---------------------------------------------------------------------------
+date
 echo STARTING: $1
 cd $1
 make distclean
@@ -38,6 +39,7 @@ testResult[count]="FAIL"
 fi
 echo FINISHED: $1
 cd ..
+date
 echo ---------------------------------------------------------------------------
 echo
 }
@@ -52,6 +54,7 @@ fi
 testList[count]=$1
 read -ra ARGS <<< "$3"
 echo ---------------------------------------------------------------------------
+date
 echo STARTING: $1
 cd $1
 make distclean
@@ -74,12 +77,14 @@ testResult[count]="FAIL"
 fi
 echo FINISHED: $1
 cd ..
+date
 echo ---------------------------------------------------------------------------
 echo
 }
 
 function TestSelectProto {
 echo ---------------------------------------------------------------------------
+date
 echo STARTING: $1
 cd $1
 make distclean
@@ -131,12 +136,14 @@ testResult[count]="FAIL"
 fi
 echo FINISHED: $1
 cd ..
+date
 echo ---------------------------------------------------------------------------
 echo
 }
 
 function TestSelectExternalProto {
 echo ---------------------------------------------------------------------------
+date
 echo STARTING: $1
 cd $1
 make distclean
@@ -228,6 +235,7 @@ echo "OCN_SELECT: C" > esm.config
 #$ESMF_INTERNAL_MPIRUN -np 4 ./$2   --- cannot run this because atmF is not fully implemented
 echo FINISHED: $1
 cd ..
+date
 echo ---------------------------------------------------------------------------
 echo
 }
@@ -236,6 +244,7 @@ function TestExplorer {
 ((count++))
 testList[count]=$1
 echo ---------------------------------------------------------------------------
+date
 echo STARTING: $1
 cd $1
 make distclean
@@ -252,6 +261,7 @@ testResult[count]="FAIL"
 fi
 echo FINISHED: $1
 cd ..
+date
 echo ---------------------------------------------------------------------------
 echo
 }
@@ -303,6 +313,7 @@ TestProto     SingleModelOpenMPProto                      mainApp
 export OMP_NUM_THREADS=3
 TestProto     SingleModelOpenMPUnawareProto               mainApp
 
+date
 echo "== TEST SUMMARY START =="
 i=1
 while [[ $i -le $count ]]
@@ -311,6 +322,7 @@ echo ${testResult[i]}: ${testList[i]}
 ((i++))
 done
 echo "== TEST SUMMARY STOP =="
+date
 
 echo
 echo ---------------------------------------------------------------------------
