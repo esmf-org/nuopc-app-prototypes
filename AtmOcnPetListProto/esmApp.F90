@@ -21,12 +21,15 @@ program esmApp
 
   integer                 :: rc, urc
   type(ESMF_GridComp)     :: esmComp
+  type(ESMF_Config)       :: config
   type(ESMF_VM)           :: vm
 
   ! Initialize ESMF
   call ESMF_Initialize(&
-    defaultConfigFileName="nuopc.configure", &
-    defaultCalkind=ESMF_CALKIND_GREGORIAN, &
+    configFileName="nuopc.configure", &
+    defaultGlobalResourceControl=.true., &
+    defaultCalKind=ESMF_CALKIND_GREGORIAN, &
+    config=config, &
     vm=vm, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
@@ -46,7 +49,7 @@ program esmApp
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
   ! Create the earth system Component
-  esmComp = ESMF_GridCompCreate(name="esm", rc=rc)
+  esmComp = ESMF_GridCompCreate(name="esm", config=config, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &

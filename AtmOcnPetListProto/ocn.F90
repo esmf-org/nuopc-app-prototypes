@@ -164,6 +164,7 @@ module OCN
     real(ESMF_KIND_R8), pointer     :: lon(:), lat(:)
     real(ESMF_KIND_R8), pointer     :: fptr(:)
     integer                         :: clb(1), cub(1), i
+    type(ESMF_VM)                   :: vm
 
     rc = ESMF_SUCCESS
 
@@ -294,7 +295,7 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
 
-    ! importable field on Grid: precipitation_flux
+    ! importable field on Mesh: precipitation_flux
     field = ESMF_FieldCreate(name="precip", mesh=meshIn, &
       typekind=ESMF_TYPEKIND_R8, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &

@@ -87,8 +87,11 @@ module ESM
     type(ESMF_GridComp)           :: child
     type(ESMF_CplComp)            :: connector
     integer                       :: petCount, i
+    character(len=160)            :: petListString
     integer, allocatable          :: petList(:)
     type(ESMF_Info)               :: info
+    type(ESMF_Config)             :: config
+    type(NUOPC_FreeFormat)        :: ff
 
     ! - diagnostics -
     type(ESMF_VM)                 :: vm
@@ -106,7 +109,8 @@ module ESM
       return  ! bail out
 
     ! get the petCount
-    call ESMF_GridCompGet(driver, petCount=petCount, vm=vm, rc=rc)
+    call ESMF_GridCompGet(driver, config=config, petCount=petCount, vm=vm, &
+      rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -118,19 +122,28 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
 
-    ! SetServices for ATM with petList on first half of PETs
-    allocate(petList(petCount/2))
-    do i=1, petCount/2
-      petList(i) = i-1 ! PET labeling goes from 0 to petCount-1
-    enddo
-    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/MaxCount", value=2, &
+    ! ATM
+    ! - set up petList
+    ff = NUOPC_FreeFormatCreate(config, label="ATM_petlist:", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_IngestPetList(petList, ff, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! - set /NUOPC/Hint/PePerPet/MaxCount
+    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/MaxCount", value=1, &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    ! - add the ATM component to Driver
     call NUOPC_DriverAddComp(driver, "ATM", atmSS, atmSVM, info=info, &
-      petList=petList, comp=child, rc=rc)
+      petList=petList, config=config, comp=child, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -207,22 +220,28 @@ module ESM
 #endif
 #endif
 
-    ! SetServices for OCN with petList on second half of PETs
-    allocate(petList(petCount/2))
-    do i=1, petCount/2
-      petList(i) = petCount/2 + i-1 ! PET labeling goes from 0 to petCount-1
-    enddo
-    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/MaxCount", value=3, &
+    ! OCN
+    ! - set up petList
+    ff = NUOPC_FreeFormatCreate(config, label="OCN_petlist:", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_IngestPetList(petList, ff, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! - set /NUOPC/Hint/PePerPet/MaxCount
+    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/MaxCount", value=1, &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_DriverAddComp(driver, "OCN", ocnSS, &
-      ocnSVM, &
-      info=info, &
-      petList=petList, &
-      comp=child, rc=rc)
+    ! - add the OCN component to Driver
+    call NUOPC_DriverAddComp(driver, "OCN", ocnSS, ocnSVM, info=info, &
+      petList=petList, comp=child, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

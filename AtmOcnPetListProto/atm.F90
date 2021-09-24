@@ -86,8 +86,8 @@ module ATM
     ! Disabling the following macro, e.g. renaming to WITHIMPORTFIELDS_disable,
     ! will result in a model component that does not advertise any importable
     ! Fields. Use this if you want to drive the model independently.
-#define WITHIMPORTFIELDS
-#ifdef WITHIMPORTFIELDS
+#define WITHIMPORTFIELDS_GRID
+#ifdef WITHIMPORTFIELDS_GRID
     ! importable field: sea_surface_temperature
     call NUOPC_Advertise(importState, &
       StandardName="sea_surface_temperature", name="sst", rc=rc)
@@ -95,7 +95,10 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 
+#define WITHIMPORTFIELDS_MESH
+#ifdef WITHIMPORTFIELDS_MESH
     ! importable field: sea_surface_salinity
     call NUOPC_Advertise(importState, &
       StandardName="sea_surface_salinity", name="sss", rc=rc)
@@ -103,7 +106,10 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 
+#define WITHIMPORTFIELDS_LOCSTREAM
+#ifdef WITHIMPORTFIELDS_LOCSTREAM
     ! importable field: sea_surface_height_above_sea_level
     call NUOPC_Advertise(importState, &
       StandardName="sea_surface_height_above_sea_level", name="ssh", rc=rc)
@@ -157,6 +163,7 @@ module ATM
     real(ESMF_KIND_R8), pointer     :: lon(:), lat(:)
     real(ESMF_KIND_R8), pointer     :: fptr(:)
     integer                         :: clb(1), cub(1), i
+    type(ESMF_VM)                   :: vm
 
     rc = ESMF_SUCCESS
 
@@ -260,7 +267,7 @@ module ATM
       return  ! bail out
     locsOut = locsIn ! for now out same as in
 
-#ifdef WITHIMPORTFIELDS
+#ifdef WITHIMPORTFIELDS_GRID
     ! importable field on Grid: sea_surface_temperature
     field = ESMF_FieldCreate(name="sst", grid=gridIn, &
       typekind=ESMF_TYPEKIND_R8, rc=rc)
@@ -273,8 +280,10 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 
-    ! importable field on Grid: sea_surface_salinity
+#ifdef WITHIMPORTFIELDS_MESH
+    ! importable field on Mesh: sea_surface_salinity
     field = ESMF_FieldCreate(name="sss", mesh=meshIn, &
       typekind=ESMF_TYPEKIND_R8, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -286,7 +295,9 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 
+#ifdef WITHIMPORTFIELDS_LOCSTREAM
     ! importable field on LocStream: sea_surface_height_above_sea_level
     field = ESMF_FieldCreate(name="ssh", locstream=locsIn, &
       typekind=ESMF_TYPEKIND_R8, rc=rc)
@@ -314,7 +325,6 @@ module ATM
           mask(i)=2
        endif
     enddo
-
 #endif
 
     ! exportable field on Grid: air_pressure_at_sea_level
@@ -343,7 +353,7 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
-    ! exportable field on Grid: precipitation_flux
+    ! exportable field on Mesh: precipitation_flux
     field = ESMF_FieldCreate(name="precip", mesh=meshOut, &
       typekind=ESMF_TYPEKIND_R8, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
