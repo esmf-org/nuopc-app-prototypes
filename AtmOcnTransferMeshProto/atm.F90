@@ -869,11 +869,13 @@ module ATM
 !$omp end critical
 !$omp end parallel
 
-#define STDOUT_off
-#ifdef STDOUT
-    unit = 6
-#else
+#define FILEOUT_off
+! Activating FILEOUT triggers a hang for Intel < 19.1.1 when multi-threaded
+! due to an Intel bug
+#ifdef FILEOUT
     unit = localPet + 100
+#else
+    unit = 6
 #endif
 !$omp parallel private(tid)
     tid = -1 ! initialize to obvious value if building without OpenMP
