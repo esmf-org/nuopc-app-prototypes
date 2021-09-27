@@ -70,4 +70,4 @@ edit:
 	nedit mainApp.F90 driver.F90 model.F90 &
 
 run:
-	env OMP_NUM_THREADS=3 mpirun -np 4 ./mainApp
+	env OMP_NUM_THREADS=3 $(ESMF_INTERNAL_MPIRUN) -np 4 ./mainApp

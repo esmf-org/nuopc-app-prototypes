@@ -70,4 +70,4 @@ edit:
 	nedit app.F90 driver.F90 mediator.F90 modelA.F90 modelB.F90 &
 
 run:
-	mpirun -np 4 ./app
+	$(ESMF_INTERNAL_MPIRUN) -np 4 ./app

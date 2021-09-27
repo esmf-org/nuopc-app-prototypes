@@ -70,4 +70,4 @@ edit:
 	nedit mainApp.F90 driver.F90 atm.F90 med.F90 &
 
 run:
-	mpirun -np 4 ./mainApp
+	$(ESMF_INTERNAL_MPIRUN) -np 4 ./mainApp

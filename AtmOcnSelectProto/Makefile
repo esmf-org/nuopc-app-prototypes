@@ -85,4 +85,4 @@ edit:
 	nedit esmApp.F90 esm.F90 atmA.F90 atmB.F90 ocnA.F90 ocnB.F90 &
 
 run:
-	mpirun -np 4 ./esmApp
+	$(ESMF_INTERNAL_MPIRUN) -np 4 ./esmApp
