@@ -153,7 +153,7 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/40, 100/), &
+    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/20, 100/), &
       regDecomp=(/1, petCount/), &
       minCornerCoord=(/10._ESMF_KIND_R8, 20._ESMF_KIND_R8/), &
       maxCornerCoord=(/100._ESMF_KIND_R8, 200._ESMF_KIND_R8/), &

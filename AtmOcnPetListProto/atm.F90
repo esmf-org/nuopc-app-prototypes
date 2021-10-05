@@ -138,7 +138,7 @@ module ATM
       return  ! bail out
 
     ! create a Grid object for Fields
-    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/100, 40/), &
+    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/100, 20/), &
       minCornerCoord=(/10._ESMF_KIND_R8, 20._ESMF_KIND_R8/), &
       maxCornerCoord=(/100._ESMF_KIND_R8, 200._ESMF_KIND_R8/), &
       coordSys=ESMF_COORDSYS_CART, staggerLocList=(/ESMF_STAGGERLOC_CENTER/), &
