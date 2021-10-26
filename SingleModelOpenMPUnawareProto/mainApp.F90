@@ -8,117 +8,107 @@
 ! Licensed under the University of Illinois-NCSA License.
 !==============================================================================
 
-program esmApp
+#define EXPLICIT_MPI_INIT
+
+program mainApp
 
   !-----------------------------------------------------------------------------
-  ! Generic ESM application driver
+  ! Generic ESMF Main
   !-----------------------------------------------------------------------------
 
   use ESMF
-  use ESM, only: esmSS => SetServices
+#ifdef EXPLICIT_MPI_INIT
+  use MPI
+#endif
+
+  use driver, only: &
+    driver_SS => SetServices
 
   implicit none
 
-  integer                 :: rc, urc
-  type(ESMF_GridComp)     :: esmComp
-  type(ESMF_Config)       :: config
-  type(ESMF_VM)           :: vm
+  integer                       :: rc, userRc
+  type(ESMF_GridComp)           :: drvComp
 
-  ! Initialize ESMF
-  call ESMF_Initialize(&
-    configFileName="nuopc.configure", &
-    defaultGlobalResourceControl=.true., &
-    defaultCalKind=ESMF_CALKIND_GREGORIAN, &
-    config=config, &
-    vm=vm, rc=rc)
+  ! Initialize MPI/ESMF
+#ifdef EXPLICIT_MPI_INIT
+  ! This prototype implements ESMF-aware resource management for threading.
+  ! Therefore must call ESMF_InitializePreMPI() before MPI_Init*() if later is
+  ! called explicitly from user level!
+  call ESMF_InitializePreMPI(rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  call MPI_Init_thread(MPI_THREAD_MULTIPLE, userRc, rc)
+#endif
+  call ESMF_Initialize(defaultCalkind=ESMF_CALKIND_GREGORIAN, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-  call ESMF_LogWrite("esmApp STARTING", ESMF_LOGMSG_INFO, rc=rc)
+  call ESMF_LogWrite("mainApp STARTING", ESMF_LOGMSG_INFO, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-  call ESMF_VMLog(vm, "esmApp VM init: ", ESMF_LOGMSG_INFO, rc=rc)
+  !-----------------------------------------------------------------------------
+
+  ! -> CREATE THE DRIVER
+  drvComp = ESMF_GridCompCreate(name="driver", rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-  ! Create the earth system Component
-  esmComp = ESMF_GridCompCreate(name="esm", config=config, rc=rc)
+  ! -> SET DRIVER SERVICES
+  call ESMF_GridCompSetServices(drvComp, driver_SS, userRc=userRc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  if (ESMF_LogFoundError(rcToCheck=userRc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-  ! SetServices for the earth system Component
-  call ESMF_GridCompSetServices(esmComp, esmSS, userRc=urc, rc=rc)
+  ! INITIALIZE THE DRIVER
+  call ESMF_GridCompInitialize(drvComp, userRc=userRc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
+  if (ESMF_LogFoundError(rcToCheck=userRc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-  ! Call Initialize for the earth system Component
-  call ESMF_GridCompInitialize(esmComp, userRc=urc, rc=rc)
+  ! RUN THE DRIVER
+  call ESMF_GridCompRun(drvComp, userRc=userRc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
+  if (ESMF_LogFoundError(rcToCheck=userRc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-  call ESMF_VMLog(vm, "esmApp VM: ", ESMF_LOGMSG_INFO, rc=rc)
+  ! FINALIZE THE DRIVER
+  call ESMF_GridCompFinalize(drvComp, userRc=userRc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-  ! Call Run  for earth the system Component
-  call ESMF_GridCompRun(esmComp, userRc=urc, rc=rc)
-  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-    line=__LINE__, &
-    file=__FILE__)) &
-    call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
+  if (ESMF_LogFoundError(rcToCheck=userRc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-  ! Call Finalize for the earth system Component
-  call ESMF_GridCompFinalize(esmComp, userRc=urc, rc=rc)
-  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-    line=__LINE__, &
-    file=__FILE__)) &
-    call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
-    line=__LINE__, &
-    file=__FILE__)) &
-    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  !-----------------------------------------------------------------------------
 
-  ! Destroy the earth system Component
-  call ESMF_GridCompDestroy(esmComp, rc=rc)
-  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-    line=__LINE__, &
-    file=__FILE__)) &
-    call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-  call ESMF_VMLog(vm, "esmApp VM final: ", ESMF_LOGMSG_INFO, rc=rc)
-  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-    line=__LINE__, &
-    file=__FILE__)) &
-    call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-  call ESMF_LogWrite("esmApp FINISHED", ESMF_LOGMSG_INFO, rc=rc)
+  call ESMF_LogWrite("mainApp FINISHED", ESMF_LOGMSG_INFO, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &

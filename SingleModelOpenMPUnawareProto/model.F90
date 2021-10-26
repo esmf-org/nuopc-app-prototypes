@@ -8,28 +8,28 @@
 ! Licensed under the University of Illinois-NCSA License.
 !==============================================================================
 
-module ATM
+module MODEL
 
   !-----------------------------------------------------------------------------
-  ! ATM Component.
+  ! MODEL Component.
   !-----------------------------------------------------------------------------
 
   use ESMF
   use NUOPC
   use NUOPC_Model, &
-    modelSS      => SetServices
+    modelSS    => SetServices
 
   implicit none
 
   private
 
-  public SetServices
+  public SetVM, SetServices
 
   !-----------------------------------------------------------------------------
   contains
   !-----------------------------------------------------------------------------
 
-  subroutine SetServices(model, rc)
+ subroutine SetServices(model, rc)
     type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
 
@@ -55,14 +55,14 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSpecialize(model, specLabel=label_Advance, &
-      specRoutine=Advance, rc=rc)
+    call NUOPC_CompSpecialize(model, specLabel=label_DataInitialize, &
+      specRoutine=DataInitialize, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSpecialize(model, specLabel=label_CheckImport, &
-      specRoutine=NUOPC_NoOp, rc=rc)
+    call NUOPC_CompSpecialize(model, specLabel=label_Advance, &
+      specRoutine=Advance, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -89,20 +89,15 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
-#if 1
+    ! Enabeling the following macro, i.e. renaming it to WITHIMPORTFIELDS,
+    ! will result in a model component that advertise import Field dependencies.
+    ! In the single model case, where there isn't another model to satisfy these
+    ! dependencies, it is expected to be caught by the compatability checking.
+#define WITHIMPORTFIELDS___disable
+#ifdef WITHIMPORTFIELDS
     ! importable field: sea_surface_temperature
     call NUOPC_Advertise(importState, &
       StandardName="sea_surface_temperature", name="sst", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-#endif
-
-#if 1
-    ! importable field: precipitation_flux
-    call NUOPC_Advertise(importState, &
-      StandardName="precipitation_flux", name="precip", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -119,23 +114,7 @@ module ATM
 
     ! exportable field: surface_net_downward_shortwave_flux
     call NUOPC_Advertise(exportState, &
-      StandardName="surface_net_downward_longwave_flux", name="rsnl", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    ! exportable field: surface_net_downward_shortwave_flux
-    call NUOPC_Advertise(exportState, &
       StandardName="surface_net_downward_shortwave_flux", name="rsns", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    ! exportable field: surface_downward_heat_flux_in_air
-    call NUOPC_Advertise(exportState, &
-      StandardName="surface_downward_heat_flux_in_air", name="sdhf", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -150,12 +129,10 @@ module ATM
     integer, intent(out) :: rc
 
     ! local variables
-    type(ESMF_State)            :: importState, exportState
-    type(ESMF_Field)            :: field
-    type(ESMF_Grid)             :: gridIn
-    type(ESMF_Grid)             :: gridOut
-    real(ESMF_KIND_R8), pointer :: dataPtr(:,:), lonPtr(:), latPtr(:)
-    integer                     :: i,j
+    type(ESMF_State)        :: importState, exportState
+    type(ESMF_Field)        :: field
+    type(ESMF_Grid)         :: gridIn
+    type(ESMF_Grid)         :: gridOut
 
     rc = ESMF_SUCCESS
 
@@ -168,29 +145,31 @@ module ATM
       return  ! bail out
 
     ! create a Grid object for Fields
-#define LAT_LON_GRID
-#ifdef LAT_LON_GRID
-    gridIn = ESMF_GridCreate1PeriDimUfrm(maxIndex=(/100, 50/), &
-      minCornerCoord=(/0._ESMF_KIND_R8, -60._ESMF_KIND_R8/), &
-      maxCornerCoord=(/360._ESMF_KIND_R8, 80._ESMF_KIND_R8/), &
-      staggerLocList=(/ESMF_STAGGERLOC_CENTER/), rc=rc)
-#else
-    gridIn = ESMF_GridCreateCubedSphere(tileSize=16, name="CubedSphere", &
-      staggerLocList=(/ESMF_STAGGERLOC_CENTER/), rc=rc)
-#endif
+    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/10, 100/), &
+      minCornerCoord=(/10._ESMF_KIND_R8, 20._ESMF_KIND_R8/), &
+      maxCornerCoord=(/100._ESMF_KIND_R8, 200._ESMF_KIND_R8/), &
+      coordSys=ESMF_COORDSYS_CART, staggerLocList=(/ESMF_STAGGERLOC_CENTER/), &
+      rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     gridOut = gridIn ! for now out same as in
 
-    ! conditionally realize the fields in the importState
-    call NUOPC_Realize(importState, grid=gridIn, typekind=ESMF_TYPEKIND_R8, &
-      selection="realize_connected_remove_others", rc=rc)
+#ifdef WITHIMPORTFIELDS
+    ! importable field: sea_surface_temperature
+    field = ESMF_FieldCreate(name="sst", grid=gridIn, &
+      typekind=ESMF_TYPEKIND_R8, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    call NUOPC_Realize(importState, field=field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
 
     ! exportable field: air_pressure_at_sea_level
     field = ESMF_FieldCreate(name="pmsl", grid=gridOut, &
@@ -205,25 +184,6 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
-    ! fill export with some data
-    call ESMF_FieldFill(field, dataFillScheme="sincos", member=1, rc=rc)
-
-    ! exportable field: surface_net_downward_longwave_flux
-    field = ESMF_FieldCreate(name="rsnl", grid=gridOut, &
-      typekind=ESMF_TYPEKIND_R8, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_Realize(exportState, field=field, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    ! fill export with some data
-    call ESMF_FieldFill(field, dataFillScheme="sincos", member=2, rc=rc)
-
     ! exportable field: surface_net_downward_shortwave_flux
     field = ESMF_FieldCreate(name="rsns", grid=gridOut, &
       typekind=ESMF_TYPEKIND_R8, rc=rc)
@@ -237,52 +197,76 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
-    ! fill export with some data
-    call ESMF_FieldFill(field, dataFillScheme="sincos", member=3, rc=rc)
-
-    ! exportable field: surface_downward_heat_flux_in_air
-    field = ESMF_FieldCreate(name="sdhf", grid=gridOut, &
-      typekind=ESMF_TYPEKIND_R8, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_Realize(exportState, field=field, rc=rc)
+    call ESMF_VMLogMemInfo(prefix="After Realize:", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 
-    ! fill export with some data
-    call ESMF_FieldFill(field, dataFillScheme="sincos", member=4, rc=rc)
+  end subroutine
+
+  !-----------------------------------------------------------------------------
+
+  subroutine DataInitialize(model, rc)
+    type(ESMF_GridComp)  :: model
+    integer, intent(out) :: rc
+
+    integer, save  :: inHere=1
+
+    rc = ESMF_SUCCESS
+
+    if (inHere > 1) then
+      ! indicate that data initialization is complete (breaking out of init-loop)
+      call NUOPC_CompAttributeSet(model, &
+        name="InitializeDataComplete", value="true", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    endif
+
+    inHere = inHere + 1
 
   end subroutine
 
   !-----------------------------------------------------------------------------
 
   subroutine Advance(model, rc)
+!$  use omp_lib
     type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
 
     ! local variables
     type(ESMF_Clock)            :: clock
     type(ESMF_State)            :: importState, exportState
-    type(ESMF_Field)            :: field
-    type(ESMF_StateItem_Flag)   :: itemType
-    real(ESMF_KIND_R8), pointer :: dataPtr(:,:)
-    integer                     :: i,j
+    type(ESMF_VM)               :: vm
+    integer                     :: currentSsiPe
     character(len=160)          :: msgString
-    integer, save               :: slice=1
 
     rc = ESMF_SUCCESS
 
     ! query for clock, importState and exportState
-    call NUOPC_ModelGet(model, modelClock=clock, importState=importState, &
-      exportState=exportState, rc=rc)
+    call ESMF_GridCompGet(model, clock=clock, importState=importState, &
+      exportState=exportState, vm=vm, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+    ! Now can use OpenMP for fine grained parallelism...
+    ! Here just write info about the PET-local OpenMP threads to Log.
+!$omp parallel private(msgString, currentSsiPe)
+!$omp critical
+!$    call ESMF_VMGet(vm, currentSsiPe=currentSsiPe)
+!$    write(msgString,'(A,I4,A,I4,A,I4,A,I4,A,I4)') &
+!$      "thread_num=", omp_get_thread_num(), &
+!$      "   currentSsiPe=", currentSsiPe, &
+!$      "   num_threads=", omp_get_num_threads(), &
+!$      "   max_threads=", omp_get_max_threads(), &
+!$      "   num_procs=", omp_get_num_procs()
+!$    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+!$omp end critical
+!$omp end parallel
 
     ! HERE THE MODEL ADVANCES: currTime -> currTime + timeStep
 
@@ -292,7 +276,7 @@ module ATM
     ! for this call of the Advance() routine.
 
     call ESMF_ClockPrint(clock, options="currTime", &
-      preString="------>Advancing ATM from: ", unit=msgString, rc=rc)
+      preString="---->Advancing Model from: ", unit=msgString, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -314,75 +298,6 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-
-    ! update the "pmsl" field
-    call ESMF_StateGet(exportState, itemName="pmsl", itemType=itemType, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    if (itemType /= ESMF_STATEITEM_NOTFOUND) then
-      call ESMF_StateGet(exportState, itemName="pmsl", field=field, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-      call ESMF_FieldGet(field, farrayPtr=dataPtr, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-      ! dummy calculation to make the export field more interesting
-      do j=lbound(dataPtr,2),ubound(dataPtr,2)
-      do i=lbound(dataPtr,1),ubound(dataPtr,1)
-        dataPtr(i,j) = dataPtr(i,j) * 1.1
-      enddo
-      enddo
-    endif
-
-    ! update the "rsns" field
-    call ESMF_StateGet(exportState, itemName="rsns", itemType=itemType, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    if (itemType /= ESMF_STATEITEM_NOTFOUND) then
-      call ESMF_StateGet(exportState, itemName="rsns", field=field, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-      call ESMF_FieldGet(field, farrayPtr=dataPtr, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-      ! dummy calculation to make the export field more interesting
-      do j=lbound(dataPtr,2),ubound(dataPtr,2)
-      do i=lbound(dataPtr,1),ubound(dataPtr,1)
-        dataPtr(i,j) = dataPtr(i,j) * 1.1
-      enddo
-      enddo
-    endif
-
-#ifdef LAT_LON_GRID
-    ! write out the Fields in the importState
-    call NUOPC_Write(importState, fileNamePrefix="field_atm_import_", &
-      timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    ! write out the Fields in the exportState
-    call NUOPC_Write(exportState, fileNamePrefix="field_atm_export_", &
-      timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-#endif
-    ! advance the time slice counter
-    slice = slice + 1
 
   end subroutine
 

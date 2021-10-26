@@ -26,6 +26,8 @@ program externalApp
   type(ESMF_TimeInterval) :: timeStep
   type(ESMF_Clock)        :: clock
   type(ESMF_State)        :: externalExportState, externalImportState
+  type(ESMF_StateItem_Flag):: itemType
+  type(ESMF_Field)        :: field
   integer                 :: phase
   character(40)           :: sharePolicy
   integer, save           :: slice=1
@@ -111,6 +113,7 @@ program externalApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
+#if 1
   ! Advertise field(s) in external import state in order to receive from ESM
 #define SHARED
 #ifdef SHARED
@@ -123,15 +126,41 @@ program externalApp
   sharePolicy = "not share"
 #endif
   call NUOPC_Advertise(externalImportState, &
-    StandardNames=(/"sea_surface_temperature"/), &
+    StandardNames=(/"sea_surface_temperature            ", &
+                    "surface_net_downward_shortwave_flux"/), &
     TransferOfferGeomObject="cannot provide", SharePolicyField=sharePolicy, &
     rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
+#endif
+
+#if 1
+  ! Advertise field(s) in external export state in order to send to ESM
+#define SHARED
+#ifdef SHARED
+  ! request reference sharing for field and geomobject
+  ! -> still the child component may not allow sharing and we end up with copy
+  sharePolicy = "share"
+#else
+  ! prevent reference sharing for field and geomobject
+  ! -> definitely create local copy of the field here
+  sharePolicy = "not share"
+#endif
+  call NUOPC_Advertise(externalExportState, &
+    StandardNames=(/"precipitation_flux"/), &
+    TransferOfferGeomObject="cannot provide", SharePolicyField=sharePolicy, &
+    rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+#endif
 
   ! Call "ExternalAdvertise" Initialize for the earth system Component
+  ! -> This method removes any fields previously advertised in the states,
+  ! but ended up not connected.
   call NUOPC_CompSearchPhaseMap(esmComp, methodflag=ESMF_METHOD_INITIALIZE, &
     phaseLabel=label_ExternalAdvertise, phaseIndex=phase, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -151,6 +180,9 @@ program externalApp
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
   ! Call "ExternalRealize" Initialize for the earth system Component
+  ! -> This method realizes any fields previously advertised in the states,
+  ! for which enough information is available to realize (e.g. due to sharing,
+  ! or transfers).
   call NUOPC_CompSearchPhaseMap(esmComp, methodflag=ESMF_METHOD_INITIALIZE, &
     phaseLabel=label_ExternalRealize, phaseIndex=phase, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -168,6 +200,27 @@ program externalApp
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+  ! Fill fields provided from this level with data
+  call ESMF_StateGet(externalExportState, itemName="precipitation_flux", &
+    itemType=itemType, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  if (itemType /= ESMF_STATEITEM_NOTFOUND) then
+    call ESMF_StateGet(externalExportState, itemName="precipitation_flux", &
+      field=field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_FieldFill(field, dataFillScheme="sincos", member=1, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  endif
 
   ! Call "ExternalDataInit" Initialize for the earth system Component
   call NUOPC_CompSearchPhaseMap(esmComp, methodflag=ESMF_METHOD_INITIALIZE, &
@@ -207,6 +260,12 @@ program externalApp
 
   ! Explicit time stepping loop on the external level, here based on ESMF_Clock
   do while (.not.ESMF_ClockIsStopTime(clock, rc=rc))
+    ! Timestamp the fields in the externalExportState
+    call NUOPC_SetTimestamp(externalExportState, clock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
     ! Run the earth system Component: i.e. step ESM forward by timestep=15min
     call ESMF_GridCompRun(esmComp, clock=clock, &
       importState=externalExportState, exportState=externalImportState, &

@@ -23,7 +23,7 @@ module OCN
 
   private
 
-  public SetServices
+  public SetVM, SetServices
 
   !-----------------------------------------------------------------------------
   contains
@@ -148,7 +148,7 @@ module OCN
 
     ! --- IMPORT -------------------------------------------------------------
 #define READ_MESHIN_FROM_FILE
-#ifdef READ_MESHIN_FROM_FILE
+#if (defined READ_MESHIN_FROM_FILE && defined ESMF_NETCDF)
     ! create from file
     meshIn = ESMF_MeshCreate("./gx3v7_unstructured.nc", &
       fileformat=ESMF_FILEFORMAT_ESMFMESH, name="OCN-MeshIn", rc=rc)
@@ -263,10 +263,10 @@ module OCN
 
     ! --- EXPORT -------------------------------------------------------------
 #define READ_MESHOUT_FROM_FILE
-#ifdef READ_MESHOUT_FROM_FILE
+#if (defined READ_MESHOUT_FROM_FILE && defined ESMF_NETCDF)
     ! create from file
     meshOut = ESMF_MeshCreate("./fv1.9x2.5_unstructured.nc", &
-      fileformat=ESMF_FILEFORMAT_ESMFMESH, name="OCN-GridOut", rc=rc)
+      fileformat=ESMF_FILEFORMAT_ESMFMESH, name="OCN-MeshOut", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -426,6 +426,7 @@ module OCN
   !-----------------------------------------------------------------------------
 
   subroutine Advance(model, rc)
+!$  use omp_lib
     type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
 
@@ -434,6 +435,9 @@ module OCN
     type(ESMF_State)            :: importState, exportState
     type(ESMF_Time)             :: currTime
     type(ESMF_TimeInterval)     :: timeStep
+    integer, save               :: slice=1
+    type(ESMF_VM)               :: vm
+    integer                     :: currentSsiPe, i, tid, unit, localPet
     character(len=160)          :: msgString
 
     rc = ESMF_SUCCESS
@@ -445,6 +449,49 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    call ESMF_GridCompGet(model, vm=vm, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_VMGet(vm, localPet=localPet, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! Now can use OpenMP for fine grained parallelism...
+    ! Here just write info about the PET-local OpenMP threads to Log.
+!$omp parallel private(msgString, currentSsiPe)
+!$omp critical
+!$    call ESMF_VMGet(vm, currentSsiPe=currentSsiPe)
+!$    write(msgString,'(A,I4,A,I4,A,I4,A,I4,A,I4)') &
+!$      "thread_num=", omp_get_thread_num(), &
+!$      "   currentSsiPe=", currentSsiPe, &
+!$      "   num_threads=", omp_get_num_threads(), &
+!$      "   max_threads=", omp_get_max_threads(), &
+!$      "   num_procs=", omp_get_num_procs()
+!$    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+!$omp end critical
+!$omp end parallel
+
+#define FILEOUT_off
+! Activating FILEOUT triggers a hang for Intel < 19.1.1 when multi-threaded
+! due to an Intel bug
+#ifdef FILEOUT
+    unit = localPet + 200
+#else
+    unit = 6
+#endif
+!$omp parallel private(tid)
+    tid = -1 ! initialize to obvious value if building without OpenMP
+!$  tid = omp_get_thread_num()
+!$omp do
+    do i=1, 100
+      write(unit,*) "OCN test write, localPet=", localPet, "  tid=", tid, &
+        "  slice=", slice, "  i=", i
+    enddo
+!$omp end parallel
 
     ! HERE THE MODEL ADVANCES: currTime -> currTime + timeStep
 
@@ -484,6 +531,8 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+    slice = slice+1
 
   end subroutine
 

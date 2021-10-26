@@ -70,4 +70,4 @@ edit:
 	nedit externalApp.F90 esm.F90 atm.F90 ocn.F90 &
 
 run:
-	mpirun -np 4 ./externalApp
+	$(ESMF_INTERNAL_MPIRUN) -np 4 ./externalApp

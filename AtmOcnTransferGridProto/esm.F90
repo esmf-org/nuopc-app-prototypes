@@ -96,18 +96,6 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-#define MORE_THAN_ONE_PE_PER_PET_WORKING_ATM
-#ifdef MORE_THAN_ONE_PE_PER_PET_WORKING_ATM
-    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/MaxCount", value=2, &
-      rc=rc)
-#else
-    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/MaxCount", value=1, &
-      rc=rc)
-#endif
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
 
     ! get the petCount
     call ESMF_GridCompGet(driver, petCount=petCount, rc=rc)
@@ -120,13 +108,29 @@ module ESM
     petCountOCN = min(2,petCount/2) ! don't give OCN more than 2 PETs
     petCountATM = petCount - petCountOCN
 
+#define MORE_THAN_ONE_PE_PER_PET_WORKING_ATM
+#ifdef MORE_THAN_ONE_PE_PER_PET_WORKING_ATM
+    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/MaxCount", value=2, &
+      rc=rc)
+!    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/ForceChildPthreads", &
+!      value=.true., rc=rc)
+#else
+    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/MaxCount", value=1, &
+      rc=rc)
+#endif
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! SetServices for ATM with petList on first half of PETs
     allocate(petList(petCountATM))
     do i=1, petCountATM
       petList(i) = i-1 ! PET labeling goes from 0 to petCount-1
     enddo
     call NUOPC_DriverAddComp(driver, "ATM", atmSS, atmSVM, info=info, &
-      petList=petList, comp=child, rc=rc)
+      petList=petList, &
+      comp=child, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -142,6 +146,8 @@ module ESM
 #ifdef MORE_THAN_ONE_PE_PER_PET_WORKING_OCN
     call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/MaxCount", value=2, &
       rc=rc)
+!    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/ForceChildPthreads", &
+!      value=.false., rc=rc)
 #else
     call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/MaxCount", value=1, &
       rc=rc)
@@ -157,7 +163,8 @@ module ESM
       petList(i) = petCountATM + i-1 ! PET labeling goes from 0 to petCount-1
     enddo
     call NUOPC_DriverAddComp(driver, "OCN", ocnSS, ocnSVM, info=info, &
-      petList=petList, comp=child, rc=rc)
+      petList=petList, &
+      comp=child, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

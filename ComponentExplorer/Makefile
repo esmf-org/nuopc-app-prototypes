@@ -97,4 +97,4 @@ edit:
 	nedit nuopcExplorerScript nuopcExplorerApp.F90  nuopcExplorerDriver.F90 explorer.config &
 
 run:
-	mpirun -np 4 ./nuopcExplorerApp
+	$(ESMF_INTERNAL_MPIRUN) -np 4 ./nuopcExplorerApp

@@ -43,12 +43,14 @@ include $(ESMFMKFILE)
 
 
 # -----------------------------------------------------------------------------
-esmApp: esmApp.o esm.o atm.o ocn.o rtm.o
+externalApp: externalApp.o atmDA.o ocnDA.o nuopc_da.o esm.o atm.o ocn.o
 	$(ESMF_F90LINKER) $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS) -o $@ $^ $(ESMF_F90ESMFLINKLIBS)
 
 # module dependencies:
-esmApp.o: esm.o
-esm.o: atm.o ocn.o rtm.o
+externalApp.o: esm.o atmDA.o ocnDA.o nuopc_da.o
+atmDA.o: nuopc_da.o
+ocnDA.o: nuopc_da.o
+esm.o: atm.o ocn.o
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -56,7 +58,7 @@ esm.o: atm.o ocn.o rtm.o
 dust:
 	rm -f PET*.ESMF_LogFile *.nc *.stdout
 clean:
-	rm -f esmApp *.o *.mod
+	rm -f externalApp *.o *.mod
 distclean: dust clean
 
 info:
@@ -67,7 +69,7 @@ info:
 	@echo ==================================================================
 
 edit:
-	nedit esmApp.F90 esm.F90 atm.F90 ocn.F90 rtm.F90 &
+	nedit externalApp.F90 atmDA.F90 ocnDA.F90 nuopc_da.F90 esm.F90 atm.F90 ocn.F90 &
 
 run:
-	$(ESMF_INTERNAL_MPIRUN) -np 4 ./esmApp
+	$(ESMF_INTERNAL_MPIRUN) -np 4 ./externalApp

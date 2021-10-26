@@ -347,21 +347,25 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_OCN-gridIn_center_coord1.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     call ESMF_GridGetCoord(gridIn, coordDim=2, array=array, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_OCN-gridIn_center_coord2.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 #ifdef TEST_GRID_EDGE_WIDTHS
     ! corner:
     call ESMF_GridGetCoord(gridIn, staggerloc=ESMF_STAGGERLOC_CORNER, &
@@ -370,22 +374,26 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_OCN-gridIn_corner_coord1.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     call ESMF_GridGetCoord(gridIn, staggerloc=ESMF_STAGGERLOC_CORNER, &
       coordDim=2, array=array, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_OCN-gridIn_corner_coord2.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     ! edge1:
     call ESMF_GridGetCoord(gridIn, staggerloc=ESMF_STAGGERLOC_EDGE1, &
       coordDim=1, array=array, rc=rc)
@@ -393,22 +401,26 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_OCN-gridIn_edge1_coord1.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     call ESMF_GridGetCoord(gridIn, staggerloc=ESMF_STAGGERLOC_EDGE1, &
       coordDim=2, array=array, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_OCN-gridIn_edge1_coord2.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     ! edge2:
     call ESMF_GridGetCoord(gridIn, staggerloc=ESMF_STAGGERLOC_EDGE2, &
       coordDim=1, array=array, rc=rc)
@@ -416,22 +428,26 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_OCN-gridIn_edge2_coord1.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     call ESMF_GridGetCoord(gridIn, staggerloc=ESMF_STAGGERLOC_EDGE2, &
       coordDim=2, array=array, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_OCN-gridIn_edge2_coord2.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 #endif
 #endif
 
@@ -726,11 +742,13 @@ module OCN
       return  ! bail out
 
     ! write the field out to file, which will be 1d and with the arbitrary order
+#ifdef ESMF_NETCDF      
     call ESMF_FieldWrite(fieldArb, fileName="field_gridArb.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 
     ! create an auxiliary regDecomp grid with the same index space as gridArb
     ! periodic along i (must set here explicitly to match the gridArb
@@ -780,11 +798,13 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_FieldWrite(fieldAux, fileName="field_gridAux.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 #endif
 
     ! pull out the sst field from exportState for testing regridding to it
@@ -828,6 +848,23 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
 
+    ! clean-up
+    call ESMF_FieldDestroy(fieldArb, noGarbage=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_FieldDestroy(fieldAux, noGarbage=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_RouteHandleDestroy(rh, noGarbage=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
 #ifdef TEST_MULTI_TILE_GRID
     ioComp = ESMFIO_Create(gridOut, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -839,12 +876,14 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMFIO_Write(ioComp, "fields_ocn_init_export.nc", &
       (/field/), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 #if 0
     ! Currently do not destroy the ioComp here, because it will trigger
     ! an issue in StateReconcile(), which looks like a bug to me.
@@ -927,6 +966,7 @@ module OCN
   !-----------------------------------------------------------------------------
 
   subroutine Advance(model, rc)
+!$  use omp_lib
     type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
 
@@ -938,6 +978,8 @@ module OCN
     type(ESMF_Time)             :: currTime
     type(ESMF_TimeInterval)     :: timeStep
     integer, save               :: slice=1
+    type(ESMF_VM)               :: vm
+    integer                     :: currentSsiPe, i, tid, unit, localPet
     character(len=160)          :: msgString
     character(80)               :: fieldName, gridName
 
@@ -950,6 +992,49 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    call ESMF_GridCompGet(model, vm=vm, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_VMGet(vm, localPet=localPet, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! Now can use OpenMP for fine grained parallelism...
+    ! Here just write info about the PET-local OpenMP threads to Log.
+!$omp parallel private(msgString, currentSsiPe)
+!$omp critical
+!$    call ESMF_VMGet(vm, currentSsiPe=currentSsiPe)
+!$    write(msgString,'(A,I4,A,I4,A,I4,A,I4,A,I4)') &
+!$      "thread_num=", omp_get_thread_num(), &
+!$      "   currentSsiPe=", currentSsiPe, &
+!$      "   num_threads=", omp_get_num_threads(), &
+!$      "   max_threads=", omp_get_max_threads(), &
+!$      "   num_procs=", omp_get_num_procs()
+!$    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+!$omp end critical
+!$omp end parallel
+
+#define FILEOUT_off
+! Activating FILEOUT triggers a hang for Intel < 19.1.1 when multi-threaded
+! due to an Intel bug
+#ifdef FILEOUT
+    unit = localPet + 200
+#else
+    unit = 6
+#endif
+!$omp parallel private(tid)
+    tid = -1 ! initialize to obvious value if building without OpenMP
+!$  tid = omp_get_thread_num()
+!$omp do
+    do i=1, 100
+      write(unit,*) "OCN test write, localPet=", localPet, "  tid=", tid, &
+        "  slice=", slice, "  i=", i
+    enddo
+!$omp end parallel
 
     ! HERE THE MODEL ADVANCES: currTime -> currTime + timeStep
 

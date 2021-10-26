@@ -1,4 +1,4 @@
-#!/bin/csh
+#!/bin/sh
 
 cd ATM-A
 gmake distclean

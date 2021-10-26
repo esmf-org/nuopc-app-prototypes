@@ -1,0 +1,49 @@
+README for External Driver API NUOPC for weakly coupled DA prototype
+--------------------------------------------------------------------
+
+A simple two model coupled system with a driver, layered with the nuopc-da
+interface, allowing access by two DA components (for ATM and OCN).
+The time step method implemented by the nuopc-da layer supports independent
+time steps on different MPI ranks.
+The nuopc-da interface is using the "External" Driver API to drive the coupled
+system. Fields are connected between the coupled system and the DA components.
+
+Description:
+
+  A two-way coupled system with a single driver (ESM) and two model components
+  (ATM, OCN).
+
+  The ESM driver uses explicitly constructed petLists when adding the two
+  model components.
+  
+  The ESM driver component uses the default run sequence to implement coupling
+  between ATM and OCN components. 
+  
+  The application layer splits the MPI_COMM_WORLD communicator for ATM DA (lower
+  half of ranks) and OCN DA (upper half of ranks). Both DA components access the
+  coupled system through the nuopc-da interface layer.
+
+Build:
+  - Set environment variable ESMFMKFILE to point to the esmf.mk of your ESMF
+    installation.
+  - gmake
+  
+Execution:
+  - Optionally set environment variable ESMF_RUNTIME_COMPLIANCECHECK to ON.
+  - mpirun -np X ./esmApp (where X is the total number of PETs, typically 4)
+  
+Output:
+  - PET*.Log files containing compliance checker output if turned on.
+  - The prototype outputs time stepping information to stdout.
+
+Code structure:
+  - Makefile    - Makefile that is based on the standard esmf.mk mechanism.
+  - atm.F90     - The ATM component, specializing generic NUOPC_Model.
+  - ocn.F90     - The OCN component, specializing generic NUOPC_Model.
+  - esm.F90     - The Earth System Model (ESM) component, specializing generic
+                  NUOPC_Driver. Define partial petLists for ATM and OCN.
+  - nuopc_da.F90- NUOPC-DA interface layer.
+  - atmDA.F90   - ATM DA component on a subset of ranks.
+  - ocnDA.F90   - OCN DA component on a subset of ranks.
+  - externalApp.F90 - Application layer setting up the NUOPC-DA interface, and
+                      both DA components.

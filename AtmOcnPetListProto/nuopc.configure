@@ -1,0 +1,6 @@
+globalResourceControl:  .false.
+logKindFlag:            ESMF_LOGKIND_MULTI
+logAppendFlag:          .false.
+
+ATM_petlist:            0-1
+OCN_petlist:            2-3

@@ -10,8 +10,9 @@
 # Licensed under the University of Illinois-NCSA License.
 #==============================================================================
 
-MPIRUN="mpirun -np"
-#MPIRUN="srun -n"
+# Obtain ESMF_INTERNAL_MPIRUN from esmf.mk
+command=`grep ESMF_INTERNAL_MPIRUN $ESMFMKFILE`
+eval $command
 
 #TOOLRUN="valgrind --leak-check=full"
 
@@ -21,12 +22,13 @@ function TestProto {
 ((count++))
 testList[count]=$1
 echo ---------------------------------------------------------------------------
+date
 echo STARTING: $1
 cd $1
-gmake distclean
-gmake
+make distclean
+make
 set -x
-$MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
 local result=$?
 set +x
 if [ $result -eq 0 ]
@@ -37,6 +39,7 @@ testResult[count]="FAIL"
 fi
 echo FINISHED: $1
 cd ..
+date
 echo ---------------------------------------------------------------------------
 echo
 }
@@ -51,13 +54,14 @@ fi
 testList[count]=$1
 read -ra ARGS <<< "$3"
 echo ---------------------------------------------------------------------------
+date
 echo STARTING: $1
 cd $1
-gmake distclean
-gmake
+make distclean
+make
 for arg in "${ARGS[@]}"; do
 set -x
-$MPIRUN 4 $TOOLRUN ./$2 $arg > $2.$arg.stdout 2>&1
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./$2 $arg > $2.$arg.stdout 2>&1
 local result=$?
 set +x
 if [ $result -ne 0 ]
@@ -73,21 +77,23 @@ testResult[count]="FAIL"
 fi
 echo FINISHED: $1
 cd ..
+date
 echo ---------------------------------------------------------------------------
 echo
 }
 
 function TestSelectProto {
 echo ---------------------------------------------------------------------------
+date
 echo STARTING: $1
 cd $1
-gmake distclean
-gmake ATM=A OCN=A,B
+make distclean
+make ATM=A OCN=A,B
 echo "OCN_SELECT: A" > esm.config
 ((count++))
 testList[count]=$1
 set -x
-$MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
 local result=$?
 set +x
 if [ $result -eq 0 ]
@@ -97,13 +103,13 @@ else
 testResult[count]="FAIL"
 fi
 echo
-gmake clean
-gmake ATM=B OCN=A,B
+make clean
+make ATM=B OCN=A,B
 echo "OCN_SELECT: A" > esm.config
 ((count++))
 testList[count]=$1
 set -x
-$MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
 local result=$?
 set +x
 if [ $result -eq 0 ]
@@ -113,13 +119,13 @@ else
 testResult[count]="FAIL"
 fi
 echo
-gmake clean
-gmake ATM=A OCN=B
+make clean
+make ATM=A OCN=B
 echo "OCN_SELECT: B" > esm.config
 ((count++))
 testList[count]=$1
 set -x
-$MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
 local result=$?
 set +x
 if [ $result -eq 0 ]
@@ -130,23 +136,25 @@ testResult[count]="FAIL"
 fi
 echo FINISHED: $1
 cd ..
+date
 echo ---------------------------------------------------------------------------
 echo
 }
 
 function TestSelectExternalProto {
 echo ---------------------------------------------------------------------------
+date
 echo STARTING: $1
 cd $1
-gmake distclean
+make distclean
 ./cleanSubs.csh
 ./buildSubs.csh
-gmake ATM=A OCN=A,B,C
+make ATM=A OCN=A,B,C
 echo "OCN_SELECT: A" > esm.config
 ((count++))
 testList[count]=$1
 set -x
-$MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
 local result=$?
 set +x
 if [ $result -eq 0 ]
@@ -156,13 +164,13 @@ else
 testResult[count]="FAIL"
 fi
 echo
-gmake clean
-gmake ATM=B OCN=A,B,C
+make clean
+make ATM=B OCN=A,B,C
 echo "OCN_SELECT: B" > esm.config
 ((count++))
 testList[count]=$1
 set -x
-$MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
 local result=$?
 set +x
 if [ $result -eq 0 ]
@@ -172,13 +180,13 @@ else
 testResult[count]="FAIL"
 fi
 echo
-gmake clean
-gmake ATM=C OCN=A,B,C
+make clean
+make ATM=C OCN=A,B,C
 echo "OCN_SELECT: C" > esm.config
 ((count++))
 testList[count]=$1
 set -x
-$MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
 local result=$?
 set +x
 if [ $result -eq 0 ]
@@ -188,13 +196,13 @@ else
 testResult[count]="FAIL"
 fi
 echo
-gmake clean
-gmake ATM=D OCN=A,B,C
+make clean
+make ATM=D OCN=A,B,C
 echo "OCN_SELECT: A" > esm.config
 ((count++))
 testList[count]=$1
 set -x
-$MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
 local result=$?
 set +x
 if [ $result -eq 0 ]
@@ -205,13 +213,13 @@ testResult[count]="FAIL"
 fi
 echo FINISHED: $1
 echo
-gmake clean
-gmake ATM=E OCN=A,B,C
+make clean
+make ATM=E OCN=A,B,C
 echo "OCN_SELECT: B" > esm.config
 ((count++))
 testList[count]=$1
 set -x
-$MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
 local result=$?
 set +x
 if [ $result -eq 0 ]
@@ -221,12 +229,13 @@ else
 testResult[count]="FAIL"
 fi
 echo
-gmake clean
-gmake ATM=F OCN=A,B,C
+make clean
+make ATM=F OCN=A,B,C
 echo "OCN_SELECT: C" > esm.config
-#$MPIRUN 4 ./$2   --- cannot run this because atmF is not fully implemented
+#$ESMF_INTERNAL_MPIRUN -np 4 ./$2   --- cannot run this because atmF is not fully implemented
 echo FINISHED: $1
 cd ..
+date
 echo ---------------------------------------------------------------------------
 echo
 }
@@ -235,12 +244,13 @@ function TestExplorer {
 ((count++))
 testList[count]=$1
 echo ---------------------------------------------------------------------------
+date
 echo STARTING: $1
 cd $1
-gmake distclean
+make distclean
 set -x
 ./nuopcExplorerScript ../AtmOcnSelectExternalProto/ATM-A/atmA.mk
-$MPIRUN 4 $TOOLRUN ./$2 > $2.stdout 2>&1
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
 local result=$?
 set +x
 if [ $result -eq 0 ]
@@ -251,6 +261,7 @@ testResult[count]="FAIL"
 fi
 echo FINISHED: $1
 cd ..
+date
 echo ---------------------------------------------------------------------------
 echo
 }
@@ -290,6 +301,7 @@ TestProto     DriverInDriverDataDepProto                  mainApp
 TestProto     DriverInDriverProto                         mainApp
 TestProto     DynPhyProto                                 esmApp
 TestProto     ExternalDriverAPIProto                      externalApp
+TestProto     ExternalDriverAPIWeakCplDAProto             externalApp
 TestProto     GenericMediatorProto                        app
 TestProto     HierarchyProto                              esmApp
 TestProto     NamespaceProto                              mainApp
@@ -298,7 +310,10 @@ TestProto     NestingSingleProto                          mainApp
 TestProto     NestingTelescopeMultipleProto               mainApp
 TestProto     SingleModelProto                            mainApp
 TestProto     SingleModelOpenMPProto                      mainApp
+export OMP_NUM_THREADS=3
+TestProto     SingleModelOpenMPUnawareProto               mainApp
 
+date
 echo "== TEST SUMMARY START =="
 i=1
 while [[ $i -le $count ]]
@@ -307,7 +322,8 @@ echo ${testResult[i]}: ${testList[i]}
 ((i++))
 done
 echo "== TEST SUMMARY STOP =="
+date
 
 echo
 echo ---------------------------------------------------------------------------
-grep ERROR */PET*.ESMF_LogFile
+grep " ERROR " */PET*.ESMF_LogFile

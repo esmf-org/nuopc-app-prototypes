@@ -28,7 +28,7 @@ module ATM
   private
 
   public SetVM, SetServices
-
+  
   !-----------------------------------------------------------------------------
   contains
   !-----------------------------------------------------------------------------
@@ -407,7 +407,7 @@ module ATM
 
     ! create the new DistGrid with the same minIndexPTile and maxIndexPTile,
     ! but use default multi-tile regDecomp
-    ! If the default regDecomp is not suitable, a custome one could be set
+    ! If the default regDecomp is not suitable, a custom one could be set
     ! up here and used.
     distgrid = ESMF_DistGridCreate(minIndexPTile=minIndexPTile, &
       maxIndexPTile=maxIndexPTile, connectionList=connectionList, rc=rc)
@@ -419,7 +419,7 @@ module ATM
     deallocate(minIndexPTile, maxIndexPTile, connectionList)
 
     ! Create a new Grid on the new DistGrid
-    grid = ESMF_GridCreate(distgrid, rc=rc)
+    grid = ESMF_GridCreate(distgrid, name="ATM-custom-"//trim(name), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -539,7 +539,7 @@ module ATM
         file=__FILE__)) &
         return  ! bail out
       ! Create default regDecomp Grid
-      grid = ESMF_GridCreate(distgrid, rc=rc)
+      grid = ESMF_GridCreate(distgrid, name="ATM-custom-"//trim(name), rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
@@ -1046,21 +1046,25 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_ATM-grid_center_coord1.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     call ESMF_GridGetCoord(grid, coordDim=2, array=array, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_ATM-grid_center_coord2.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 #ifdef TEST_GRID_EDGE_WIDTHS
     ! corner:
     call ESMF_GridGetCoord(grid, staggerloc=ESMF_STAGGERLOC_CORNER, &
@@ -1069,22 +1073,26 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_ATM-grid_corner_coord1.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     call ESMF_GridGetCoord(grid, staggerloc=ESMF_STAGGERLOC_CORNER, &
       coordDim=2, array=array, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_ATM-grid_corner_coord2.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     ! edge1:
     call ESMF_GridGetCoord(grid, staggerloc=ESMF_STAGGERLOC_EDGE1, &
       coordDim=1, array=array, rc=rc)
@@ -1092,22 +1100,26 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_ATM-grid_edge1_coord1.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     call ESMF_GridGetCoord(grid, staggerloc=ESMF_STAGGERLOC_EDGE1, &
       coordDim=2, array=array, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_ATM-grid_edge1_coord2.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     ! edge2:
     call ESMF_GridGetCoord(grid, staggerloc=ESMF_STAGGERLOC_EDGE2, &
       coordDim=1, array=array, rc=rc)
@@ -1115,22 +1127,26 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_ATM-grid_edge2_coord1.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     call ESMF_GridGetCoord(grid, staggerloc=ESMF_STAGGERLOC_EDGE2, &
       coordDim=2, array=array, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef ESMF_NETCDF      
     call ESMF_ArrayWrite(array, "array_ATM-grid_edge2_coord2.nc", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 #endif
 #endif
 
@@ -1365,6 +1381,7 @@ module ATM
   !-----------------------------------------------------------------------------
 
   subroutine Advance(model, rc)
+!$  use omp_lib
     type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
 
@@ -1372,6 +1389,8 @@ module ATM
     type(ESMF_Clock)            :: clock
     type(ESMF_State)            :: importState, exportState
     integer, save               :: slice=1
+    type(ESMF_VM)               :: vm
+    integer                     :: currentSsiPe, i, tid, unit, localPet
     character(len=160)          :: msgString
 
     rc = ESMF_SUCCESS
@@ -1383,6 +1402,49 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    call ESMF_GridCompGet(model, vm=vm, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_VMGet(vm, localPet=localPet, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! Now can use OpenMP for fine grained parallelism...
+    ! Here just write info about the PET-local OpenMP threads to Log.
+!$omp parallel private(msgString, currentSsiPe)
+!$omp critical
+!$    call ESMF_VMGet(vm, currentSsiPe=currentSsiPe)
+!$    write(msgString,'(A,I4,A,I4,A,I4,A,I4,A,I4)') &
+!$      "thread_num=", omp_get_thread_num(), &
+!$      "   currentSsiPe=", currentSsiPe, &
+!$      "   num_threads=", omp_get_num_threads(), &
+!$      "   max_threads=", omp_get_max_threads(), &
+!$      "   num_procs=", omp_get_num_procs()
+!$    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+!$omp end critical
+!$omp end parallel
+
+#define FILEOUT_off
+! Activating FILEOUT triggers a hang for Intel < 19.1.1 when multi-threaded
+! due to an Intel bug
+#ifdef FILEOUT
+    unit = localPet + 100
+#else
+    unit = 6
+#endif
+!$omp parallel private(tid)
+    tid = -1 ! initialize to obvious value if building without OpenMP
+!$  tid = omp_get_thread_num()
+!$omp do
+    do i=1, 100
+      write(unit,*) "ATM test write, localPet=", localPet, "  tid=", tid, &
+        "  slice=", slice, "  i=", i
+    enddo
+!$omp end parallel
 
     ! HERE THE MODEL ADVANCES: currTime -> currTime + timeStep
 

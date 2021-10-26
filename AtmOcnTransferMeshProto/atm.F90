@@ -23,7 +23,7 @@ module ATM
 
   private
 
-  public SetServices
+  public SetVM, SetServices
 
   !-----------------------------------------------------------------------------
   contains
@@ -230,6 +230,12 @@ module ATM
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
+      ! destroy the grid actually not needed
+      call ESMF_GridDestroy(gridIn, noGarbage=.true., rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
     endif
 
     !NOTE: The air_pressure_at_sea_level (pmsl) Field is not realized here
@@ -387,21 +393,23 @@ module ATM
 #if (defined USE_NODAL_DG && defined USE_ELEMENT_DG)
     ! Create a new Mesh on both new DistGrid
     mesh = ESMF_MeshEmptyCreate(nodalDistGrid=newNodalDG, &
-      elementDistGrid=newElementDG, name=name, rc=rc)
+      elementDistGrid=newElementDG, name="ATM-custom-"//trim(name), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 #elif (defined USE_NODAL_DG)
     ! Create a new Mesh on new nodal DistGrid
-    mesh = ESMF_MeshEmptyCreate(nodalDistGrid=newNodalDG, name=name, rc=rc)
+    mesh = ESMF_MeshEmptyCreate(nodalDistGrid=newNodalDG, &
+      name="ATM-custom-"//trim(name), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 #elif (defined USE_ELEMENT_DG)
     ! Create a new Mesh on new element DistGrid
-    mesh = ESMF_MeshEmptyCreate(elementDistGrid=newElementDG, name=name, rc=rc)
+    mesh = ESMF_MeshEmptyCreate(elementDistGrid=newElementDG, &
+      name="ATM-custom-"//trim(name), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -452,7 +460,7 @@ module ATM
 
 #undef USE_NODAL_DG
 #undef USE_ELEMENT_DG
-#define USE_NODAL_DG_off
+#define USE_NODAL_DG
 #define USE_ELEMENT_DG
 
 #ifdef USE_NODAL_DG
@@ -532,21 +540,23 @@ module ATM
 #if (defined USE_NODAL_DG && defined USE_ELEMENT_DG)
     ! Create a new Mesh on both new DistGrid
     mesh = ESMF_MeshEmptyCreate(nodalDistGrid=newNodalDG, &
-      elementDistGrid=newElementDG, name=name, rc=rc)
+      elementDistGrid=newElementDG, name="ATM-custom-"//trim(name), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 #elif (defined USE_NODAL_DG)
     ! Create a new Mesh on new nodal DistGrid
-    mesh = ESMF_MeshEmptyCreate(nodalDistGrid=newNodalDG, name=name, rc=rc)
+    mesh = ESMF_MeshEmptyCreate(nodalDistGrid=newNodalDG, &
+      name="ATM-custom-"//trim(name), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 #elif (defined USE_ELEMENT_DG)
     ! Create a new Mesh on new element DistGrid
-    mesh = ESMF_MeshEmptyCreate(elementDistGrid=newElementDG, name=name, rc=rc)
+    mesh = ESMF_MeshEmptyCreate(elementDistGrid=newElementDG, &
+      name="ATM-custom-"//trim(name), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -727,6 +737,13 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
+    ! release the RouteHandle
+    call ESMF_FieldRegridRelease(rh, noGarbage=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
     ! realize "sss" field in the importState, with transferred Mesh
     ! test the option here to specify an explicit typekind
     call NUOPC_Realize(importState, fieldName="sss", &
@@ -805,12 +822,16 @@ module ATM
   !-----------------------------------------------------------------------------
 
   subroutine Advance(model, rc)
+!$  use omp_lib
     type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
 
     ! local variables
     type(ESMF_Clock)            :: clock
     type(ESMF_State)            :: importState, exportState
+    integer, save               :: slice=1
+    type(ESMF_VM)               :: vm
+    integer                     :: currentSsiPe, i, tid, unit, localPet
     character(len=160)          :: msgString
 
     rc = ESMF_SUCCESS
@@ -822,6 +843,49 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    call ESMF_GridCompGet(model, vm=vm, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_VMGet(vm, localPet=localPet, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! Now can use OpenMP for fine grained parallelism...
+    ! Here just write info about the PET-local OpenMP threads to Log.
+!$omp parallel private(msgString, currentSsiPe)
+!$omp critical
+!$    call ESMF_VMGet(vm, currentSsiPe=currentSsiPe)
+!$    write(msgString,'(A,I4,A,I4,A,I4,A,I4,A,I4)') &
+!$      "thread_num=", omp_get_thread_num(), &
+!$      "   currentSsiPe=", currentSsiPe, &
+!$      "   num_threads=", omp_get_num_threads(), &
+!$      "   max_threads=", omp_get_max_threads(), &
+!$      "   num_procs=", omp_get_num_procs()
+!$    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+!$omp end critical
+!$omp end parallel
+
+#define FILEOUT_off
+! Activating FILEOUT triggers a hang for Intel < 19.1.1 when multi-threaded
+! due to an Intel bug
+#ifdef FILEOUT
+    unit = localPet + 100
+#else
+    unit = 6
+#endif
+!$omp parallel private(tid)
+    tid = -1 ! initialize to obvious value if building without OpenMP
+!$  tid = omp_get_thread_num()
+!$omp do
+    do i=1, 100
+      write(unit,*) "ATM test write, localPet=", localPet, "  tid=", tid, &
+        "  slice=", slice, "  i=", i
+    enddo
+!$omp end parallel
 
     ! HERE THE MODEL ADVANCES: currTime -> currTime + timeStep
 
@@ -853,6 +917,8 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+    slice = slice+1
 
   end subroutine
 

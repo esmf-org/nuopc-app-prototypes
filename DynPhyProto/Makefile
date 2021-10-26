@@ -70,4 +70,4 @@ edit:
 	nedit esmApp.F90 atm.F90 dyn.F90 phy.F90 &
 
 run:
-	mpirun -np 4 ./esmApp
+	$(ESMF_INTERNAL_MPIRUN) -np 4 ./esmApp

@@ -33,7 +33,7 @@ include $(ESMFMKFILE)
 	$(ESMF_F90COMPILER) -c $(ESMF_F90COMPILEOPTS) $(ESMF_F90COMPILEPATHS) $(ESMF_F90COMPILEFREENOCPP) $<
 
 %.o : %.F90
-	$(ESMF_F90COMPILER) -c $(ESMF_F90COMPILEOPTS) $(ESMF_F90COMPILEPATHS) $(ESMF_F90COMPILEFREECPP) $(ESMF_F90COMPILECPPFLAGS) $<
+	$(ESMF_F90COMPILER) -c $(ESMF_F90COMPILEOPTS) $(ESMF_F90COMPILEPATHS) $(ESMF_F90COMPILEFREECPP) $(ESMF_F90COMPILECPPFLAGS) -DESMF_VERSION_MAJOR=$(ESMF_VERSION_MAJOR) $<
         
 %.o : %.c
 	$(ESMF_CXXCOMPILER) -c $(ESMF_CXXCOMPILEOPTS) $(ESMF_CXXCOMPILEPATHSLOCAL) $(ESMF_CXXCOMPILEPATHS) $(ESMF_CXXCOMPILECPPFLAGS) $<
@@ -43,12 +43,12 @@ include $(ESMFMKFILE)
 
 
 # -----------------------------------------------------------------------------
-esmApp: esmApp.o esm.o atm.o ocn.o rtm.o
+mainApp: mainApp.o driver.o model.o
 	$(ESMF_F90LINKER) $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS) -o $@ $^ $(ESMF_F90ESMFLINKLIBS)
 
 # module dependencies:
-esmApp.o: esm.o
-esm.o: atm.o ocn.o rtm.o
+mainApp.o: driver.o
+driver.o: model.o
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -56,7 +56,7 @@ esm.o: atm.o ocn.o rtm.o
 dust:
 	rm -f PET*.ESMF_LogFile *.nc *.stdout
 clean:
-	rm -f esmApp *.o *.mod
+	rm -f mainApp *.o *.mod
 distclean: dust clean
 
 info:
@@ -67,7 +67,7 @@ info:
 	@echo ==================================================================
 
 edit:
-	nedit esmApp.F90 esm.F90 atm.F90 ocn.F90 rtm.F90 &
+	nedit mainApp.F90 driver.F90 model.F90 &
 
 run:
-	$(ESMF_INTERNAL_MPIRUN) -np 4 ./esmApp
+	env OMP_NUM_THREADS=3 $(ESMF_INTERNAL_MPIRUN) -np 4 ./mainApp
