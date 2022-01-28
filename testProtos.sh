@@ -17,6 +17,7 @@ eval $command
 #TOOLRUN="valgrind --leak-check=full"
 
 count=0
+failcount=0
 
 function TestProto {
 ((count++))
@@ -319,6 +320,7 @@ i=1
 while [[ $i -le $count ]]
 do
 echo ${testResult[i]}: ${testList[i]}
+if [ "${testResult[i]}" != "PASS" ]; then ((failcount++)); fi
 ((i++))
 done
 echo "== TEST SUMMARY STOP =="
@@ -327,3 +329,5 @@ date
 echo
 echo ---------------------------------------------------------------------------
 grep " ERROR " */PET*.ESMF_LogFile
+
+exit $failcount
