@@ -57,13 +57,13 @@ echo
 # - value of four standard makefile arguments
 
 echo "-- Obtaining values of the standard variables set in the .mk file ..."
-gmake COMP=$1 output
+make COMP=$1 output
 echo
 
 # - build explorer application
 
 echo "-- Building the explorer application using the component in the .mk file ..."
-gmake COMP=$1 nuopcExplorerApp FRONT_COMP_LABEL=$2
+make COMP=$1 nuopcExplorerApp FRONT_COMP_LABEL=$2
 
 if [ $? -eq 0 ]
 then
