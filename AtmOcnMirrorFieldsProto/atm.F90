@@ -1,6 +1,6 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright 2002-2021, University Corporation for Atmospheric Research,
+! Copyright 2002-2022, University Corporation for Atmospheric Research,
 ! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
 ! Laboratory, University of Michigan, National Centers for Environmental
 ! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
@@ -238,6 +238,14 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+      
+!TODO: There is currently a shortcoming inside ESMF_StateReconcile(), a method
+!TODO: extensively used by NUOPC_Connector. The shortcoming does not allow
+!TODO: GeomObjects to be shared by Fields that use different SharePolicyField
+!TODO: settings, and go between components on different threading levels.
+!TODO: This is an edge case, but long term it should be supported.
+
+#if 0    
     ! set SharePolicyGeomObject = "share"
     call NUOPC_SetAttribute(field, name="SharePolicyGeomObject", &
       value="share", rc=rc)
@@ -245,6 +253,16 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
+#if 0
+    ! set SharePolicyField = "share"
+    call NUOPC_SetAttribute(field, name="SharePolicyField", &
+      value="share", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
 
     ! surface_net_downward_shortwave_flux
     call ESMF_StateGet(exportState, field=field, &
@@ -262,6 +280,7 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 #endif
+#if 1
     ! set SharePolicyField = "share"
     call NUOPC_SetAttribute(field, name="SharePolicyField", &
       value="share", rc=rc)
@@ -269,6 +288,7 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
 #endif
 
   end subroutine

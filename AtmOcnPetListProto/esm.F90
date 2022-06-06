@@ -1,6 +1,6 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright 2002-2021, University Corporation for Atmospheric Research,
+! Copyright 2002-2022, University Corporation for Atmospheric Research,
 ! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
 ! Laboratory, University of Michigan, National Centers for Environmental
 ! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
@@ -382,6 +382,9 @@ module ESM
     integer                         :: i, j, cplListSize
     character(len=160), allocatable :: cplList(:)
     character(len=160)              :: tempString
+    integer, pointer                :: petList(:)
+    type(ESMF_PtrInt1D), pointer    :: petLists(:)
+    type(ESMF_CplComp),  pointer    :: connList(:)
 
     rc = ESMF_SUCCESS
 
@@ -442,6 +445,81 @@ module ESM
     enddo
 
     deallocate(connectorList)
+
+    ! section demonstrating access to petLists via NUOPC_DriverGetComp()
+
+    ! directly access ATM component by label
+    nullify(petList)
+    call NUOPC_DriverGetComp(driver, compLabel="ATM", petList=petList, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    write (msg,*) "ATM petList= ", petList
+    call ESMF_LogWrite(trim(msg), ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! directly access OCN component by label
+    nullify(petList)
+    call NUOPC_DriverGetComp(driver, compLabel="OCN", petList=petList, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    write (msg,*) "OCN petList= ", petList
+    call ESMF_LogWrite(trim(msg), ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! access petLists for all components under the driver that derive from
+    ! ESMF_GridComp. Here this means ATM and OCN.
+    nullify(petLists)
+    call NUOPC_DriverGetComp(driver, petLists=petLists, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    do i=1, size(petLists)
+      write (msg,*) "GridComp petLists(",i,")= ", petLists(i)%ptr
+      call ESMF_LogWrite(trim(msg), ESMF_LOGMSG_INFO, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    enddo
+
+    deallocate(petLists)
+
+    ! access petLists for all components under the driver that derive from
+    ! ESMF_CplComp, i.e. Connectors.
+    nullify(petLists)
+    nullify(connList)
+    call NUOPC_DriverGetComp(driver, compList=connList, petLists=petLists, &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    do i=1, size(petLists)
+      write (msg,*) "CplComp  petLists(",i,")= ", petLists(i)%ptr
+      call ESMF_LogWrite(trim(msg), ESMF_LOGMSG_INFO, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    enddo
+
+    deallocate(petLists)
+    deallocate(connList)
 
   end subroutine
 

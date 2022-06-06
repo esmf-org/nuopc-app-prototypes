@@ -1,47 +1,47 @@
 #!/bin/sh
 
 cd ATM-A
-gmake distclean
+make distclean
 cd ..
 
 cd ATM-B
-gmake distclean
+make distclean
 cd ..
 
 cd ATM-C
-gmake distclean
+make distclean
 cd ..
 
 cd ATM-D
-gmake distclean
+make distclean
 cd ..
 
 cd ATM-E
-gmake distclean
+make distclean
 cd ..
 
 cd ATM-F
-gmake distclean
+make distclean
 cd ..
 
 cd OcnModelA
-gmake distclean
+make distclean
 cd ..
 
 cd OcnModelB
-gmake distclean
+make distclean
 cd ..
 
 cd OcnModelB/OcnSub
-gmake distclean
+make distclean
 cd ../..
 
 cd OcnModelC
-gmake distclean
+make distclean
 cd ..
 
 cd OcnModelC/OcnSub
-gmake distclean
+make distclean
 cd ../..
 
 cd OcnCommon
