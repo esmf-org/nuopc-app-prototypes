@@ -24,6 +24,9 @@ endif
 
 include $(ESMFMKFILE)
 
+# strip quotes around the ESMF_INTERNAL_MPIRUN value
+ESMF_INTERNAL_MPIRUN := $(shell echo $(ESMF_INTERNAL_MPIRUN))
+
 ################################################################################
 # Need a variable that contains only a comma for some of the operations below
 COMMA := ,

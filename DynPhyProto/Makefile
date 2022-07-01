@@ -24,6 +24,9 @@ endif
 
 include $(ESMFMKFILE)
 
+# strip quotes around the ESMF_INTERNAL_MPIRUN value
+ESMF_INTERNAL_MPIRUN := $(shell echo $(ESMF_INTERNAL_MPIRUN))
+
 ################################################################################
 ################################################################################
 
