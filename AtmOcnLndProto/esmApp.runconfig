@@ -13,6 +13,9 @@ runSeq::
       @1800           # 30min sub cycle driving OCN to show it is parsed ok
         OCN
         @300          # 5min test cycle that does not do anything
+          @@600
+            LND -> ATM  # alarm triggered dummy Connector for testing alarms
+          @@
         @
         LND           # in the 30min sub cycle
       @
@@ -23,9 +26,9 @@ runSeq::
 
 driverAttributes::
   Verbosity = 4609
-  Profiling = 0
+  Profiling = 4096
 ::
 
 ocnAttributes::
-  Verbosity = 0
+  Verbosity = 1
 ::
