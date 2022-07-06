@@ -62,16 +62,16 @@ module GenericDriver
     type(ESMF_Time)                 :: startTime, stopTime
     type(ESMF_TimeInterval)         :: timeStep
     type(ESMF_Clock)                :: internalClock
-    integer                         :: i
+    integer                         :: i, componentCount, ompNumThreads
     integer, allocatable            :: petList(:)
     type(ESMF_GridComp)             :: comp
     type(ESMF_Config)               :: config
     type(NUOPC_FreeFormat)          :: ff
-    integer                         :: componentCount
     character(len=32), allocatable  :: compLabels(:)
     character(len=32)               :: prefix
     integer                         :: petListBounds(2)
     character(len=240)              :: sharedObject
+    type(ESMF_Info)                 :: info
 
     ! get the config
     call ESMF_GridCompGet(driver, config=config, rc=rc)
@@ -117,7 +117,8 @@ module GenericDriver
     do i=1, componentCount
       ! construct component prefix
       prefix=trim(compLabels(i))
-      ! - set up petList
+
+      ! set up petList
       ff = NUOPC_FreeFormatCreate(config, label=trim(prefix)//"_petlist:", &
         rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -131,9 +132,32 @@ module GenericDriver
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-      ! - add child component with SetServices in shared object
+
+      ! set up NUOPC hint for OpenMP
+      call ESMF_ConfigGetAttribute(config, ompNumThreads, &
+        label=trim(prefix)//"_omp_num_threads:", default=-1, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      info = ESMF_InfoCreate(rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      if (ompNumThreads /= -1) then
+        call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/MaxCount", &
+          value=ompNumThreads, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+      endif
+
+      ! add child component with SetVM and SetServices in shared object
       call NUOPC_DriverAddComp(driver, trim(prefix), &
-        sharedObj=trim(sharedObject), comp=comp, petList=petList, rc=rc)
+        sharedObj=trim(sharedObject), info=info, petList=petList, comp=comp, &
+        rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, &
         msg="Unable to add component '"//trim(prefix)// &
           "' to driver via shared object: "//trim(sharedObject), &
@@ -161,6 +185,11 @@ module GenericDriver
 
       ! clean-up
       deallocate(petList)
+      call ESMF_InfoDestroy(info, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
     enddo
 
     deallocate(compLabels)
@@ -266,7 +295,7 @@ module GenericDriver
 end module GenericDriver
 
 !==============================================================================
-! Generic NUOPC application testing a stand-alone model component cap
+! Generic NUOPC application
 !==============================================================================
 
 program GenericApp

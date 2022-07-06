@@ -457,6 +457,19 @@ module ATM
 
 end module
 
+! External access to SetVM
+subroutine SetVM(comp, rc)
+  use ESMF
+  use atm, only: SetVMModule => SetVM
+  type(ESMF_GridComp) :: comp
+  integer, intent(out) :: rc
+  call SetVMModule(comp, rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    return  ! bail out
+end subroutine
+
 ! External access to SetServices
 subroutine SetServices(comp, rc)
   use ESMF

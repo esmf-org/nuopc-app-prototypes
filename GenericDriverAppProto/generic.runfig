@@ -11,12 +11,13 @@ UMS_attributes::
 
 ATM_shared_object:    ./ATM-A/atm.so
 ATM_petlist:          0-3
+ATM_omp_num_threads:  2
 ATM_attributes::
   Verbosity = high
 ::
 
 OCN_shared_object:    ./OCN-A/ocn.so
-OCN_petlist:          2 3
+OCN_petlist:          1 3
 OCN_attributes::
   Verbosity = high
 ::
