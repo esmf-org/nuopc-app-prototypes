@@ -9,7 +9,7 @@ UMS_attributes::
   Verbosity = high
 ::
 
-ATM_shared_object:    ./ATM-A/atm.so
+ATM_shared_object:    ./ATM-B/lib/libatm.so
 ATM_petlist:          0-3
 ATM_omp_num_threads:  2
 ATM_attributes::
