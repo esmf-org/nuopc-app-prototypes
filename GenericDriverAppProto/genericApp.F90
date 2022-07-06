@@ -62,39 +62,37 @@ module GenericDriver
     type(ESMF_Time)                 :: startTime, stopTime
     type(ESMF_TimeInterval)         :: timeStep
     type(ESMF_Clock)                :: internalClock
-    integer                         :: petCount, i, j
+    integer                         :: i
     integer, allocatable            :: petList(:)
     type(ESMF_GridComp)             :: comp
     type(ESMF_Config)               :: config
-    type(NUOPC_FreeFormat)          :: attrFF
+    type(NUOPC_FreeFormat)          :: ff
     integer                         :: componentCount
     character(len=32), allocatable  :: compLabels(:)
     character(len=32)               :: prefix
     integer                         :: petListBounds(2)
     character(len=240)              :: sharedObject
 
-    ! get the petCount and config
-    call ESMF_GridCompGet(driver, petCount=petCount, config=config, rc=rc)
+    ! get the config
+    call ESMF_GridCompGet(driver, config=config, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 
     ! read and ingest free format driver attributes
-    attrFF = NUOPC_FreeFormatCreate(config, label="UMS_attributes::", &
+    ff = NUOPC_FreeFormatCreate(config, label="UMS_attributes::", &
       relaxedflag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-
-    call NUOPC_CompAttributeIngest(driver, attrFF, addFlag=.true., rc=rc)
+    call NUOPC_CompAttributeIngest(driver, ff, addFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-
-    call NUOPC_FreeFormatDestroy(attrFF, rc=rc)
+    call NUOPC_FreeFormatDestroy(ff, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -119,31 +117,21 @@ module GenericDriver
     do i=1, componentCount
       ! construct component prefix
       prefix=trim(compLabels(i))
-      ! read in petList bounds
-      call ESMF_ConfigGetAttribute(config, petListBounds, &
-        label=trim(prefix)//"_petlist_bounds:", default=-1, rc=rc)
+      ! - set up petList
+      ff = NUOPC_FreeFormatCreate(config, label=trim(prefix)//"_petlist:", &
+        rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-      ! handle the default situation
-      if (petListBounds(1)==-1 .or. petListBounds(2)==-1) then
-        petListBounds(1) = 0
-        petListBounds(2) = petCount - 1
-      endif
-      ! set petList for this component
-      allocate(petList(petListBounds(2)-petListBounds(1)+1))
-      do j=petListBounds(1), petListBounds(2)
-        petList(j-petListBounds(1)+1) = j ! PETs are 0 based
-      enddo
+      call NUOPC_IngestPetList(petList, ff, rc=rc)
       call ESMF_ConfigGetAttribute(config, sharedObject, &
         label=trim(prefix)//"_shared_object:", rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-
-      ! Add child component with SetServices in shared object
+      ! - add child component with SetServices in shared object
       call NUOPC_DriverAddComp(driver, trim(prefix), &
         sharedObj=trim(sharedObject), comp=comp, petList=petList, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, &
@@ -154,18 +142,18 @@ module GenericDriver
         return  ! bail out
 
       ! read and ingest free format component attributes
-      attrFF = NUOPC_FreeFormatCreate(config, &
+      ff = NUOPC_FreeFormatCreate(config, &
         label=trim(prefix)//"_attributes::", relaxedflag=.true., rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out        
-      call NUOPC_CompAttributeIngest(comp, attrFF, addFlag=.true., rc=rc)
+      call NUOPC_CompAttributeIngest(comp, ff, addFlag=.true., rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-      call NUOPC_FreeFormatDestroy(attrFF, rc=rc)
+      call NUOPC_FreeFormatDestroy(ff, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &

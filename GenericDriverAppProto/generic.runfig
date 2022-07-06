@@ -10,13 +10,13 @@ UMS_attributes::
 ::
 
 ATM_shared_object:    ./ATM-A/atm.so
-ATM_petlist_bounds:   0 1
+ATM_petlist:          0-3
 ATM_attributes::
   Verbosity = high
 ::
 
 OCN_shared_object:    ./OCN-A/ocn.so
-OCN_petlist_bounds:   2 3
+OCN_petlist:          2 3
 OCN_attributes::
   Verbosity = high
 ::
