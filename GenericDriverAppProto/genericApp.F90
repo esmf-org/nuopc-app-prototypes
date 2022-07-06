@@ -1,0 +1,407 @@
+!==============================================================================
+! Generic NUOPC application layer
+!   This file contains the main application program and the top level driver.
+!==============================================================================
+
+module GenericDriver
+
+  use ESMF
+  use NUOPC
+  use NUOPC_Driver,             driverSS    => SetServices
+
+  implicit none
+
+  private
+
+  public SetServices
+
+  !-----------------------------------------------------------------------------
+  contains
+  !-----------------------------------------------------------------------------
+
+  subroutine SetServices(driver, rc)
+    type(ESMF_GridComp)  :: driver
+    integer, intent(out) :: rc
+
+    type(NUOPC_FreeFormat) :: fdFF
+
+    rc = ESMF_SUCCESS
+
+    ! Derive from NUOPC_Driver
+    call NUOPC_CompDerive(driver, driverSS, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! Specialize Driver
+    call NUOPC_CompSpecialize(driver, specLabel=label_SetModelServices, &
+      specRoutine=SetModelServices, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call NUOPC_CompSpecialize(driver, specLabel=label_SetRunSequence, &
+      specRoutine=SetRunSequence, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+  end subroutine SetServices
+
+  !-----------------------------------------------------------------------------
+
+  subroutine SetModelServices(driver, rc)
+    type(ESMF_GridComp)  :: driver
+    integer, intent(out) :: rc
+
+    ! local variables
+    character(len=32)               :: startTimeString, stopTimeString
+    type(ESMF_Time)                 :: startTime, stopTime
+    type(ESMF_TimeInterval)         :: timeStep
+    type(ESMF_Clock)                :: internalClock
+    integer                         :: petCount, i, j
+    integer, allocatable            :: petList(:)
+    type(ESMF_GridComp)             :: comp
+    type(ESMF_Config)               :: config
+    type(NUOPC_FreeFormat)          :: attrFF
+    integer                         :: componentCount
+    character(len=32), allocatable  :: compLabels(:)
+    character(len=32)               :: prefix
+    integer                         :: petListBounds(2)
+    character(len=240)              :: sharedObject
+
+    ! get the petCount and config
+    call ESMF_GridCompGet(driver, petCount=petCount, config=config, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! read and ingest free format driver attributes
+    attrFF = NUOPC_FreeFormatCreate(config, label="UMS_attributes::", &
+      relaxedflag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call NUOPC_CompAttributeIngest(driver, attrFF, addFlag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call NUOPC_FreeFormatDestroy(attrFF, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! determine the generic component labels
+    componentCount = ESMF_ConfigGetLen(config, label="UMS_component_list:", &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    allocate(compLabels(componentCount))
+    call ESMF_ConfigGetAttribute(config, valueList=compLabels, &
+      label="UMS_component_list:", count=componentCount, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! determine information for each component and add to the driver
+    do i=1, componentCount
+      ! construct component prefix
+      prefix=trim(compLabels(i))
+      ! read in petList bounds
+      call ESMF_ConfigGetAttribute(config, petListBounds, &
+        label=trim(prefix)//"_petlist_bounds:", default=-1, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      ! handle the default situation
+      if (petListBounds(1)==-1 .or. petListBounds(2)==-1) then
+        petListBounds(1) = 0
+        petListBounds(2) = petCount - 1
+      endif
+      ! set petList for this component
+      allocate(petList(petListBounds(2)-petListBounds(1)+1))
+      do j=petListBounds(1), petListBounds(2)
+        petList(j-petListBounds(1)+1) = j ! PETs are 0 based
+      enddo
+      call ESMF_ConfigGetAttribute(config, sharedObject, &
+        label=trim(prefix)//"_shared_object:", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+      ! Add child component with SetServices in shared object
+      call NUOPC_DriverAddComp(driver, trim(prefix), &
+        sharedObj=trim(sharedObject), comp=comp, petList=petList, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, &
+        msg="Unable to add component '"//trim(prefix)// &
+          "' to driver via shared object: "//trim(sharedObject), &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+      ! read and ingest free format component attributes
+      attrFF = NUOPC_FreeFormatCreate(config, &
+        label=trim(prefix)//"_attributes::", relaxedflag=.true., rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out        
+      call NUOPC_CompAttributeIngest(comp, attrFF, addFlag=.true., rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      call NUOPC_FreeFormatDestroy(attrFF, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+
+      ! clean-up
+      deallocate(petList)
+    enddo
+
+    deallocate(compLabels)
+
+    ! read startTimeString and stopTimeString from config
+    call ESMF_ConfigGetAttribute(config, startTimeString, label="startTime:", &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_ConfigGetAttribute(config, stopTimeString, label="stopTime:", &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! set the driver clock startTime/stopTime
+    call ESMF_TimeSet(startTime, timeString=startTimeString, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_TimeSet(stopTime,  timeString=stopTimeString,  rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! set the driver clock timeStep
+    ! 5 minute coupling timeStep by default (when runSequence uses @*)
+    ! can be overwritten by runSequence
+    call ESMF_TimeIntervalSet(timeStep, m=5, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    internalClock = ESMF_ClockCreate(name="Application Clock", &
+      timeStep=timeStep, startTime=startTime, stopTime=stopTime, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call ESMF_GridCompSet(driver, clock=internalClock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    rc = ESMF_SUCCESS
+
+  end subroutine SetModelServices
+
+  !-----------------------------------------------------------------------------
+
+  subroutine SetRunSequence(driver, rc)
+    type(ESMF_GridComp)  :: driver
+    integer, intent(out) :: rc
+
+    ! local variables
+    character(ESMF_MAXSTR)              :: name
+    type(ESMF_Config)                   :: config
+    type(NUOPC_FreeFormat)              :: runSeqFF
+
+    rc = ESMF_SUCCESS
+
+    ! query the driver for its name and config
+    call ESMF_GridCompGet(driver, name=name, config=config, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! read free format run sequence from config
+    runSeqFF = NUOPC_FreeFormatCreate(config, label="runSeq::", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! ingest FreeFormat run sequence
+    call NUOPC_DriverIngestRunSequence(driver, runSeqFF, &
+      autoAddConnectors=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! clean-up
+    call NUOPC_FreeFormatDestroy(runSeqFF, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+  end subroutine SetRunSequence
+
+  !-----------------------------------------------------------------------------
+
+end module GenericDriver
+
+!==============================================================================
+! Generic NUOPC application testing a stand-alone model component cap
+!==============================================================================
+
+program GenericApp
+
+  use ESMF
+  use NUOPC
+  use GenericDriver, only: driverSS => SetServices
+
+  implicit none
+
+  integer                 :: rc, urc
+  type(ESMF_GridComp)     :: driver
+  type(ESMF_Config)       :: config
+  character(len=240)      :: fieldDictionary
+  logical                 :: logFlush
+
+  ! Initialize ESMF
+  call ESMF_Initialize(configFileName="generic.runfig", config=config, &
+    defaultCalkind=ESMF_CALKIND_GREGORIAN, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+  call ESMF_ConfigGetAttribute(config, logFlush, &
+    label="UMS_log_flush:", default=.false., rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    return  ! bail out
+  call ESMF_LogSet(flush=logFlush, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+  call ESMF_LogWrite("GenericApp STARTING", ESMF_LOGMSG_INFO, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+  call ESMF_ConfigGetAttribute(config, fieldDictionary, &
+    label="UMS_field_dictionary:", default="<no-set>", rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    return  ! bail out
+  if (trim(fieldDictionary)/="<no-set>") then
+    ! Read custom dictionary from YAML file
+    call NUOPC_FieldDictionarySetup(fileName=trim(fieldDictionary), rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, &
+      msg="Unable to read Field Dictionary file: "//trim(fieldDictionary), &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+  endif
+
+  ! Create the generic driver
+  driver = ESMF_GridCompCreate(name="GenericDriver", config=config, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+  ! SetServices for the generic driver
+  call ESMF_GridCompSetServices(driver, driverSS, userRc=urc, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+  ! Call Initialize for the generic driver
+  call ESMF_GridCompInitialize(driver, userRc=urc, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+  ! Call Run for the generic driver
+  call ESMF_GridCompRun(driver, userRc=urc, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+  ! Call Finalize for the generic driver
+  call ESMF_GridCompFinalize(driver, userRc=urc, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+  ! Destroy the generic driver
+  call ESMF_GridCompDestroy(driver, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+  call ESMF_LogWrite("GenericApp FINISHED", ESMF_LOGMSG_INFO, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+  ! Finalize ESMF
+  call ESMF_Finalize(rc=rc)
+
+end program GenericApp

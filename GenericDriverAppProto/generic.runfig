@@ -1,0 +1,34 @@
+logKindFlag:            ESMF_LOGKIND_MULTI
+globalResourceControl:  .true.
+
+UMS_log_flush:        .true.
+#UMS_field_dictionary: ./fd.yaml
+
+UMS_component_list:   ATM OCN
+UMS_attributes::
+  Verbosity = high
+::
+
+ATM_shared_object:    ./ATM-A/atm.so
+ATM_petlist_bounds:   0 1
+ATM_attributes::
+  Verbosity = high
+::
+
+OCN_shared_object:    ./OCN-A/ocn.so
+OCN_petlist_bounds:   2 3
+OCN_attributes::
+  Verbosity = high
+::
+
+startTime:  2012-10-24T18:00:00
+stopTime:   2012-10-24T19:00:00
+
+runSeq::
+  @900
+    ATM -> OCN
+    OCN -> ATM
+    ATM
+    OCN
+  @
+::

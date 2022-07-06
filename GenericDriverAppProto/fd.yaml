@@ -1,0 +1,53 @@
+field_dictionary:
+  description:    Demo Field Dictionary
+  entries:
+    - standard_name: sea_surface_temperature
+      canonical_units: K
+      description: "
+        Sea surface temperature is usually abbreviated as 'SST'. It is
+        the temperature of sea water near the surface (including the
+        part under sea-ice, if any). More specific terms, namely sea_surface_skin_temperature,
+        sea_surface_subskin_temperature, and surface_termperature are available for the skin, subskin, and
+        interface temperature. respectively. For the temperature of sea water at
+        a particular depth or layer, a data variable of sea_water_temperature
+        with a vertical coordinate axis should be used.&#x2019;
+      "
+    - standard_name: air_pressure_at_mean_sea_level
+      canonical_units: Pa
+      description: "
+        Air pressure at sea level is the quantity often abbreviated
+        as MSLP or PMSL. Air pressure is the force per
+        unit area which would be exerted when the moving gas
+        molecules of which the air is composed strike a theoretical
+        surface of any orientation. 'Mean sea level' means the time
+        mean of sea surface elevation at a given location over
+        an arbitrary period sufficient to eliminate the tidal signals.
+      "
+    - standard_name: integral_wrt_time_of_surface_net_downward_shortwave_flux
+      canonical_units: W s m-2
+      description: "
+        The phrase 'integral_wrt_X_of_Y' means int Y dX. The data variable
+        should have an axis for X specifying the limits of
+        the integral as bounds. 'wrt' means with respect to. The
+        surface called 'surface' means the lower boundary of the atmosphere.
+        'Downward' indicates a vector component which is positive when directed
+        downward (negative upward). Net downward radiation is the difference between
+        radiation from above (downwelling) and radiation from below (upwelling). 'Shortwave'
+        means shortwave radiation. In accordance with common usage in geophysical
+        disciplines, 'flux' implies per unit area, called 'flux density' in
+        physics.
+      "
+    - standard_name: surface_net_downward_shortwave_flux
+      canonical_units: W m-2
+      description: "
+        The surface called 'surface' means the lower boundary of the
+        atmosphere. 'shortwave' means shortwave radiation. 'Downward' indicates a vector component
+        which is positive when directed downward (negative upward). Net downward
+        radiation is the difference between radiation from above (downwelling) and
+        radiation from below (upwelling). In accordance with common usage in
+        geophysical disciplines, 'flux' implies per unit area, called 'flux density'
+        in physics.
+      "
+    - alias: air_pressure_at_sea_level
+      standard_name: air_pressure_at_mean_sea_level
+
