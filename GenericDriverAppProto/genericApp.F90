@@ -325,7 +325,7 @@ program GenericApp
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
-    return  ! bail out
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
   call ESMF_LogSet(flush=logFlush, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
@@ -343,7 +343,7 @@ program GenericApp
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
-    return  ! bail out
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
   if (trim(fieldDictionary)/="<no-set>") then
     ! Read custom dictionary from YAML file
     call NUOPC_FieldDictionarySetup(fileName=trim(fieldDictionary), rc=rc)
@@ -351,7 +351,7 @@ program GenericApp
       msg="Unable to read Field Dictionary file: "//trim(fieldDictionary), &
       line=__LINE__, &
       file=__FILE__)) &
-      return  ! bail out
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
   endif
 
   ! Create the generic driver
