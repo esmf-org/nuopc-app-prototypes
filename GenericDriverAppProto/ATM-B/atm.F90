@@ -72,8 +72,12 @@ module ATM
 
     ! local variables
     type(ESMF_State)        :: importState, exportState
+    integer :: testUnit
 
     rc = ESMF_SUCCESS
+    
+    open(newunit=testUnit, file="testFile.txt")
+    print *, testUnit
 
     ! query for importState and exportState
     call NUOPC_ModelGet(model, importState=importState, &
