@@ -72,12 +72,18 @@ module ATM
 
     ! local variables
     type(ESMF_State)        :: importState, exportState
-    integer :: testUnit
+    integer :: testUnit, days_per_year
+
+namelist /setup_nml/ days_per_year
 
     rc = ESMF_SUCCESS
     
-    open(newunit=testUnit, file="testFile.txt")
+    open(newunit=testUnit, file="testFile.txt",status="old")
     print *, testUnit
+
+    read (testUnit, nml=setup_nml)
+    
+    print *, days_per_year
 
     ! query for importState and exportState
     call NUOPC_ModelGet(model, importState=importState, &
