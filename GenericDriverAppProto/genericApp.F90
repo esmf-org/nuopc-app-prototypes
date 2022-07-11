@@ -23,8 +23,6 @@ module GenericDriver
     type(ESMF_GridComp)  :: driver
     integer, intent(out) :: rc
 
-    type(NUOPC_FreeFormat) :: fdFF
-
     rc = ESMF_SUCCESS
 
     ! Derive from NUOPC_Driver
@@ -75,24 +73,6 @@ module GenericDriver
 
     ! get the config
     call ESMF_GridCompGet(driver, config=config, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    ! read and ingest free format driver attributes
-    ff = NUOPC_FreeFormatCreate(config, label="UMS_attributes::", &
-      relaxedflag=.true., rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_CompAttributeIngest(driver, ff, addFlag=.true., rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_FreeFormatDestroy(ff, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -168,6 +148,22 @@ module GenericDriver
       ! read and ingest free format component attributes
       ff = NUOPC_FreeFormatCreate(config, &
         label=trim(prefix)//"_attributes::", relaxedflag=.true., rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out        
+      call NUOPC_CompAttributeIngest(comp, ff, addFlag=.true., rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      call NUOPC_FreeFormatDestroy(ff, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      ff = NUOPC_FreeFormatCreate(config, &
+        label="ALLCOMP_attributes::", relaxedflag=.true., rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
@@ -311,6 +307,7 @@ program GenericApp
   type(ESMF_Config)       :: config
   character(len=240)      :: fieldDictionary
   logical                 :: logFlush
+  type(NUOPC_FreeFormat)  :: ff
 
   ! Initialize ESMF
   call ESMF_Initialize(configFileName="generic.runfig", config=config, &
@@ -368,6 +365,40 @@ program GenericApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
   if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+  ! read and ingest free format driver attributes
+  ff = NUOPC_FreeFormatCreate(config, label="UMS_attributes::", &
+    relaxedflag=.true., rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  call NUOPC_CompAttributeIngest(driver, ff, addFlag=.true., rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  call NUOPC_FreeFormatDestroy(ff, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  ff = NUOPC_FreeFormatCreate(config, label="ALLCOMP_attributes::", &
+    relaxedflag=.true., rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  call NUOPC_CompAttributeIngest(driver, ff, addFlag=.true., rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  call NUOPC_FreeFormatDestroy(ff, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
