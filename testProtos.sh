@@ -105,6 +105,7 @@ testResult[count]="FAIL"
 fi
 echo
 make clean
+#-
 make ATM=B OCN=A,B
 echo "OCN_SELECT: A" > esm.config
 ((count++))
@@ -121,6 +122,7 @@ testResult[count]="FAIL"
 fi
 echo
 make clean
+#-
 make ATM=A OCN=B
 echo "OCN_SELECT: B" > esm.config
 ((count++))
@@ -150,6 +152,7 @@ cd $1
 make distclean
 ./cleanSubs.csh
 ./buildSubs.csh
+#-
 make ATM=A OCN=A,B,C
 echo "OCN_SELECT: A" > esm.config
 ((count++))
@@ -166,6 +169,7 @@ testResult[count]="FAIL"
 fi
 echo
 make clean
+#-
 make ATM=B OCN=A,B,C
 echo "OCN_SELECT: B" > esm.config
 ((count++))
@@ -182,6 +186,7 @@ testResult[count]="FAIL"
 fi
 echo
 make clean
+#-
 make ATM=C OCN=A,B,C
 echo "OCN_SELECT: C" > esm.config
 ((count++))
@@ -198,6 +203,7 @@ testResult[count]="FAIL"
 fi
 echo
 make clean
+#-
 make ATM=D OCN=A,B,C
 echo "OCN_SELECT: A" > esm.config
 ((count++))
@@ -212,9 +218,9 @@ testResult[count]="PASS"
 else
 testResult[count]="FAIL"
 fi
-echo FINISHED: $1
 echo
 make clean
+#-
 make ATM=E OCN=A,B,C
 echo "OCN_SELECT: B" > esm.config
 ((count++))
@@ -231,9 +237,22 @@ testResult[count]="FAIL"
 fi
 echo
 make clean
-make ATM=F OCN=A,B,C
-echo "OCN_SELECT: C" > esm.config
+#-
+#make ATM=F OCN=A,B,C
+#echo "OCN_SELECT: C" > esm.config
+#((count++))
+#testList[count]=$1
+#set -x
 #$ESMF_INTERNAL_MPIRUN -np 4 ./$2   --- cannot run this because atmF is not fully implemented
+#local result=$?
+#set +x
+#if [ $result -eq 0 ]
+#then
+#testResult[count]="PASS"
+#else
+#testResult[count]="FAIL"
+#fi
+#-
 echo FINISHED: $1
 cd ..
 date
