@@ -216,14 +216,10 @@ module GenericDriver
       file=__FILE__)) &
       return  ! bail out
 
-    ! set the driver clock timeStep
-    ! 5 minute coupling timeStep by default (when runSequence uses @*)
-    ! can be overwritten by runSequence
-    call ESMF_TimeIntervalSet(timeStep, m=5, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
+    ! set the driver clock default timeStep = stopTime - startTime
+    ! use with runSequence @*,
+    ! or overwritten with explicit timeStep in runSequence
+    timeStep = stopTime - startTime
 
     internalClock = ESMF_ClockCreate(name="Application Clock", &
       timeStep=timeStep, startTime=startTime, stopTime=stopTime, rc=rc)
