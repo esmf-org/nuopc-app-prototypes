@@ -239,7 +239,7 @@ echo
 make clean
 #-
 #make ATM=F OCN=A,B,C
-#echo "OCN_SELECT: C" > esm.config
+echo "OCN_SELECT: C" > esm.config
 #((count++))
 #testList[count]=$1
 #set -x
