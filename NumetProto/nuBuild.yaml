@@ -1,0 +1,10 @@
+components:
+
+  tawas:
+    source_dir:   ./TAWAS
+    shared:       true
+
+  lumo:
+    source_dir:   ./LUMO
+    shared:       false
+    fort_module:  lumo
