@@ -16,6 +16,8 @@ eval $command
 
 #TOOLRUN="valgrind --leak-check=full"
 
+RESULTSDIR=NUOPC-PROTO-RESULTS
+
 count=0
 failcount=0
 
@@ -38,6 +40,9 @@ testResult[count]="PASS"
 else
 testResult[count]="FAIL"
 fi
+mkdir -p ../$RESULTSDIR
+cp $2.stdout ../$RESULTSDIR/$1.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.Log
 echo FINISHED: $1
 cd ..
 date
@@ -76,6 +81,9 @@ testResult[count]="PASS"
 else
 testResult[count]="FAIL"
 fi
+mkdir -p ../$RESULTSDIR
+cp $2.$arg.stdout ../$RESULTSDIR/$1.$arg.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.$arg.Log
 echo FINISHED: $1
 cd ..
 date
@@ -103,6 +111,9 @@ testResult[count]="PASS"
 else
 testResult[count]="FAIL"
 fi
+mkdir -p ../$RESULTSDIR
+cp $2.stdout ../$RESULTSDIR/$1.1.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.1.Log
 echo
 make clean
 #-
@@ -120,6 +131,9 @@ testResult[count]="PASS"
 else
 testResult[count]="FAIL"
 fi
+mkdir -p ../$RESULTSDIR
+cp $2.stdout ../$RESULTSDIR/$1.2.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.2.Log
 echo
 make clean
 #-
@@ -137,6 +151,9 @@ testResult[count]="PASS"
 else
 testResult[count]="FAIL"
 fi
+mkdir -p ../$RESULTSDIR
+cp $2.stdout ../$RESULTSDIR/$1.3.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.3.Log
 echo FINISHED: $1
 cd ..
 date
@@ -167,6 +184,9 @@ testResult[count]="PASS"
 else
 testResult[count]="FAIL"
 fi
+mkdir -p ../$RESULTSDIR
+cp $2.stdout ../$RESULTSDIR/$1.1.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.1.Log
 echo
 make clean
 #-
@@ -184,6 +204,9 @@ testResult[count]="PASS"
 else
 testResult[count]="FAIL"
 fi
+mkdir -p ../$RESULTSDIR
+cp $2.stdout ../$RESULTSDIR/$1.2.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.2.Log
 echo
 make clean
 #-
@@ -201,6 +224,9 @@ testResult[count]="PASS"
 else
 testResult[count]="FAIL"
 fi
+mkdir -p ../$RESULTSDIR
+cp $2.stdout ../$RESULTSDIR/$1.3.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.3.Log
 echo
 make clean
 #-
@@ -218,6 +244,9 @@ testResult[count]="PASS"
 else
 testResult[count]="FAIL"
 fi
+mkdir -p ../$RESULTSDIR
+cp $2.stdout ../$RESULTSDIR/$1.4.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.4.Log
 echo
 make clean
 #-
@@ -235,6 +264,9 @@ testResult[count]="PASS"
 else
 testResult[count]="FAIL"
 fi
+mkdir -p ../$RESULTSDIR
+cp $2.stdout ../$RESULTSDIR/$1.5.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.5.Log
 echo
 make clean
 #-
@@ -279,6 +311,9 @@ testResult[count]="PASS"
 else
 testResult[count]="FAIL"
 fi
+mkdir -p ../$RESULTSDIR
+cp $2.stdout ../$RESULTSDIR/$1.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.Log
 echo FINISHED: $1
 cd ..
 date
@@ -332,6 +367,7 @@ TestProto     SingleModelProto                            mainApp
 TestProto     SingleModelOpenMPProto                      mainApp
 export OMP_NUM_THREADS=3
 TestProto     SingleModelOpenMPUnawareProto               mainApp
+export OMP_NUM_THREADS=1
 
 date
 echo "== TEST SUMMARY START =="
