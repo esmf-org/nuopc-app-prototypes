@@ -353,7 +353,6 @@ echo
 }
 
 # function    # proto directory                           # executable
-TestESMXProto ESMX_AtmOcnProto                            esmx
 TestProto     AsyncIOBlockingProto                        asyncIOApp
 TestProto     AsyncIONonblockingProto                     asyncIOApp
 TestProto     AtmOcnConOptsProto                          esmApp
@@ -400,6 +399,8 @@ TestProto     SingleModelOpenMPProto                      mainApp
 export OMP_NUM_THREADS=3
 TestProto     SingleModelOpenMPUnawareProto               mainApp
 export OMP_NUM_THREADS=1
+# - ESMX tests ----------------------------------------------------------------
+TestESMXProto ESMX_AtmOcnProto                            esmx
 
 date
 echo "== TEST SUMMARY START =="
