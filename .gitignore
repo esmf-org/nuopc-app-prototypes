@@ -686,8 +686,6 @@ ESMX_AtmOcnProto/TaWaS/libtawas.so
 ESMX_AtmOcnProto/TaWaS/tawas.cmake
 ESMX_AtmOcnProto/TaWaS/tawas.mod
 ESMX_AtmOcnProto/build/
-ESMX_AtmOcnProto/buildSubs.sh
-ESMX_AtmOcnProto/cleanSubs.sh
 ESMX_AtmOcnProto/esmx.stdout
 ExternalDriverAPIProto/PET0.ESMF_LogFile
 ExternalDriverAPIProto/PET1.ESMF_LogFile
