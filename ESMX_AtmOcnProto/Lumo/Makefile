@@ -41,9 +41,25 @@ include $(ESMFMKFILE)
 %.o : %.C
 	$(ESMF_CXXCOMPILER) -c $(ESMF_CXXCOMPILEOPTS) $(ESMF_CXXCOMPILEPATHSLOCAL) $(ESMF_CXXCOMPILEPATHS) $(ESMF_CXXCOMPILECPPFLAGS) $<
 
-# -----------------------------------------------------------------------------
-ocn.so: ocn.o
+lib%.so: %.o
 	$(ESMF_CXXLINKER) -shared -o $@ $<
+
+.PRECIOUS: lib%.so
+
+%.cmake : lib%.so
+	@echo "# Self-describing NUOPC Component for ESMX" > $@
+	@echo >> $@
+	@echo "add_library($* SHARED IMPORTED)"           >> $@
+	@echo "set_target_properties($* PROPERTIES"       >> $@
+	@echo "  IMPORTED_LOCATION             `pwd`/$<"  >> $@
+	@echo "  INTERFACE_INCLUDE_DIRECTORIES `pwd`"     >> $@
+	@echo "#  INTERFACE_LINK_DIRECTORIES    <not-needed-here>"    >> $@
+	@echo "#  INTERFACE_LINK_LIBRARIES      <not-needed-here>"    >> $@
+	@echo ")" >> $@
+	@echo "target_link_libraries(esmx PRIVATE $*)"  >> $@
+
+# -----------------------------------------------------------------------------
+lumo.cmake:
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -51,7 +67,7 @@ ocn.so: ocn.o
 dust:
 	rm -f PET*.ESMF_LogFile
 clean:
-	rm -f *.o *.so *.mod *.mk
+	rm -f *.o *.so *.mod *.mk lumo.cmake
 distclean: dust clean
 
 info:
@@ -62,4 +78,4 @@ info:
 	@echo ==================================================================
 
 edit:
-	nedit ocn.F90 &
+	nedit lumo.F90 &

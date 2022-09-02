@@ -321,7 +321,39 @@ echo ---------------------------------------------------------------------------
 echo
 }
 
+function TestESMXProto {
+((count++))
+testList[count]=$1
+echo ---------------------------------------------------------------------------
+date
+echo STARTING: $1
+cd $1
+make distclean
+./cleanSubs.sh
+./buildSubs.sh
+make
+set -x
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./build/$2 > $2.stdout 2>&1
+local result=$?
+set +x
+if [ $result -eq 0 ]
+then
+testResult[count]="PASS"
+else
+testResult[count]="FAIL"
+fi
+mkdir -p ../$RESULTSDIR
+cp $2.stdout ../$RESULTSDIR/$1.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.Log
+echo FINISHED: $1
+cd ..
+date
+echo ---------------------------------------------------------------------------
+echo
+}
+
 # function    # proto directory                           # executable
+TestESMXProto ESMX_AtmOcnProto                            esmx
 TestProto     AsyncIOBlockingProto                        asyncIOApp
 TestProto     AsyncIONonblockingProto                     asyncIOApp
 TestProto     AtmOcnConOptsProto                          esmApp

@@ -1,4 +1,4 @@
-# GNU Makefile template for user ESMF application
+# GNU Makefile template for user ESMF component
 
 ################################################################################
 ################################################################################
@@ -24,9 +24,6 @@ endif
 
 include $(ESMFMKFILE)
 
-# strip quotes around the ESMF_INTERNAL_MPIRUN value
-ESMF_INTERNAL_MPIRUN := $(shell echo $(ESMF_INTERNAL_MPIRUN))
-
 ################################################################################
 ################################################################################
 
@@ -44,18 +41,33 @@ ESMF_INTERNAL_MPIRUN := $(shell echo $(ESMF_INTERNAL_MPIRUN))
 %.o : %.C
 	$(ESMF_CXXCOMPILER) -c $(ESMF_CXXCOMPILEOPTS) $(ESMF_CXXCOMPILEPATHSLOCAL) $(ESMF_CXXCOMPILEPATHS) $(ESMF_CXXCOMPILECPPFLAGS) $<
 
+lib%.so: %.o
+	$(ESMF_CXXLINKER) -shared -o $@ $<
+
+.PRECIOUS: lib%.so
+
+%.cmake : lib%.so
+	@echo "# Self-describing NUOPC Component for ESMX" > $@
+	@echo >> $@
+	@echo "add_library($* SHARED IMPORTED)"           >> $@
+	@echo "set_target_properties($* PROPERTIES"       >> $@
+	@echo "  IMPORTED_LOCATION             `pwd`/$<"  >> $@
+	@echo "  INTERFACE_INCLUDE_DIRECTORIES `pwd`"     >> $@
+	@echo "#  INTERFACE_LINK_DIRECTORIES    <not-needed-here>"    >> $@
+	@echo "#  INTERFACE_LINK_LIBRARIES      <not-needed-here>"    >> $@
+	@echo ")" >> $@
+	@echo "target_link_libraries(esmx PRIVATE $*)"  >> $@
 
 # -----------------------------------------------------------------------------
-genericApp: genericApp.o
-	$(ESMF_F90LINKER) $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS) -o $@ $^ $(ESMF_F90ESMFLINKLIBS)
+tawas.cmake:
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 .PHONY: dust clean distclean info edit
 dust:
-	rm -rf PET*.ESMF_LogFile traceout *.nc *.stdout
+	rm -f PET*.ESMF_LogFile
 clean:
-	rm -f genericApp *.o *.mod
+	rm -f *.o *.so *.mod *.mk tawas.cmake
 distclean: dust clean
 
 info:
@@ -66,7 +78,4 @@ info:
 	@echo ==================================================================
 
 edit:
-	nedit genericApp.F90
-
-run:
-	$(ESMF_INTERNAL_MPIRUN) -np 4 ./genericApp
+	nedit tawas.F90 &

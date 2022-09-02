@@ -1,4 +1,4 @@
-# GNU Makefile template for user ESMF component
+# GNU Makefile template for user ESMF application
 
 ################################################################################
 ################################################################################
@@ -24,34 +24,23 @@ endif
 
 include $(ESMFMKFILE)
 
+# strip quotes around the ESMF_INTERNAL_MPIRUN value
+ESMF_INTERNAL_MPIRUN := $(shell echo $(ESMF_INTERNAL_MPIRUN))
+
 ################################################################################
 ################################################################################
 
-.SUFFIXES: .f90 .F90 .c .C
-
-%.o : %.f90
-	$(ESMF_F90COMPILER) -c $(ESMF_F90COMPILEOPTS) $(ESMF_F90COMPILEPATHS) $(ESMF_F90COMPILEFREENOCPP) $<
-
-%.o : %.F90
-	$(ESMF_F90COMPILER) -c $(ESMF_F90COMPILEOPTS) $(ESMF_F90COMPILEPATHS) $(ESMF_F90COMPILEFREECPP) $(ESMF_F90COMPILECPPFLAGS) $<
-        
-%.o : %.c
-	$(ESMF_CXXCOMPILER) -c $(ESMF_CXXCOMPILEOPTS) $(ESMF_CXXCOMPILEPATHSLOCAL) $(ESMF_CXXCOMPILEPATHS) $(ESMF_CXXCOMPILECPPFLAGS) $<
-
-%.o : %.C
-	$(ESMF_CXXCOMPILER) -c $(ESMF_CXXCOMPILEOPTS) $(ESMF_CXXCOMPILEPATHSLOCAL) $(ESMF_CXXCOMPILEPATHS) $(ESMF_CXXCOMPILECPPFLAGS) $<
-
-# -----------------------------------------------------------------------------
-ocn.so: ocn.o
-	$(ESMF_CXXLINKER) -shared -o $@ $<
+esmx: esmxBuild.yaml
+	cmake -H$(ESMF_ESMXDIR) -Bbuild
+	cmake --build ./build
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-.PHONY: dust clean distclean info edit
+.PHONY: dust clean distclean info run
 dust:
-	rm -f PET*.ESMF_LogFile
+	rm -f PET*.ESMF_LogFile *.nc *.stdout
 clean:
-	rm -f *.o *.so *.mod *.mk
+	rm -rf build
 distclean: dust clean
 
 info:
@@ -61,5 +50,5 @@ info:
 	@cat $(ESMFMKFILE)
 	@echo ==================================================================
 
-edit:
-	nedit ocn.F90 &
+run:
+	$(ESMF_INTERNAL_MPIRUN) -np 4 ./build/esmx
