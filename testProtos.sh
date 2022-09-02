@@ -167,8 +167,8 @@ date
 echo STARTING: $1
 cd $1
 make distclean
-./cleanSubs.csh
-./buildSubs.csh
+./cleanSubs.sh
+./buildSubs.sh
 #-
 make ATM=A OCN=A,B,C
 echo "OCN_SELECT: A" > esm.config
