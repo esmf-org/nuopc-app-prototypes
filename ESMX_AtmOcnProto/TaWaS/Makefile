@@ -59,7 +59,7 @@ lib%.a: %.o
 	@echo "#  INTERFACE_LINK_DIRECTORIES    <not-needed-here>"    >> $@
 	@echo "#  INTERFACE_LINK_LIBRARIES      <not-needed-here>"    >> $@
 	@echo ")" >> $@
-	@echo "target_link_libraries(esmx PRIVATE $*)"  >> $@
+	@echo "target_link_libraries(esmx_driver PUBLIC $*)"  >> $@
 
 # -----------------------------------------------------------------------------
 tawas.cmake:
