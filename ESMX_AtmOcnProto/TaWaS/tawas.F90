@@ -457,6 +457,8 @@ module TAWAS
 
 end module
 
+#ifdef SHARED_OBJECT
+
 ! External access to SetVM
 subroutine SetVM(comp, rc)
   use ESMF
@@ -482,3 +484,5 @@ subroutine SetServices(comp, rc)
     file=__FILE__)) &
     return  ! bail out
 end subroutine
+
+#endif

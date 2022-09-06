@@ -44,12 +44,15 @@ include $(ESMFMKFILE)
 lib%.so: %.o
 	$(ESMF_CXXLINKER) -shared -o $@ $<
 
-.PRECIOUS: lib%.so
+lib%.a: %.o
+	ar cr $@ $<
 
-%.cmake : lib%.so
+.PRECIOUS: lib%.so lib%.a
+
+%.cmake : lib%.a
 	@echo "# Self-describing NUOPC Component for ESMX" > $@
 	@echo >> $@
-	@echo "add_library($* SHARED IMPORTED)"           >> $@
+	@echo "add_library($* STATIC IMPORTED)"           >> $@
 	@echo "set_target_properties($* PROPERTIES"       >> $@
 	@echo "  IMPORTED_LOCATION             `pwd`/$<"  >> $@
 	@echo "  INTERFACE_INCLUDE_DIRECTORIES `pwd`"     >> $@
@@ -67,7 +70,7 @@ tawas.cmake:
 dust:
 	rm -f PET*.ESMF_LogFile
 clean:
-	rm -f *.o *.so *.mod *.mk tawas.cmake
+	rm -f *.o *.a *.so *.mod *.mk tawas.cmake
 distclean: dust clean
 
 info:
