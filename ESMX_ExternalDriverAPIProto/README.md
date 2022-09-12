@@ -1,6 +1,6 @@
 # ESMX_ExternalDriverAPIProto
 
-ESMX is used to implement a coupled system with two components (ATM and OCN). The `ESMX_Driver` is driven by an external application layer through the [External NUOPC Interface](https://earthsystemmodeling.org/docs/nightly/develop/NUOPC_refdoc/node3.html#SECTION00038000000000000000)
+[ESMX](https://github.com/esmf-org/esmf/tree/develop/src/addon/ESMX) is used to implement a coupled system with two components (ATM and OCN). The `ESMX_Driver` is driven by an external application layer through the [External NUOPC Interface](https://earthsystemmodeling.org/docs/nightly/develop/NUOPC_refdoc/node3.html#SECTION00038000000000000000)
 
 ## Primary Artifacts
 

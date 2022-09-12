@@ -1,6 +1,6 @@
 # ESMX_AtmOcnProto
 
-ESMX is used to implement a coupled system with two components (ATM and OCN). Both components are provided as NUOPC-compliant models. 
+[ESMX](https://github.com/esmf-org/esmf/tree/develop/src/addon/ESMX) is used to implement a coupled system with two components (ATM and OCN). Both components are provided as NUOPC-compliant models. 
 
 ## Primary Artifacts
 
