@@ -7,6 +7,8 @@
 ! NASA Goddard Space Flight Center.
 ! Licensed under the University of Illinois-NCSA License.
 !==============================================================================
+#define FILENAME "externalApp.F90"
+!==============================================================================
 
 program externalApp
 
@@ -37,44 +39,44 @@ program externalApp
     defaultCalkind=ESMF_CALKIND_GREGORIAN, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
-    file=__FILE__)) &
+    file=FILENAME)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
   call ESMF_LogSet(flush=.true., rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
-    file=__FILE__)) &
+    file=FILENAME)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
   call ESMF_LogWrite("externalApp STARTING", ESMF_LOGMSG_INFO, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
-    file=__FILE__)) &
+    file=FILENAME)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
   ! Create the application Clock
   call ESMF_TimeIntervalSet(timeStep, m=15, rc=rc) ! 15 minute steps
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
-    file=__FILE__)) &
+    file=FILENAME)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
   call ESMF_TimeSet(startTime, yy=2010, mm=6, dd=1, h=0, m=0, &
     calkindflag=ESMF_CALKIND_GREGORIAN, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
-    file=__FILE__)) &
+    file=FILENAME)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
   call ESMF_TimeSet(stopTime, yy=2010, mm=6, dd=1, h=1, m=0, &
     calkindflag=ESMF_CALKIND_GREGORIAN, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
-    file=__FILE__)) &
+    file=FILENAME)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
   clock = ESMF_ClockCreate(name="Application Clock", &
     timeStep=timeStep, startTime=startTime, stopTime=stopTime, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
-    file=__FILE__)) &
+    file=FILENAME)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
   ! Create the external level import/export States
@@ -85,32 +87,32 @@ program externalApp
     rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
-    file=__FILE__)) &
+    file=FILENAME)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
   ! -> state holding fields imported by the external level from the ESM component
   externalImportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT, &
     rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
-    file=__FILE__)) &
+    file=FILENAME)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
   ! Create the earth system Component
   esmComp = ESMF_GridCompCreate(name="ESMX_Driver", rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
-    file=__FILE__)) &
+    file=FILENAME)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
   ! SetServices for the earth system Component
   call ESMF_GridCompSetServices(esmComp, esmSS, userRc=urc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
-    file=__FILE__)) &
+    file=FILENAME)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
   if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
-    file=__FILE__)) &
+    file=FILENAME)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
 #if 1
@@ -132,7 +134,7 @@ program externalApp
     rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
-    file=__FILE__)) &
+    file=FILENAME)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 #endif
 
@@ -154,7 +156,7 @@ program externalApp
     rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
-    file=__FILE__)) &
+    file=FILENAME)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 #endif
 
@@ -165,18 +167,18 @@ program externalApp
     phaseLabel=label_ExternalAdvertise, phaseIndex=phase, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
-    file=__FILE__)) &
+    file=FILENAME)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
   call ESMF_GridCompInitialize(esmComp, phase=phase, clock=clock, &
     importState=externalExportState, exportState=externalImportState, &
     userRc=urc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
-    file=__FILE__)) &
+    file=FILENAME)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
   if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
-    file=__FILE__)) &
+    file=FILENAME)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
   ! Call "ExternalRealize" Initialize for the earth system Component
@@ -187,18 +189,18 @@ program externalApp
     phaseLabel=label_ExternalRealize, phaseIndex=phase, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
-    file=__FILE__)) &
+    file=FILENAME)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
   call ESMF_GridCompInitialize(esmComp, phase=phase, clock=clock, &
     importState=externalExportState, exportState=externalImportState, &
     userRc=urc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
-    file=__FILE__)) &
+    file=FILENAME)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
   if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
-    file=__FILE__)) &
+    file=FILENAME)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
   ! Fill fields provided from this level with data
@@ -206,19 +208,19 @@ program externalApp
     itemType=itemType, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
-    file=__FILE__)) &
+    file=FILENAME)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
   if (itemType /= ESMF_STATEITEM_NOTFOUND) then
     call ESMF_StateGet(externalExportState, itemName="precipitation_flux", &
       field=field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
-      file=__FILE__)) &
+      file=FILENAME)) &
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_FieldFill(field, dataFillScheme="sincos", member=1, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
-      file=__FILE__)) &
+      file=FILENAME)) &
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
   endif
 
@@ -227,18 +229,18 @@ program externalApp
     phaseLabel=label_ExternalDataInit, phaseIndex=phase, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
-    file=__FILE__)) &
+    file=FILENAME)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
   call ESMF_GridCompInitialize(esmComp, phase=phase, clock=clock, &
     importState=externalExportState, exportState=externalImportState, &
     userRc=urc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
-    file=__FILE__)) &
+    file=FILENAME)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
   if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
-    file=__FILE__)) &
+    file=FILENAME)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
   ! Write out the Fields in the externalImportState after initialize
@@ -247,7 +249,7 @@ program externalApp
     overwrite=.true., relaxedFlag=.true., rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
-    file=__FILE__)) &
+    file=FILENAME)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
   ! Write out the Fields in the externalExportState after initialize
   call NUOPC_Write(externalExportState, &
@@ -255,7 +257,7 @@ program externalApp
     overwrite=.true., relaxedFlag=.true., rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
-    file=__FILE__)) &
+    file=FILENAME)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
   ! Explicit time stepping loop on the external level, here based on ESMF_Clock
@@ -264,7 +266,7 @@ program externalApp
     call NUOPC_SetTimestamp(externalExportState, clock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
-      file=__FILE__)) &
+      file=FILENAME)) &
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
     ! Run the earth system Component: i.e. step ESM forward by timestep=15min
     call ESMF_GridCompRun(esmComp, clock=clock, &
@@ -272,11 +274,11 @@ program externalApp
       userRc=urc, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
-      file=__FILE__)) &
+      file=FILENAME)) &
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
     if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
-      file=__FILE__)) &
+      file=FILENAME)) &
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
     ! Write out the Fields in the externalImportState as a time slice
     call NUOPC_Write(externalImportState, &
@@ -284,7 +286,7 @@ program externalApp
       timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
-      file=__FILE__)) &
+      file=FILENAME)) &
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
     ! Write out the Fields in the externalExportState as a time slice
     call NUOPC_Write(externalExportState, &
@@ -292,7 +294,7 @@ program externalApp
       timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
-      file=__FILE__)) &
+      file=FILENAME)) &
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
     ! Increment the time slice counter
     slice = slice + 1
@@ -300,7 +302,7 @@ program externalApp
     call ESMF_ClockAdvance(clock, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
-      file=__FILE__)) &
+      file=FILENAME)) &
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
   end do
 
@@ -310,24 +312,24 @@ program externalApp
     userRc=urc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
-    file=__FILE__)) &
+    file=FILENAME)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
   if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
-    file=__FILE__)) &
+    file=FILENAME)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
   ! Destroy the earth system Component
   call ESMF_GridCompDestroy(esmComp, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
-    file=__FILE__)) &
+    file=FILENAME)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
   call ESMF_LogWrite("externalApp FINISHED", ESMF_LOGMSG_INFO, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
-    file=__FILE__)) &
+    file=FILENAME)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
   ! Finalize ESMF
