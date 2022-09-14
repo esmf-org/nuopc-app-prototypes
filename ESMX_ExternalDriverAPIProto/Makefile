@@ -8,7 +8,7 @@ include $(ESMFMKFILE)
 ESMF_INTERNAL_MPIRUN := $(shell echo $(ESMF_INTERNAL_MPIRUN))
 
 build/externalApp: externalApp.F90 esmxBuild.yaml
-	cmake -Bbuild -DESMF_ESMXDIR=$(ESMF_ESMXDIR)
+	cmake -H. -Bbuild -DESMF_ESMXDIR=$(ESMF_ESMXDIR)
 	cmake --build ./build
 
 # -----------------------------------------------------------------------------
