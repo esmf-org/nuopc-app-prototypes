@@ -28,7 +28,7 @@ Files and sub-directories that are needed for the integration into the automated
 2. Inspect the `esmf.mk` file of your ESMF installation to find the appropriate `ESMF_ESMXDIR` variable:<br>
    `more $ESMFMKFILE`
 3. Configure the top level CMake build to reference ESMX via the desired `ESMF_ESMXDIR` path. The `CMakeLists.txt` implements the ESMF_ESMXDIR option that needs to be set accordingly. This can either be done manually on the shell by just copying the path found in step 2, or setting an environment variable `ESMF_ESMXDIR`. Here the latter is assumed:<br>
-   `cmake -Bbuild -DESMF_ESMXDIR=$(ESMF_ESMXDIR)`
+   `cmake -H. -Bbuild -DESMF_ESMXDIR=$ESMF_ESMXDIR`
 4. Build the local top level executable `externalApp` under the `build` directory that was created in step 3:<br>
    `cmake --build ./build`
 5. Executable `./build/externalApp` can now be executed on 4 PETs using the system-specific MPI launch procedure. The executable must be able to access file `esmxRun.config`. The `ESMX_Driver` reads the run configuration and drives the system accordingly.
