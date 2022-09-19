@@ -26,7 +26,7 @@ Files and sub-directories that are needed for the integration into the automated
 2. Inspect the `esmf.mk` file of your ESMF installation to find the appropriate `ESMF_ESMXDIR` variable:<br>
    `more $ESMFMKFILE`
 3. Configure the ESMX build by passing the `ESMF_ESMXDIR` path via the `-H` option to `cmake`. This can either be done manually on the shell by just copying the path found in step 2, or setting an environment variable `ESMF_ESMXDIR`. Here the latter is assumed:<br>
-   `cmake -H$(ESMF_ESMXDIR) -Bbuild`
+   `cmake -H$ESMF_ESMXDIR -Bbuild`
 4. Build the executable `esmx` under the `build` directory that was created in step 3:<br>
    `cmake --build ./build`
 5. Executable `./build/esmx` can now be executed on 4 PETs using the system-specific MPI launch procedure. The executable must be able to access file `esmxRun.config`. It reads the run configuration and drives the system accordingly.
