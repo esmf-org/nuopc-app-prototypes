@@ -398,6 +398,7 @@ AtmOcnSelectExternalProto/PET0.ESMF_LogFile
 AtmOcnSelectExternalProto/PET1.ESMF_LogFile
 AtmOcnSelectExternalProto/PET2.ESMF_LogFile
 AtmOcnSelectExternalProto/PET3.ESMF_LogFile
+AtmOcnSelectExternalProto/atmD.so
 AtmOcnSelectExternalProto/atmE.so
 AtmOcnSelectExternalProto/esmApp.stdout
 AtmOcnSelectExternalProto/ocn.so

@@ -80,7 +80,7 @@ ocn.mk:
 
 # - build everything (including dependencies) into a single shared object
 ocn.so: ocn.o $(DEP_CMPL_OBJS)
-	$(ESMF_CXXLINKER) -shared -o $@ $< $(DEP_LINK_OBJS) $(DEP_SHRD_PATH) $(DEP_SHRD_LIBS)
+	$(ESMF_CXXLINKER) -shared -o $@ $< $(DEP_LINK_OBJS) $(DEP_SHRD_PATH) $(DEP_SHRD_LIBS) $(ESMF_CXXLINKPATHS) $(ESMF_CXXESMFLINKLIBS)
 	rm -f $<
 
 # -----------------------------------------------------------------------------

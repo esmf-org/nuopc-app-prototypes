@@ -14,6 +14,7 @@ cd ..
 
 cd ATM-D
 make distclean; make
+cp libatmD.so ../atmD.so
 cd ..
 
 cd ATM-E

@@ -57,7 +57,7 @@ include $(ESMFMKFILE)
 atmE.mk:
 
 atmE.so: atmE.o
-	$(ESMF_CXXLINKER) -shared -o $@ $<
+	$(ESMF_F90LINKER) $(ESMF_SO_F90LINKOPTS) -o $@ $< $(ESMF_F90ESMFLINKPATHS) -lesmf
 	rm -f $<
 
 # -----------------------------------------------------------------------------
