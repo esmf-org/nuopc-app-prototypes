@@ -1,0 +1,7 @@
+components:
+
+  tawas:
+    cmake_config: TaWaS/tawas.cmake
+
+  lumo:
+    cmake_config: Lumo/lumo.cmake

@@ -16,6 +16,8 @@ eval $command
 
 #TOOLRUN="valgrind --leak-check=full"
 
+RESULTSDIR=NUOPC-PROTO-RESULTS
+
 count=0
 failcount=0
 
@@ -38,6 +40,9 @@ testResult[count]="PASS"
 else
 testResult[count]="FAIL"
 fi
+mkdir -p ../$RESULTSDIR
+cp $2.stdout ../$RESULTSDIR/$1.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.Log
 echo FINISHED: $1
 cd ..
 date
@@ -76,6 +81,9 @@ testResult[count]="PASS"
 else
 testResult[count]="FAIL"
 fi
+mkdir -p ../$RESULTSDIR
+cp $2.$arg.stdout ../$RESULTSDIR/$1.$arg.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.$arg.Log
 echo FINISHED: $1
 cd ..
 date
@@ -103,8 +111,12 @@ testResult[count]="PASS"
 else
 testResult[count]="FAIL"
 fi
+mkdir -p ../$RESULTSDIR
+cp $2.stdout ../$RESULTSDIR/$1.1.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.1.Log
 echo
 make clean
+#-
 make ATM=B OCN=A,B
 echo "OCN_SELECT: A" > esm.config
 ((count++))
@@ -119,8 +131,12 @@ testResult[count]="PASS"
 else
 testResult[count]="FAIL"
 fi
+mkdir -p ../$RESULTSDIR
+cp $2.stdout ../$RESULTSDIR/$1.2.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.2.Log
 echo
 make clean
+#-
 make ATM=A OCN=B
 echo "OCN_SELECT: B" > esm.config
 ((count++))
@@ -135,6 +151,9 @@ testResult[count]="PASS"
 else
 testResult[count]="FAIL"
 fi
+mkdir -p ../$RESULTSDIR
+cp $2.stdout ../$RESULTSDIR/$1.3.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.3.Log
 echo FINISHED: $1
 cd ..
 date
@@ -148,8 +167,9 @@ date
 echo STARTING: $1
 cd $1
 make distclean
-./cleanSubs.csh
-./buildSubs.csh
+./cleanSubs.sh
+./buildSubs.sh
+#-
 make ATM=A OCN=A,B,C
 echo "OCN_SELECT: A" > esm.config
 ((count++))
@@ -164,8 +184,12 @@ testResult[count]="PASS"
 else
 testResult[count]="FAIL"
 fi
+mkdir -p ../$RESULTSDIR
+cp $2.stdout ../$RESULTSDIR/$1.1.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.1.Log
 echo
 make clean
+#-
 make ATM=B OCN=A,B,C
 echo "OCN_SELECT: B" > esm.config
 ((count++))
@@ -180,8 +204,12 @@ testResult[count]="PASS"
 else
 testResult[count]="FAIL"
 fi
+mkdir -p ../$RESULTSDIR
+cp $2.stdout ../$RESULTSDIR/$1.2.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.2.Log
 echo
 make clean
+#-
 make ATM=C OCN=A,B,C
 echo "OCN_SELECT: C" > esm.config
 ((count++))
@@ -196,8 +224,12 @@ testResult[count]="PASS"
 else
 testResult[count]="FAIL"
 fi
+mkdir -p ../$RESULTSDIR
+cp $2.stdout ../$RESULTSDIR/$1.3.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.3.Log
 echo
 make clean
+#-
 make ATM=D OCN=A,B,C
 echo "OCN_SELECT: A" > esm.config
 ((count++))
@@ -212,9 +244,12 @@ testResult[count]="PASS"
 else
 testResult[count]="FAIL"
 fi
-echo FINISHED: $1
+mkdir -p ../$RESULTSDIR
+cp $2.stdout ../$RESULTSDIR/$1.4.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.4.Log
 echo
 make clean
+#-
 make ATM=E OCN=A,B,C
 echo "OCN_SELECT: B" > esm.config
 ((count++))
@@ -229,11 +264,27 @@ testResult[count]="PASS"
 else
 testResult[count]="FAIL"
 fi
+mkdir -p ../$RESULTSDIR
+cp $2.stdout ../$RESULTSDIR/$1.5.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.5.Log
 echo
 make clean
-make ATM=F OCN=A,B,C
+#-
+#make ATM=F OCN=A,B,C
 echo "OCN_SELECT: C" > esm.config
+#((count++))
+#testList[count]=$1
+#set -x
 #$ESMF_INTERNAL_MPIRUN -np 4 ./$2   --- cannot run this because atmF is not fully implemented
+#local result=$?
+#set +x
+#if [ $result -eq 0 ]
+#then
+#testResult[count]="PASS"
+#else
+#testResult[count]="FAIL"
+#fi
+#-
 echo FINISHED: $1
 cd ..
 date
@@ -260,6 +311,40 @@ testResult[count]="PASS"
 else
 testResult[count]="FAIL"
 fi
+mkdir -p ../$RESULTSDIR
+cp $2.stdout ../$RESULTSDIR/$1.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.Log
+echo FINISHED: $1
+cd ..
+date
+echo ---------------------------------------------------------------------------
+echo
+}
+
+function TestESMXProto {
+((count++))
+testList[count]=$1
+echo ---------------------------------------------------------------------------
+date
+echo STARTING: $1
+cd $1
+make distclean
+./cleanSubs.sh
+./buildSubs.sh
+make
+set -x
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./build/$2 > $2.stdout 2>&1
+local result=$?
+set +x
+if [ $result -eq 0 ]
+then
+testResult[count]="PASS"
+else
+testResult[count]="FAIL"
+fi
+mkdir -p ../$RESULTSDIR
+cp $2.stdout ../$RESULTSDIR/$1.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.Log
 echo FINISHED: $1
 cd ..
 date
@@ -313,6 +398,10 @@ TestProto     SingleModelProto                            mainApp
 TestProto     SingleModelOpenMPProto                      mainApp
 export OMP_NUM_THREADS=3
 TestProto     SingleModelOpenMPUnawareProto               mainApp
+export OMP_NUM_THREADS=1
+# - ESMX tests ----------------------------------------------------------------
+TestESMXProto ESMX_AtmOcnProto                            esmx
+TestESMXProto ESMX_ExternalDriverAPIProto                 externalApp
 
 date
 echo "== TEST SUMMARY START =="

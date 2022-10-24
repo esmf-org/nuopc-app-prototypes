@@ -23,7 +23,7 @@ module atmE
 
   private
 
-  public SetServices
+  public SetVM, SetServices
 
   !-----------------------------------------------------------------------------
   contains
@@ -248,6 +248,15 @@ module atmE
   !-----------------------------------------------------------------------------
 
 end module
+
+! External access to SetVM
+subroutine SetVM(comp, rc)
+  use ESMF
+  use atmE, only: SetVMModule => SetVM
+  type(ESMF_GridComp) :: comp
+  integer, intent(out) :: rc
+  call SetVMModule(comp, rc)
+end subroutine
 
 ! External access to SetServices
 subroutine SetServices(comp, rc)
