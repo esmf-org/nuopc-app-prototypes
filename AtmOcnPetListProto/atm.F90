@@ -143,6 +143,14 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
+    ! exportable field: magnitude_of_surface_downward_stress
+    call NUOPC_Advertise(exportState, &
+      StandardName="magnitude_of_surface_downward_stress", name="msds", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
   end subroutine
 
   !-----------------------------------------------------------------------------
@@ -355,6 +363,19 @@ module ATM
 
     ! exportable field on Mesh: precipitation_flux
     field = ESMF_FieldCreate(name="precip", mesh=meshOut, &
+      typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_Realize(exportState, field=field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! exportable field on Mesh: magnitude_of_surface_downward_stress
+    field = ESMF_FieldCreate(name="msds", mesh=meshOut, &
       typekind=ESMF_TYPEKIND_R8, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &

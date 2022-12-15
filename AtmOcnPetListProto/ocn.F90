@@ -117,6 +117,14 @@ module OCN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+    ! importable field: magnitude_of_surface_downward_stress
+    call NUOPC_Advertise(importState, &
+      StandardName="magnitude_of_surface_downward_stress", name="msds", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 #endif
 
     ! exportable field: sea_surface_temperature
@@ -295,8 +303,31 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
 
-    ! importable field on Mesh: precipitation_flux
-    field = ESMF_FieldCreate(name="precip", mesh=meshIn, &
+    ! importable field on Mesh or Grid: precipitation_flux
+    field = ESMF_FieldCreate(name="precip", &
+#if 1
+      mesh=meshIn, &
+#else
+      grid=gridIn, &
+#endif
+      typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_Realize(importState, field=field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! importable field on Mesh or Grid: magnitude_of_surface_downward_stress
+    field = ESMF_FieldCreate(name="msds", &
+#if 1
+      mesh=meshIn, &
+#else
+      grid=gridIn, &
+#endif
       typekind=ESMF_TYPEKIND_R8, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
