@@ -73,11 +73,20 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call ESMF_ConfigLoadFile(config, "esmApp.runconfig", rc=rc)
+#define CONFIG_FF_off
+#ifdef CONFIG_FF
+    call ESMF_ConfigLoadFile(config, "esmAppRun.config", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#else
+    call ESMF_ConfigLoadFile(config, "esmAppRun.yaml", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
     call ESMF_GridCompSet(driver, config=config, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -85,7 +94,7 @@ module ESM
       return  ! bail out
 
     ! set driver verbosity
-    call NUOPC_CompAttributeSet(driver, name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(driver, name="Verbosity", value="0", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -107,6 +116,7 @@ module ESM
     type(ESMF_Clock)              :: internalClock
     type(ESMF_Config)             :: config
     type(NUOPC_FreeFormat)        :: attrFF
+    type(ESMF_HConfig)            :: hconfig, hconfigSub
 
     rc = ESMF_SUCCESS
 
@@ -116,6 +126,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef CONFIG_FF
     attrFF = NUOPC_FreeFormatCreate(config, label="driverAttributes::", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -133,6 +144,29 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#else
+    call ESMF_ConfigGet(config, hconfig=hconfig, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    hconfigSub = ESMF_HConfigCreateAt(hconfig, &
+      keyString="driverAttributes", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompAttributeIngest(driver, hconfigSub, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_HConfigDestroy(hconfigSub, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
 
     ! SetServices for ATM
     call NUOPC_DriverAddComp(driver, "ATM", atmSS, comp=child, rc=rc)
@@ -141,7 +175,7 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     ! set default ATM attributes
-    call NUOPC_CompAttributeSet(child, name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(child, name="Verbosity", value="0", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -173,7 +207,7 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     ! set default OCN attributes
-    call NUOPC_CompAttributeSet(child, name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(child, name="Verbosity", value="0", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -205,7 +239,7 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     ! set default MED attributes
-    call NUOPC_CompAttributeSet(child, name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(child, name="Verbosity", value="0", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -307,9 +341,13 @@ module ESM
     ! local variables
     character(ESMF_MAXSTR)        :: name, connName
     type(ESMF_Config)             :: config
+    type(ESMF_HConfig)            :: hconfig, hconfigSub
     type(NUOPC_FreeFormat)        :: ff
     type(ESMF_CplComp), pointer   :: connectorList(:)
     integer                       :: i
+
+    type(ESMF_Info) :: info ! for debugging only
+    character(:), allocatable :: infoString ! debug only
 
     rc = ESMF_SUCCESS
 
@@ -318,11 +356,13 @@ module ESM
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
 
-    ! read free format run sequence from config
     call ESMF_GridCompGet(driver, config=config, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
-    ff = NUOPC_FreeFormatCreate(config, label="runSeq::", rc=rc)
+
+#ifdef CONFIG_FF
+    ! read free format run sequence from config
+    ff = NUOPC_FreeFormatCreate(config, label="runSeq1::", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
 
@@ -341,6 +381,30 @@ module ESM
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
 
+    ! clean-up
+    call NUOPC_FreeFormatDestroy(ff, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+
+#else
+    call ESMF_ConfigGet(config, hconfig=hconfig, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+    hconfigSub = ESMF_HConfigCreateAt(hconfig, keyString="runSeq1", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+    call NUOPC_DriverIngestRunSequence(driver, hconfigSub, &
+#ifdef TESTAUTOADDCONNECTORS
+      autoAddConnectors=.true., &
+#endif
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+    call ESMF_HConfigDestroy(hconfigSub, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+#endif
+
 #if 1
     ! Diagnostic output
     call NUOPC_DriverPrint(driver, orderflag=.true., rc=rc)
@@ -348,45 +412,31 @@ module ESM
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
 #endif
 
-    ! clean-up
-    call NUOPC_FreeFormatDestroy(ff, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
-
     ! set Verbosity on Connectors no matter how they were added
     ! also read in potential connector attributes from config
     nullify(connectorList)
     call NUOPC_DriverGetComp(driver, connectorList, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
+      line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
     do i=1, size(connectorList)
       ! default Verbosity, may be overridden from config below
       call NUOPC_CompAttributeSet(connectorList(i), name="Verbosity", &
-        value="high", rc=rc)
+        value="0", rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
+        line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
       ! read connector Attributes from config
       call NUOPC_CompGet(connectorList(i), name=connName, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
+        line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
       call ESMF_LogWrite("Reading Attributes for Connector: "//trim(connName), &
         ESMF_LOGMSG_INFO, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
+        line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+#ifdef CONFIG_FF
       ff = NUOPC_FreeFormatCreate(config, relaxedflag=.true., &
         label=trim(connName)//"-Attributes::", rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
+        line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
 #if 1
       call NUOPC_FreeFormatLog(ff, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -395,15 +445,37 @@ module ESM
       ! ingest FreeFormat driver attributes
       call NUOPC_CompAttributeIngest(connectorList(i), ff, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
+        line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
       ! clean-up
       call NUOPC_FreeFormatDestroy(ff, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
+        line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+#else
+      hconfigSub = ESMF_HConfigCreateAt(hconfig, &
+        keyString=trim(connName)//"-Attributes", rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+      call NUOPC_CompAttributeIngest(connectorList(i), hconfigSub, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+      call ESMF_HConfigDestroy(hconfigSub, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+#endif
+
+#if 0
+      ! just debugging the Info in JSON
+      call ESMF_InfoGetFromHost(connectorList(i), info=info, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+      infoString = ESMF_InfoDump(info, indent=1, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+      call ESMF_LogWrite(msg=infoString, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+#endif
+
     enddo
 
   end subroutine
