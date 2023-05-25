@@ -1,0 +1,26 @@
+ESMX:
+
+  Driver:
+    componentList:          [ATM, OCN]
+    attributes:
+      Verbosity: low
+
+    runSequence: |
+      @*
+        ATM -> OCN
+        OCN -> ATM
+        ATM
+        OCN
+      @
+
+ATM:
+  model:            Tawas
+  attributes:
+    Verbosity:  low
+  petList:          0-1
+
+OCN:
+  model:            lumo
+  petList:          2-3
+  attributes:
+    Verbosity:  low

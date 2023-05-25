@@ -1,5 +1,5 @@
 ###############################################
-####  esmApp Run-Time Configuration File  #####
+####  esmApp Run-Time Configuration YAML  #####
 ###############################################
 
 #-------------------------------------------------------------------------------
@@ -12,7 +12,7 @@
 # of 900s. Therefore, each iteration of the runSeq:: must step forward exactly
 # 900s.
 # 
-runSeq::
+runSeq1: |
     @100:200   # First loop running for 200s @ 100s
       MED
       MED -> OCN :remapMethod=patch:srcTermProcessing=1
@@ -39,7 +39,6 @@ runSeq::
       OCN -> MED
     @
     MED -> OCN  # A pretty useless connector call, just to show it works
-::
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
@@ -47,7 +46,7 @@ runSeq::
 # identical to the Driver time loop. The timeStep and runDuration specified
 # here overwrite what the Driver might set in ModelSetServices.
 #
-#runSeq::
+runSeq2: |
     @1800:5400
       MED
       MED -> ATM
@@ -61,12 +60,11 @@ runSeq::
       @
       OCN -> MED
     @
-::
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
 # A concurrent run sequence
-#runSeq::
+runSeq3: |
     @900:1800
       MED
       MED -> ATM
@@ -76,13 +74,12 @@ runSeq::
       ATM -> MED
       OCN -> MED
     @
-::
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
 # A sequential run sequence
-#runSeq::
-    @1800             # 30min time step 
+runSeq4: |
+    @1800             # 30min time step
       MED
       MED -> ATM
       ATM
@@ -94,18 +91,23 @@ runSeq::
       OCN -> MED
       MED
     @
-::
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
 # Attributes for components
-driverAttributes::
-  Verbosity = 4609
-  Profiling = 0
-::
+driverAttributes:
+  Verbosity:  "4609"
+  Profiling:  "0"
+
 # Another way of specifying the ConnectionOptions Attribute for a Connector is
 # to explicitly set the Attribute here:
-MED-TO-ATM-Attributes::
-  ConnectionOptions = :remapMethod=nearest_stod
-::
+MED-TO-ATM-Attributes:
+  ConnectionOptions: :remapMethod=nearest_stod
+  Verbosity:  "4609"              # must explicitly quote this integer
+  Profiling:  low                 # this is naturally a string
+  Diagnostic: "0"                 # again explicitly quote the zero
+  CustomSeq1: [1, 2, 3, 4]        # sequence of integers
+  CustomSeq2: [1., 2., 3., 4.]    # sequence of floats
+  CustomSeq3: [true, false]       # sequence of bools
+  CustomType: {k1: [a, aa, aaa], k2: b, k3: c}  # complex structure
 #-------------------------------------------------------------------------------

@@ -8,6 +8,8 @@
 ! Licensed under the University of Illinois-NCSA License.
 !==============================================================================
 
+#define USE_YAML
+
 module ESM
 
   !-----------------------------------------------------------------------------
@@ -86,11 +88,11 @@ module ESM
     type(ESMF_Clock)              :: internalClock
     type(ESMF_GridComp)           :: child
     type(ESMF_CplComp)            :: connector
-    integer                       :: petCount, i
-    character(len=160)            :: petListString
+    integer                       :: i
     integer, allocatable          :: petList(:)
     type(ESMF_Info)               :: info
     type(ESMF_Config)             :: config
+    type(ESMF_HConfig)            :: hconfig, hconfigNode
     type(NUOPC_FreeFormat)        :: ff
 
     ! - diagnostics -
@@ -108,13 +110,21 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
 
-    ! get the petCount
-    call ESMF_GridCompGet(driver, config=config, petCount=petCount, vm=vm, &
-      rc=rc)
+    ! get the config
+    call ESMF_GridCompGet(driver, config=config, vm=vm, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+#ifdef USE_YAML
+    ! config -> hconfig
+    call ESMF_ConfigGet(config, hconfig=hconfig, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
 
     call ESMF_VMLog(vm, "ESM SetModelServices() enter: ", ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -124,6 +134,26 @@ module ESM
 
     ! ATM
     ! - set up petList
+#ifdef USE_YAML
+    isFlag = ESMF_HConfigIsDefined(hconfig, keyString="ATM_petlist", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    if (isFlag) then
+      hconfigNode = ESMF_HConfigCreateAt(hconfig, keyString="ATM_petlist", &
+        rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      call NUOPC_IngestPetList(petList, hconfigNode, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    endif
+#else
     ff = NUOPC_FreeFormatCreate(config, label="ATM_petlist:", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -134,6 +164,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     ! - set /NUOPC/Hint/PePerPet/MaxCount
     call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/MaxCount", value=1, &
       rc=rc)
@@ -222,6 +253,26 @@ module ESM
 
     ! OCN
     ! - set up petList
+#ifdef USE_YAML
+    isFlag = ESMF_HConfigIsDefined(hconfig, keyString="OCN_petlist", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    if (isFlag) then
+      hconfigNode = ESMF_HConfigCreateAt(hconfig, keyString="OCN_petlist", &
+        rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      call NUOPC_IngestPetList(petList, hconfigNode, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+    endif
+#else
     ff = NUOPC_FreeFormatCreate(config, label="OCN_petlist:", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -232,6 +283,7 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#endif
     ! - set /NUOPC/Hint/PePerPet/MaxCount
     call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/MaxCount", value=1, &
       rc=rc)
@@ -488,12 +540,14 @@ module ESM
       return  ! bail out
 
     do i=1, size(petLists)
-      write (msg,*) "GridComp petLists(",i,")= ", petLists(i)%ptr
-      call ESMF_LogWrite(trim(msg), ESMF_LOGMSG_INFO, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
+      if (associated(petLists(i)%ptr)) then
+        write (msg,*) "GridComp petLists(",i,")= ", petLists(i)%ptr
+        call ESMF_LogWrite(trim(msg), ESMF_LOGMSG_INFO, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+      endif
     enddo
 
     deallocate(petLists)
@@ -510,12 +564,14 @@ module ESM
       return  ! bail out
 
     do i=1, size(petLists)
-      write (msg,*) "CplComp  petLists(",i,")= ", petLists(i)%ptr
-      call ESMF_LogWrite(trim(msg), ESMF_LOGMSG_INFO, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
+      if (associated(petLists(i)%ptr)) then
+        write (msg,*) "CplComp  petLists(",i,")= ", petLists(i)%ptr
+        call ESMF_LogWrite(trim(msg), ESMF_LOGMSG_INFO, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+      endif
     enddo
 
     deallocate(petLists)

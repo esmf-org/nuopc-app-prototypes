@@ -23,10 +23,23 @@ program esmApp
   type(ESMF_GridComp)     :: esmComp
   type(ESMF_Config)       :: config
   type(ESMF_VM)           :: vm
+  character(10)           :: configKey(2)
+
+#define USE_YAML
+
+#ifdef USE_YAML
+  configKey(1) = "ESMF"
+  configKey(2) = "APP"
+#endif
 
   ! Initialize ESMF
   call ESMF_Initialize(&
-    configFileName="nuopc.configure", &
+#ifdef USE_YAML
+    configFileName="nuopcRun.yaml", &
+    configKey=configKey, &
+#else
+    configFileName="nuopcRun.config", &
+#endif
     defaultGlobalResourceControl=.true., &
     defaultCalKind=ESMF_CALKIND_GREGORIAN, &
     config=config, &

@@ -30,7 +30,7 @@ ESMF_INTERNAL_MPIRUN := $(shell echo $(ESMF_INTERNAL_MPIRUN))
 ################################################################################
 ################################################################################
 
-esmx: esmxBuild.yaml
+ESMX_App: esmxBuild.yaml
 	cmake -H$(ESMF_ESMXDIR) -Bbuild
 	cmake --build ./build
 
@@ -51,4 +51,4 @@ info:
 	@echo ==================================================================
 
 run:
-	$(ESMF_INTERNAL_MPIRUN) -np 4 ./build/esmx
+	$(ESMF_INTERNAL_MPIRUN) -np 4 ./build/esmx_app

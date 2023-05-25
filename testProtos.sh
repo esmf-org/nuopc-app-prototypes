@@ -400,7 +400,7 @@ export OMP_NUM_THREADS=3
 TestProto     SingleModelOpenMPUnawareProto               mainApp
 export OMP_NUM_THREADS=1
 # - ESMX tests ----------------------------------------------------------------
-TestESMXProto ESMX_AtmOcnProto                            esmx
+TestESMXProto ESMX_AtmOcnProto                            esmx_app
 TestESMXProto ESMX_ExternalDriverAPIProto                 externalApp
 
 date
