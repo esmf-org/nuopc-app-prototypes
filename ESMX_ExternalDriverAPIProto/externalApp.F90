@@ -333,6 +333,6 @@ program externalApp
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
   ! Finalize ESMF
-  call ESMF_Finalize()
+  call ESMF_Finalize(rc=rc)
 
 end program

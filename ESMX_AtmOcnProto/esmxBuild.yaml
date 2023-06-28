@@ -1,7 +1,8 @@
 components:
 
-  taWas:
-    cmake_config: TaWaS/tawas.cmake
+  Lumo:
 
-  luMo:
-    cmake_config: Lumo/lumo.cmake
+  tawas:
+    source_dir: TaWaS
+    install_prefix: TaWaS
+

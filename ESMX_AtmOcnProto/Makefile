@@ -29,10 +29,10 @@ ESMF_INTERNAL_MPIRUN := $(shell echo $(ESMF_INTERNAL_MPIRUN))
 
 ################################################################################
 ################################################################################
+EXE = install/bin/esmx_app
 
-ESMX_App: esmxBuild.yaml
-	cmake -H$(ESMF_ESMXDIR) -Bbuild
-	cmake --build ./build
+$(EXE): esmxBuild.yaml
+	$(ESMF_APPSDIR)/ESMX_Builder
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -40,8 +40,9 @@ ESMX_App: esmxBuild.yaml
 dust:
 	rm -f PET*.ESMF_LogFile *.nc *.stdout
 clean:
-	rm -rf build
+	rm -rf build install
 distclean: dust clean
+	cd TaWaS; make distclean
 
 info:
 	@echo ==================================================================
@@ -51,4 +52,6 @@ info:
 	@echo ==================================================================
 
 run:
-	$(ESMF_INTERNAL_MPIRUN) -np 4 ./build/esmx_app
+	$(ESMF_INTERNAL_MPIRUN) -np 4 ./$(EXE)
+runAlt:
+	$(ESMF_INTERNAL_MPIRUN) -np 4 ./$(EXE) esmxRunAlt.yaml

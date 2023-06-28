@@ -329,11 +329,9 @@ date
 echo STARTING: $1
 cd $1
 make distclean
-./cleanSubs.sh
-./buildSubs.sh
 make
 set -x
-$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./build/$2 > $2.stdout 2>&1
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./install/bin/$2 > $2.stdout 2>&1
 local result=$?
 set +x
 if [ $result -eq 0 ]
@@ -345,6 +343,52 @@ fi
 mkdir -p ../$RESULTSDIR
 cp $2.stdout ../$RESULTSDIR/$1.stdout
 cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.Log
+echo FINISHED: $1
+cd ..
+date
+echo ---------------------------------------------------------------------------
+echo
+}
+
+function TestESMXwAltProto {
+((count++))
+testList[count]=$1
+echo ---------------------------------------------------------------------------
+date
+echo STARTING: $1
+cd $1
+make distclean
+make
+set -x
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./install/bin/$2 > $2.stdout 2>&1
+local result=$?
+set +x
+if [ $result -eq 0 ]
+then
+testResult[count]="PASS"
+else
+testResult[count]="FAIL"
+fi
+mkdir -p ../$RESULTSDIR
+cp $2.stdout ../$RESULTSDIR/$1.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.Log
+echo ---------------------------------------------------------------------------
+((count++))
+testList[count]=$1-Alt
+make dust
+set -x
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./install/bin/$2 esmxRunAlt.yaml > $2.stdout 2>&1
+local result=$?
+set +x
+if [ $result -eq 0 ]
+then
+testResult[count]="PASS"
+else
+testResult[count]="FAIL"
+fi
+mkdir -p ../$RESULTSDIR
+cp $2.stdout ../$RESULTSDIR/$1-Alt.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1-Alt.Log
 echo FINISHED: $1
 cd ..
 date
@@ -400,7 +444,7 @@ export OMP_NUM_THREADS=3
 TestProto     SingleModelOpenMPUnawareProto               mainApp
 export OMP_NUM_THREADS=1
 # - ESMX tests ----------------------------------------------------------------
-TestESMXProto ESMX_AtmOcnProto                            esmx_app
+TestESMXwAltProto ESMX_AtmOcnProto                        esmx_app
 TestESMXProto ESMX_ExternalDriverAPIProto                 externalApp
 
 date

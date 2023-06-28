@@ -21,13 +21,31 @@ ESMX:
       @
 
 ATM:
-  model:            Tawas     # model value is case insensitive to match Fortran
+  model:            ESMX_Data   # use the ESMX data component
   ompNumThreads:    4
   attributes:
     Verbosity:  low
   petList:          [3, [2-0]]  # petList is list of scalars and lists.
                                 # each list again can be of scalars and lists
                                 # recursively.
+  geom:
+    nx: 10
+    ny: 100
+    minx: 10.
+    miny: 20.
+    maxx: 100.
+    maxy: 200.
+    coordSys: ESMF_COORDSYS_CART
+
+  importFields:
+    sea_surface_temperature:            {dim: 2, min: 0.0, max: 100.1}
+    sea_surface_salinity:               {dim: 2, min: 199.9, max: 200.1}
+
+  exportFields:
+    air_pressure_at_sea_level:            {dim: 2, val: 2.5}
+    precipitation_flux:                   {dim: 2, val: 3.5}
+    surface_net_downward_shortwave_flux:  {dim: 2, val: 4.5}
+
 
 OCN:
   model:            lumo
