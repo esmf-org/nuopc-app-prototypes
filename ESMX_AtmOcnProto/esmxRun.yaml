@@ -20,11 +20,15 @@ ESMX:
         OCN
       @
 
+attributes: &common # define an anchor so it can be used by multiple components
+  Verbosity:  low   # good default for Verbosity setting
+
 ATM:
   model:            Tawas     # model value is case insensitive to match Fortran
   ompNumThreads:    4
   attributes:
-    Verbosity:  low
+    <<: *common     # use the attributes map via an alias common
+    Verbosity: high # override the setting from common alias
   petList:          [3, [2-0]]  # petList is list of scalars and lists.
                                 # each list again can be of scalars and lists
                                 # recursively.
@@ -33,4 +37,4 @@ OCN:
   model:            lumo
   petList:          [0-1, 3]
   attributes:
-    Verbosity:  low
+    <<: *common
