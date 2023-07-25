@@ -1,6 +1,6 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright 2002-2022, University Corporation for Atmospheric Research,
+! Copyright (c) 2002-2023, University Corporation for Atmospheric Research,
 ! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
 ! Laboratory, University of Michigan, National Centers for Environmental
 ! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
@@ -113,6 +113,14 @@ module OCN
     ! importable field: precipitation_flux
     call NUOPC_Advertise(importState, &
       StandardName="precipitation_flux", name="precip", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! importable field: magnitude_of_surface_downward_stress
+    call NUOPC_Advertise(importState, &
+      StandardName="magnitude_of_surface_downward_stress", name="msds", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -295,8 +303,31 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
 
-    ! importable field on Mesh: precipitation_flux
-    field = ESMF_FieldCreate(name="precip", mesh=meshIn, &
+    ! importable field on Mesh or Grid: precipitation_flux
+    field = ESMF_FieldCreate(name="precip", &
+#if 1
+      mesh=meshIn, &
+#else
+      grid=gridIn, &
+#endif
+      typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_Realize(importState, field=field, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    ! importable field on Mesh or Grid: magnitude_of_surface_downward_stress
+    field = ESMF_FieldCreate(name="msds", &
+#if 1
+      mesh=meshIn, &
+#else
+      grid=gridIn, &
+#endif
       typekind=ESMF_TYPEKIND_R8, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &

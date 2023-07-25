@@ -1,6 +1,6 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright 2002-2022, University Corporation for Atmospheric Research,
+! Copyright (c) 2002-2023, University Corporation for Atmospheric Research,
 ! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
 ! Laboratory, University of Michigan, National Centers for Environmental
 ! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
@@ -33,6 +33,12 @@ module LUMO
     type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
 
+    ! local variables
+    type(ESMF_Config)         :: config
+    type(ESMF_HConfig)        :: hconfig, hconfigNode
+    character(80)             :: compLabel
+    character(:), allocatable :: badKey
+    logical                   :: isFlag
     rc = ESMF_SUCCESS
 
     ! derive from NUOPC_Model
@@ -67,6 +73,51 @@ module LUMO
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+    ! validate config
+    call ESMF_GridCompGet(model, name=compLabel, configIsPresent=isFlag, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    if (isFlag) then
+      ! Config present, assert it is in the ESMX YAML format
+      call ESMF_GridCompGet(model, config=config, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      call ESMF_ConfigGet(config, hconfig=hconfig, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      hconfigNode = ESMF_HConfigCreateAt(hconfig, keyString=compLabel, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      ! component responsibility to validate ESMX handled options here, and
+      ! potentially locally handled options
+      isFlag = ESMF_HConfigValidateMapKeys(hconfigNode, &
+        vocabulary=["model        ", &  ! ESMX handled option
+                    "petList      ", &  ! ESMX handled option
+                    "ompNumThreads", &  ! ESMX handled option
+                    "attributes   "  &  ! ESMX handled option
+                   ], badKey=badKey, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, &
+        file=__FILE__)) &
+        return  ! bail out
+      if (.not.isFlag) then
+        call ESMF_LogSetError(ESMF_RC_ARG_WRONG, &
+          msg="An invalid key was found in config under "//trim(compLabel)// &
+            " (maybe a typo?): "//badKey, &
+          line=__LINE__, &
+          file=__FILE__, rcToReturn=rc)
+        return
+      endif
+    endif
 
   end subroutine
 
@@ -320,6 +371,11 @@ module LUMO
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    call ESMF_FieldFill(field, dataFillScheme="const", const1=100.d0, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
     call NUOPC_Realize(exportState, field=field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -329,6 +385,11 @@ module LUMO
     ! exportable field on Mesh: sea_surface_salinity
     field = ESMF_FieldCreate(name="sss", mesh=meshOut, &
       typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call ESMF_FieldFill(field, dataFillScheme="const", const1=200.d0, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
