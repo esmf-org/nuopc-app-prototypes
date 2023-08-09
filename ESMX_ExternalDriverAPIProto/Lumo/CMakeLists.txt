@@ -1,18 +1,26 @@
 cmake_minimum_required(VERSION 3.19)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-find_package(ESMF 8.4.0 MODULE REQUIRED)
+find_package(ESMF 8.5.0 MODULE REQUIRED)
 
-if(NOT DEFINED CMAKE_Fortran_COMPILER)
-  set(CMAKE_Fortran_COMPILER "${ESMF_F90COMPILER}")
-endif()
-if(NOT DEFINED CMAKE_Fortran_FLAGS)
-  set(CMAKE_Fortran_FLAGS "${ESMF_F90COMPILEOPTS}")
-endif()
+set(CMAKE_Fortran_COMPILER "${ESMF_F90COMPILER}")
 
 project(Lumo
         VERSION 1.0
         LANGUAGES Fortran)
+
+if(CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
+  set(CMAKE_Fortran_FLAGS "-ffree-line-length-none -Wall -Wextra -Wconversion -Wno-unused -Wno-unused-dummy-argument")
+  set(CMAKE_Fortran_FLAGS_RELEASE "-Ofast")
+  set(CMAKE_Fortran_FLAGS_RELWITHDEBINFO "-g -fbacktrace -0fast")
+  set(CMAKE_Fortran_FLAGS_DEBUG "-g -fbacktrace -O0 -fcheck=all -ffpe-trap=invalid,zero,overflow,underflow")
+elseif(CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
+  set(CMAKE_Fortran_FLAGS_RELEASE "-O2")
+  set(CMAKE_Fortran_FLAGS_RELWITHDEBINFO "-g -traceback -O2")
+  set(CMAKE_Fortran_FLAGS_DEBUG "-g -traceback -O0 -check all -fpe0 -ftrapuv -init=snan,arrays")
+else()
+  message(WARNING "${CMAKE_Fortran_COMPILER_ID} Fortran compiler will be used with default options")
+endif()
 
 add_library(Lumo lumo.F90)
 target_link_libraries(Lumo ESMF)

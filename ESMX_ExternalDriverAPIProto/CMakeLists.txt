@@ -24,6 +24,7 @@ add_subdirectory(${ESMF_ESMXDIR}/Driver ./ESMX_Driver)
 add_executable(externalApp externalApp.F90)
 target_include_directories(externalApp PUBLIC ${PROJECT_BINARY_DIR})
 target_link_libraries(externalApp PUBLIC esmx_driver)
+set_target_properties(externalApp PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 # Install executable
 install(

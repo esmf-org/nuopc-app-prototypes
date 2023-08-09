@@ -30,9 +30,9 @@ ESMF_INTERNAL_MPIRUN := $(shell echo $(ESMF_INTERNAL_MPIRUN))
 ################################################################################
 ################################################################################
 EXE = install/bin/externalApp
+.PHONY: $(EXE)
 
-
-$(EXE): externalApp.F90 esmxBuild.yaml
+$(EXE):
 	cmake -S. -Bbuild -DESMF_ESMXDIR=$(ESMF_ESMXDIR) -DCMAKE_INSTALL_PREFIX=install
 	cmake --build ./build
 	cmake --install ./build
