@@ -1,0 +1,43 @@
+name: ESMF Release Test
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - releases/**
+  push:
+  workflow_dispatch:
+
+jobs:
+  nuopc-test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        compiler: [gfortran]
+        comm: [mpiuni]
+        version: [latest]
+        esmpy: [false]
+        cache: [true]
+        netcdf: [nc-config]
+    runs-on: ${{matrix.os}}
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+    - name: Package Install (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get -qq -y update
+        sudo apt -qq install libnetcdf-dev libnetcdff-dev
+    - name: Install ESMF
+      uses: esmf-org/install-esmf-action
+      env:
+        ESMF_COMPILER: ${{matrix.compiler}}
+        ESMF_COMM: ${{matrix.comm}}
+        ESMF_NETCDF: ${{matrix.netcdf}}
+      with:
+        version: ${{matrix.version}}
+        esmpy: ${{matrix.esmpy}}
+        cache: ${{matrix.cache}}
+    - name: NUOPC Tests
+      run: |
+        ./testProtos.sh
