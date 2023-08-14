@@ -1,4 +1,4 @@
-name: ESMF Release Test
+name: NUOPC Test
 
 on:
   pull_request:
@@ -10,22 +10,27 @@ on:
 
 jobs:
   nuopc-test:
+    name: ${{matrix.config.name}}
+    runs-on: ${{matrix.config.os}}
     strategy:
       matrix:
-        os: [ubuntu-latest]
-        compiler: [gfortran]
-        comm: [openmpi]
-        version: [latest]
-        esmpy: [false]
-        cache: [true]
-        netcdf: [nc-config]
-    runs-on: ${{matrix.os}}
+        config:
+        - {
+            name: "Ubuntu Latest (esmf-latest, gfortran, openmpi, netcdf)",
+            os: ubuntu-latest,
+            version: latest,
+            compiler: gfortran,
+            comm: openmpi,
+            esmpy: false,
+            cache: true,
+            netcdf: nc-config
+          }
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v3
     - name: Library Directory
       run: |
-        export STACK_ROOT=~/stack
+        export STACK_ROOT=$HOME/stack
         mkdir -p ${STACK_ROOT}/{include,lib,lib64,bin}
         export LD_LIBRARY_PATH=${STACK_ROOT}/lib64:${STACK_ROOT}/lib:${LD_LIBRARY_PATH}
         echo "STACK_ROOT=${STACK_ROOT}" >> $GITHUB_ENV
@@ -36,24 +41,24 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ${{env.STACK_ROOT}}
-        key: stack-${{matrix.os}}-${{matrix.compiler}}-${{matrix.comm}}-${{matrix.netcdf}}
+        key: stack-${{matrix.config.os}}-${{matrix.config.compiler}}-${{matrix.config.comm}}-${{matrix.config.netcdf}}
     - name: Install OPENMPI
       env:
         CACHE_HIT: ${{steps.cache-libraries.outputs.cache-hit}}
       run: |
         if [[ "$CACHE_HIT" != 'true' ]]; then
-          OPENMPI_URL="https://download.open-mpi.org/release/open-mpi/v3.0/openmpi-3.0.0.tar.gz"
+          OPENMPI_URL="https://download.open-mpi.org/release/open-mpi/v4.0/openmpi-4.0.3.tar.gz"
           mkdir ${{runner.temp}}/openmpi
           cd ${{runner.temp}}/openmpi
           curl -L $OPENMPI_URL | tar --strip-components=1 -xz
-          ./configure --enable-fortran --prefix=$STACK_ROOT
-          make all install
+          ./configure --prefix=${{env.STACK_ROOT}}
+          make -j 2 install
         fi
-        echo "CC=mpicc" >> $GITHUB_ENV
-        echo "CXX=mpicxx" >> $GITHUB_ENV
-        echo "F77=mpif77" >> $GITHUB_ENV
-        echo "F90=mpif90" >> $GITHUB_ENV
-        echo "FC=mpifort" >> $GITHUB_ENV
+        echo "CC=${{env.STACK_ROOT}}/bin/mpicc" >> $GITHUB_ENV
+        echo "CXX=${{env.STACK_ROOT}}/bin/mpicxx" >> $GITHUB_ENV
+        echo "F77=${{env.STACK_ROOT}}/bin/mpif77" >> $GITHUB_ENV
+        echo "F90=${{env.STACK_ROOT}}/bin/mpif90" >> $GITHUB_ENV
+        echo "FC=${{env.STACK_ROOT}}/bin/mpifort" >> $GITHUB_ENV
         echo "OPENMPI_ROOT=$STACK_ROOT" >> $GITHUB_ENV
     - name: Install HDF5
       env:
@@ -64,46 +69,46 @@ jobs:
           mkdir ${{runner.temp}}/hdf5
           cd ${{runner.temp}}/hdf5
           curl -L $HDF5_URL | tar --strip-components=2 -xz
-          ./configure --quiet --enable-silent-rules --enable-fortran --prefix=$STACK_ROOT
-          make all install
+          ./configure --enable-fortran --prefix=${{env.STACK_ROOT}}
+          make -j 2 install
         fi
-        echo "HDF5_ROOT=$STACK_ROOT" >> $GITHUB_ENV
+        echo "HDF5_ROOT=${{env.STACK_ROOT}}" >> $GITHUB_ENV
     - name: Install NetCDF-C
       env:
         CACHE_HIT: ${{steps.cache-libraries.outputs.cache-hit}}
       run: |
         if [[ "$CACHE_HIT" != 'true' ]]; then
-          NETCDF_URL="https://github.com/Unidata/netcdf-c/archive/refs/tags/v4.7.4.tar.gz"
+          NETCDF_URL="https://github.com/Unidata/netcdf-c/archive/v4.9.0.tar.gz"
           mkdir ${{runner.temp}}/netcdf-c
           cd ${{runner.temp}}/netcdf-c
           curl -L $NETCDF_URL | tar --strip-components=1 -xz
-          CPPFLAGS=-I${STACK_ROOT}/include LDFLAGS=-L${STACK_ROOT}/lib ./configure --quiet --enable-silent-rules --enable-netcdf-4 --disable-dap --prefix=$STACK_ROOT
-          make all install
+          CPPFLAGS=-I${STACK_ROOT}/include LDFLAGS=-L${STACK_ROOT}/lib ./configure --enable-netcdf-4 --disable-dap --prefix=${{env.STACK_ROOT}}
+          make -j 2 install
         fi
-        echo "NETCDF_ROOT=$STACK_ROOT" >> $GITHUB_ENV
+        echo "NETCDF_ROOT=${{env.STACK_ROOT}}" >> $GITHUB_ENV
     - name: Install NetCDF-Fortran
       env:
         CACHE_HIT: ${{steps.cache-libraries.outputs.cache-hit}}
       run: |
         if [[ "$CACHE_HIT" != 'true' ]]; then
-          NETCDFF_URL="https://github.com/Unidata/netcdf-fortran/archive/refs/tags/v4.4.5.tar.gz"
+          NETCDFF_URL="https://github.com/Unidata/netcdf-fortran/archive/v4.5.4.tar.gz"
           mkdir ${{runner.temp}}/netcdf-fortran
           cd ${{runner.temp}}/netcdf-fortran
           curl -L $NETCDFF_URL | tar --strip-components=1 -xz
-          CPPFLAGS=-I${STACK_ROOT}/include LDFLAGS=-L${STACK_ROOT}/lib ./configure --quiet --enable-silent-rules --prefix=${STACK_ROOT}
-          make all install
+          CPPFLAGS=-I${STACK_ROOT}/include LDFLAGS=-L${STACK_ROOT}/lib ./configure --quiet --enable-silent-rules --prefix=${{env.STACK_ROOT}}
+          make -j 2 install
         fi
-        echo "NETCDFF_ROOT=$STACK_ROOT" >> $GITHUB_ENV
+        echo "NETCDFF_ROOT=${{env.STACK_ROOT}}" >> $GITHUB_ENV
     - name: Install ESMF
       uses: esmf-org/install-esmf-action@v0.1.0
       env:
-        ESMF_COMPILER: ${{matrix.compiler}}
-        ESMF_COMM: ${{matrix.comm}}
-        ESMF_NETCDF: ${{matrix.netcdf}}
+        ESMF_COMPILER: ${{matrix.config.compiler}}
+        ESMF_COMM: ${{matrix.config.comm}}
+        ESMF_NETCDF: ${{matrix.config.netcdf}}
       with:
-        version: ${{matrix.version}}
-        esmpy: ${{matrix.esmpy}}
-        cache: ${{matrix.cache}}
+        version: ${{matrix.config.version}}
+        esmpy: ${{matrix.config.esmpy}}
+        cache: ${{matrix.config.cache}}
     - name: NUOPC Tests
       run: |
         ./testProtos.sh
