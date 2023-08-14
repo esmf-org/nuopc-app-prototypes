@@ -14,7 +14,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         compiler: [gfortran]
-        comm: [mpiuni]
+        comm: [openmpi]
         version: [latest]
         esmpy: [false]
         cache: [true]
@@ -23,11 +23,77 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v3
-    - name: Package Install (Linux)
-      if: runner.os == 'Linux'
+    - name: Library Directory
       run: |
-        sudo apt-get -qq -y update
-        sudo apt -qq install libnetcdf-dev libnetcdff-dev
+        export STACK_ROOT=~/stack
+        mkdir -p ${STACK_ROOT}/{include,lib,lib64,bin}
+        export LD_LIBRARY_PATH=${STACK_ROOT}/lib64:${STACK_ROOT}/lib:${LD_LIBRARY_PATH}
+        echo "STACK_ROOT=${STACK_ROOT}" >> $GITHUB_ENV
+        echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}" >> $GITHUB_ENV
+        echo "${STACK_ROOT}/bin" >> $GITHUB_PATH
+    - name: Cache Libraries
+      id: cache-libraries
+      uses: actions/cache@v3
+      with:
+        path: ${{env.STACK_ROOT}}
+        key: stack-${{matrix.os}}-${{matrix.compiler}}-${{matrix.comm}}-${{matrix.netcdf}}
+    - name: Install OPENMPI
+      env:
+        CACHE_HIT: ${{steps.cache-libraries.outputs.cache-hit}}
+      run: |
+        if [[ "$CACHE_HIT" != 'true' ]]; then
+          OPENMPI_URL="https://download.open-mpi.org/release/open-mpi/v3.0/openmpi-3.0.0.tar.gz"
+          mkdir ${{runner.temp}}/openmpi
+          cd ${{runner.temp}}/openmpi
+          curl -L $OPENMPI_URL | tar --strip-components=1 -xz
+          ./configure --enable-fortran --prefix=$STACK_ROOT
+          make all install
+        fi
+        echo "CC=mpicc" >> $GITHUB_ENV
+        echo "CXX=mpicxx" >> $GITHUB_ENV
+        echo "F77=mpif77" >> $GITHUB_ENV
+        echo "F90=mpif90" >> $GITHUB_ENV
+        echo "FC=mpifort" >> $GITHUB_ENV
+        echo "OPENMPI_ROOT=$STACK_ROOT" >> $GITHUB_ENV
+    - name: Install HDF5
+      env:
+        CACHE_HIT: ${{steps.cache-libraries.outputs.cache-hit}}
+      run: |
+        if [[ "$CACHE_HIT" != 'true' ]]; then
+          HDF5_URL="https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.12/hdf5-1.12.2/src/hdf5-1.12.2.tar.gz"
+          mkdir ${{runner.temp}}/hdf5
+          cd ${{runner.temp}}/hdf5
+          curl -L $HDF5_URL | tar --strip-components=2 -xz
+          ./configure --quiet --enable-silent-rules --enable-fortran --prefix=$STACK_ROOT
+          make all install
+        fi
+        echo "HDF5_ROOT=$STACK_ROOT" >> $GITHUB_ENV
+    - name: Install NetCDF-C
+      env:
+        CACHE_HIT: ${{steps.cache-libraries.outputs.cache-hit}}
+      run: |
+        if [[ "$CACHE_HIT" != 'true' ]]; then
+          NETCDF_URL="https://github.com/Unidata/netcdf-c/archive/refs/tags/v4.7.4.tar.gz"
+          mkdir ${{runner.temp}}/netcdf-c
+          cd ${{runner.temp}}/netcdf-c
+          curl -L $NETCDF_URL | tar --strip-components=1 -xz
+          CPPFLAGS=-I${STACK_ROOT}/include LDFLAGS=-L${STACK_ROOT}/lib ./configure --quiet --enable-silent-rules --enable-netcdf-4 --disable-dap --prefix=$STACK_ROOT
+          make all install
+        fi
+        echo "NETCDF_ROOT=$STACK_ROOT" >> $GITHUB_ENV
+    - name: Install NetCDF-Fortran
+      env:
+        CACHE_HIT: ${{steps.cache-libraries.outputs.cache-hit}}
+      run: |
+        if [[ "$CACHE_HIT" != 'true' ]]; then
+          NETCDFF_URL="https://github.com/Unidata/netcdf-fortran/archive/refs/tags/v4.4.5.tar.gz"
+          mkdir ${{runner.temp}}/netcdf-fortran
+          cd ${{runner.temp}}/netcdf-fortran
+          curl -L $NETCDFF_URL | tar --strip-components=1 -xz
+          CPPFLAGS=-I${STACK_ROOT}/include LDFLAGS=-L${STACK_ROOT}/lib ./configure --quiet --enable-silent-rules --prefix=${STACK_ROOT}
+          make all install
+        fi
+        echo "NETCDFF_ROOT=$STACK_ROOT" >> $GITHUB_ENV
     - name: Install ESMF
       uses: esmf-org/install-esmf-action@v0.1.0
       env:
