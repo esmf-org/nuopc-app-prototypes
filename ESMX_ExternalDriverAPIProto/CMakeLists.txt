@@ -17,6 +17,9 @@ project(ExternalDriverAPIProto
         LANGUAGES Fortran CXX C
         )
 
+# Find required packages
+find_package(OpenMP REQUIRED)
+
 # Add ESMX driver
 add_subdirectory(${ESMF_ESMXDIR}/Driver ./ESMX_Driver)
 

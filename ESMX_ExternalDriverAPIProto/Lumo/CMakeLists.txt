@@ -9,6 +9,8 @@ project(Lumo
         VERSION 1.0
         LANGUAGES Fortran)
 
+find_package(OpenMP REQUIRED)
+
 if(CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
   set(CMAKE_Fortran_FLAGS "-ffree-line-length-none -Wall -Wextra -Wconversion -Wno-unused -Wno-unused-dummy-argument")
   set(CMAKE_Fortran_FLAGS_RELEASE "-Ofast")
@@ -23,7 +25,8 @@ else()
 endif()
 
 add_library(Lumo lumo.F90)
-target_link_libraries(Lumo ESMF)
+target_link_libraries(Lumo PUBLIC ESMF)
+target_link_libraries(Lumo PUBLIC OpenMP::OpenMP_Fortran)
 
 install(TARGETS Lumo
         EXPORT Lumo

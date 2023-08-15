@@ -1,3 +1,6 @@
+application:
+  link_packages: OpenMP
+
 components:
 
   Lumo:
