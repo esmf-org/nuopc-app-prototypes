@@ -111,4 +111,5 @@ jobs:
         cache: ${{matrix.config.cache}}
     - name: NUOPC Tests
       run: |
+        export TOOLRUN="--oversubscribe"
         ./testProtos.sh
