@@ -13,9 +13,8 @@ jobs:
       matrix:
         config:
         - {
-            name: "Ubuntu (esmf-develop, gfortran, openmpi)",
+            name: "Ubuntu (gfortran, openmpi)",
             os: ubuntu-latest,
-            version: develop,
             compiler: gfortran,
             comm: openmpi
           }
@@ -36,7 +35,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ${{env.STACK_ROOT}}
-        key: ${{matrix.config.version}}-nightly-${{matrix.config.os}}-${{matrix.config.compiler}}-${{matrix.config.comm}}
+        key: develop-nightly-${{matrix.config.os}}-${{matrix.config.compiler}}-${{matrix.config.comm}}
     - name: Install OPENMPI
       if: ${{matrix.config.comm}} == 'openmpi'
       env:
@@ -55,7 +54,7 @@ jobs:
         echo "F77=${{env.STACK_ROOT}}/bin/mpif77" >> $GITHUB_ENV
         echo "F90=${{env.STACK_ROOT}}/bin/mpif90" >> $GITHUB_ENV
         echo "FC=${{env.STACK_ROOT}}/bin/mpifort" >> $GITHUB_ENV
-        echo "OPENMPI_ROOT=$STACK_ROOT" >> $GITHUB_ENV
+        echo "OPENMPI_ROOT=${{env.STACK_ROOT}}" >> $GITHUB_ENV
     - name: Install HDF5
       env:
         CACHE_HIT: ${{steps.cache-libraries.outputs.cache-hit}}
@@ -103,7 +102,7 @@ jobs:
         ESMF_NETCDF: 'nc-config'
         ESMF_INSTALL_PREFIX: ${STACK_ROOT}
       with:
-        version: ${{matrix.config.version}}
+        version: 'develop'
         esmpy: false
         cache: false
     - name: NUOPC Tests
