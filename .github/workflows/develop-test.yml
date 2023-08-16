@@ -18,7 +18,7 @@ jobs:
         - {
             name: "Ubuntu Latest (esmf-latest, gfortran, openmpi, netcdf)",
             os: ubuntu-latest,
-            version: latest,
+            version: develop,
             compiler: gfortran,
             comm: openmpi,
             esmpy: false,
