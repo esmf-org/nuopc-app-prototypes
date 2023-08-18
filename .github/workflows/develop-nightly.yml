@@ -35,7 +35,9 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ${{env.STACK_ROOT}}
-        key: develop-nightly-${{matrix.config.os}}-${{matrix.config.compiler}}-${{matrix.config.comm}}
+        key: develop-nightly-${{matrix.config.os}}-${{matrix.config.compiler}}-${{matrix.config.comm}}-${{github.run_id}}
+        restore-keys: |
+          develop-nightly-${{matrix.config.os}}-${{matrix.config.compiler}}-${{matrix.config.comm}}
     - name: Install OPENMPI
       if: ${{matrix.config.comm}} == 'openmpi'
       env:
@@ -102,7 +104,9 @@ jobs:
         ESMF_NETCDF: 'nc-config'
         ESMF_INSTALL_PREFIX: ${STACK_ROOT}
       with:
+        build-key: 'develop-nightly-${{matrix.config.os}}-${{matrix.config.compiler}}-${{matrix.config.comm}}'
         version: 'develop'
+        rebuild-check: quick
         esmpy: false
         cache: false
     - name: NUOPC Tests
