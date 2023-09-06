@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.22)
 list(APPEND CMAKE_MODULE_PATH "${ESMF_ESMXDIR}/Driver/cmake")
 
 # Find ESMF
-find_package(ESMF 8.5.0 MODULE REQUIRED)
+find_package(ESMF 8.6.0 MODULE REQUIRED)
 
 # Set compilers consistent with ESMF
 set(CMAKE_Fortran_COMPILER        "${ESMF_F90COMPILER}")
@@ -17,6 +17,9 @@ project(ExternalDriverAPIProto
         LANGUAGES Fortran CXX C
         )
 
+# Find required packages
+find_package(OpenMP REQUIRED)
+
 # Add ESMX driver
 add_subdirectory(${ESMF_ESMXDIR}/Driver ./ESMX_Driver)
 
@@ -24,6 +27,7 @@ add_subdirectory(${ESMF_ESMXDIR}/Driver ./ESMX_Driver)
 add_executable(externalApp externalApp.F90)
 target_include_directories(externalApp PUBLIC ${PROJECT_BINARY_DIR})
 target_link_libraries(externalApp PUBLIC esmx_driver)
+set_target_properties(externalApp PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 # Install executable
 install(
