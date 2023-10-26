@@ -21,7 +21,7 @@ RESULTSDIR=NUOPC-PROTO-RESULTS
 count=0
 failcount=0
 
-if [ "$ESMF_OS" = "Darwin" ]
+if [[ $OSTYPE = *darwin* ]]
 then
    # Darwin systems that use Apple Clang need extra environment variables
    # to find the libomp installation. These are important for the ESMX
