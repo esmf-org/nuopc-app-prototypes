@@ -21,6 +21,17 @@ RESULTSDIR=NUOPC-PROTO-RESULTS
 count=0
 failcount=0
 
+if [ "$ESMF_OS" = "Darwin" ]
+then
+   # Darwin systems that use Apple Clang need extra environment variables
+   # to find the libomp installation. These are important for the ESMX
+   # tests where CMake is used under the hood to determine the correct
+   # compiler and linker flags. Set them here to be available:
+   export LDFLAGS=-L/opt/homebrew/opt/libomp/lib
+   export CXXFLAGS=-I/opt/homebrew/opt/libomp/include
+   export CFLAGS=-I/opt/homebrew/opt/libomp/include
+fi
+
 function TestProto {
 ((count++))
 testList[count]=$1
