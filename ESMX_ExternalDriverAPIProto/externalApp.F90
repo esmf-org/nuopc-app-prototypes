@@ -36,7 +36,7 @@ program externalApp
 
   ! Initialize ESMF
   call ESMF_Initialize(logkindflag=ESMF_LOGKIND_MULTI, &
-    defaultCalkind=ESMF_CALKIND_GREGORIAN, rc=rc)
+    defaultCalkind=ESMF_CALKIND_GREGORIAN, globalResourceControl=.true., rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=FILENAME)) &

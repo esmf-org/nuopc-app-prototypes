@@ -42,15 +42,15 @@ program externalApp
 
   ! Split up the MPI_COMM_WORLD into atmDA (first half) and ocnDA (second half)
   ! of MPI ranks. Call into the respective DA routine
-  call MPI_Comm_size(MPI_COMM_WORLD, size, ierror=rc)
-  call MPI_Comm_rank(MPI_COMM_WORLD, rank, ierror=rc)
+  call MPI_Comm_size(MPI_COMM_WORLD, size, rc)
+  call MPI_Comm_rank(MPI_COMM_WORLD, rank, rc)
   if (rank < size/2) then
     ! atm DA processes
-    call MPI_Comm_split(MPI_COMM_WORLD, 1, rank, splitComm, ierror=rc)
+    call MPI_Comm_split(MPI_COMM_WORLD, 1, rank, splitComm, rc)
     call atmDAexec(comm=splitComm)
   else
     ! ocn DA processes
-    call MPI_Comm_split(MPI_COMM_WORLD, 2, rank, splitComm, ierror=rc)
+    call MPI_Comm_split(MPI_COMM_WORLD, 2, rank, splitComm, rc)
     call ocnDAexec(comm=splitComm)
   endif
 

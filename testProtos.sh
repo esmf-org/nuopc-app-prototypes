@@ -21,6 +21,17 @@ RESULTSDIR=NUOPC-PROTO-RESULTS
 count=0
 failcount=0
 
+if [[ $OSTYPE = *darwin* ]]
+then
+   # Darwin systems that use Apple Clang need extra environment variables
+   # to find the libomp installation. These are important for the ESMX
+   # tests where CMake is used under the hood to determine the correct
+   # compiler and linker flags. Set them here to be available:
+   export LDFLAGS=-L/opt/homebrew/opt/libomp/lib
+   export CXXFLAGS=-I/opt/homebrew/opt/libomp/include
+   export CFLAGS=-I/opt/homebrew/opt/libomp/include
+fi
+
 function TestProto {
 ((count++))
 testList[count]=$1
@@ -161,137 +172,6 @@ echo ---------------------------------------------------------------------------
 echo
 }
 
-function TestSelectExternalProto {
-echo ---------------------------------------------------------------------------
-date
-echo STARTING: $1
-cd $1
-make distclean
-./cleanSubs.sh
-./buildSubs.sh
-#-
-make ATM=A OCN=A,B,C
-echo "OCN_SELECT: A" > esm.config
-((count++))
-testList[count]=$1
-set -x
-$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
-local result=$?
-set +x
-if [ $result -eq 0 ]
-then
-testResult[count]="PASS"
-else
-testResult[count]="FAIL"
-fi
-mkdir -p ../$RESULTSDIR
-cp $2.stdout ../$RESULTSDIR/$1.1.stdout
-cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.1.Log
-echo
-make clean
-#-
-make ATM=B OCN=A,B,C
-echo "OCN_SELECT: B" > esm.config
-((count++))
-testList[count]=$1
-set -x
-$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
-local result=$?
-set +x
-if [ $result -eq 0 ]
-then
-testResult[count]="PASS"
-else
-testResult[count]="FAIL"
-fi
-mkdir -p ../$RESULTSDIR
-cp $2.stdout ../$RESULTSDIR/$1.2.stdout
-cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.2.Log
-echo
-make clean
-#-
-make ATM=C OCN=A,B,C
-echo "OCN_SELECT: C" > esm.config
-((count++))
-testList[count]=$1
-set -x
-$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
-local result=$?
-set +x
-if [ $result -eq 0 ]
-then
-testResult[count]="PASS"
-else
-testResult[count]="FAIL"
-fi
-mkdir -p ../$RESULTSDIR
-cp $2.stdout ../$RESULTSDIR/$1.3.stdout
-cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.3.Log
-echo
-make clean
-#-
-make ATM=D OCN=A,B,C
-echo "OCN_SELECT: A" > esm.config
-((count++))
-testList[count]=$1
-set -x
-$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
-local result=$?
-set +x
-if [ $result -eq 0 ]
-then
-testResult[count]="PASS"
-else
-testResult[count]="FAIL"
-fi
-mkdir -p ../$RESULTSDIR
-cp $2.stdout ../$RESULTSDIR/$1.4.stdout
-cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.4.Log
-echo
-make clean
-#-
-make ATM=E OCN=A,B,C
-echo "OCN_SELECT: B" > esm.config
-((count++))
-testList[count]=$1
-set -x
-$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./$2 > $2.stdout 2>&1
-local result=$?
-set +x
-if [ $result -eq 0 ]
-then
-testResult[count]="PASS"
-else
-testResult[count]="FAIL"
-fi
-mkdir -p ../$RESULTSDIR
-cp $2.stdout ../$RESULTSDIR/$1.5.stdout
-cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.5.Log
-echo
-make clean
-#-
-#make ATM=F OCN=A,B,C
-echo "OCN_SELECT: C" > esm.config
-#((count++))
-#testList[count]=$1
-#set -x
-#$ESMF_INTERNAL_MPIRUN -np 4 ./$2   --- cannot run this because atmF is not fully implemented
-#local result=$?
-#set +x
-#if [ $result -eq 0 ]
-#then
-#testResult[count]="PASS"
-#else
-#testResult[count]="FAIL"
-#fi
-#-
-echo FINISHED: $1
-cd ..
-date
-echo ---------------------------------------------------------------------------
-echo
-}
-
 function TestExplorer {
 ((count++))
 testList[count]=$1
@@ -419,13 +299,18 @@ TestProto     AtmOcnPetListProto                          esmApp
 TestProto     AtmOcnProto                                 esmApp
 TestProto     AtmOcnRtmTwoTimescalesProto                 esmApp
 TestProto     AtmOcnScalarProto                           esmApp
-TestSelectExternalProto   AtmOcnSelectExternalProto       esmApp
 TestSelectProto           AtmOcnSelectProto               esmApp
 TestProto     AtmOcnSimpleImplicitProto                   esmApp
 TestProto     AtmOcnTransferGridProto                     esmApp
 TestProto     AtmOcnTransferLocStreamProto                esmApp
 TestProto     AtmOcnTransferMeshProto                     esmApp
-TestExplorer  ComponentExplorer                           nuopcExplorerApp
+#TODO: Currently the ComponentExplorer implementation is based on the deprecated
+#TODO: GNU Makefile based component build dependency approach. Consider moving
+#TODO: any ComponentExplorer functionality worth preserving into ESMX, then
+#TODO: test this approach here.
+#TODO: Leaving the following line in as commented out for a reminder of the
+#TODO: above for now.
+#TestExplorer  ComponentExplorer                           nuopcExplorerApp
 TestProto     CustomFieldDictionaryProto                  mainApp
 TestProto     DriverInDriverDataDepProto                  mainApp
 TestProto     DriverInDriverProto                         mainApp
