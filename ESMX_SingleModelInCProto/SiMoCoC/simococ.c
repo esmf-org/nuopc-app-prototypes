@@ -21,17 +21,21 @@
 //-------------------------------------------------------------------------
 //-------------------------------------------------------------------------
 
+void Advertise(ESMC_GridComp model, int *rc){
+  // initialize return code to success
+  *rc = ESMF_SUCCESS;
+
+  *rc = ESMC_LogWrite("Message from inside C component Advertise() method",
+    ESMC_LOGMSG_INFO);
+  if (*rc!=ESMF_SUCCESS) return;  // bail out
+}
+
 void Advance(ESMC_GridComp model, int *rc){
   // initialize return code to success
   *rc = ESMF_SUCCESS;
-}
 
-void Run(ESMC_GridComp model, ESMC_State importState,
-  ESMC_State exportState, ESMC_Clock *clock, int *rc){
-  // initialize return code to success
-  *rc = ESMF_SUCCESS;
-
-  *rc = ESMC_LogWrite("Message from inside C component RUN", ESMC_LOGMSG_INFO);
+  *rc = ESMC_LogWrite("Message from inside C component Advance() method",
+    ESMC_LOGMSG_INFO);
   if (*rc!=ESMF_SUCCESS) return;  // bail out
 }
 
@@ -42,14 +46,14 @@ void SetServices(ESMC_GridComp model, int *rc){
   // initialize return code to success
   *rc = ESMF_SUCCESS;
 
+  // derive from NUOPC_Model
   *rc = NUOPC_CompDerive(model, NUOPC_ModelSetServices);
   if (*rc!=ESMF_SUCCESS) return;  // bail out
 
-  // here call specialize once C API is available
-
-  // for now must override RUN method, or else there is an issue because of
-  // missing advance specialization
-  *rc = ESMC_GridCompSetEntryPoint(model, ESMF_METHOD_RUN, Run, 1);
+  // specialize model
+  *rc = NUOPC_CompSpecialize(model, label_Advertise, Advertise);
+  if (*rc!=ESMF_SUCCESS) return;  // bail out
+  *rc = NUOPC_CompSpecialize(model, label_Advance, Advance);
   if (*rc!=ESMF_SUCCESS) return;  // bail out
 }
 
