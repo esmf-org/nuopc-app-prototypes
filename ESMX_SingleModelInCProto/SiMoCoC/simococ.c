@@ -60,6 +60,9 @@ void SetServices(ESMC_GridComp model, int *rc){
 void SetVM(ESMC_GridComp model, int *rc){
   // initialize return code to success
   *rc = ESMF_SUCCESS;
+  // call NUOPC_Model generic SetVM
+  NUOPC_ModelSetVM(model, rc);
+  if (*rc!=ESMF_SUCCESS) return;  // bail out
 }
 
 //-------------------------------------------------------------------------
