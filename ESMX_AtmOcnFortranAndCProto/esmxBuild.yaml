@@ -1,0 +1,9 @@
+application:
+  disable_comps: ESMX_Data
+  link_packages: OpenMP
+
+components:
+  Catmos:
+    link_into_app: False
+
+  Lumo:

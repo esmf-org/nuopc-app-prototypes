@@ -670,6 +670,13 @@ ESMX_SingleModelInCProto/PET0.ESMF_LogFile
 ESMX_SingleModelInCProto/PET1.ESMF_LogFile
 ESMX_SingleModelInCProto/PET2.ESMF_LogFile
 ESMX_SingleModelInCProto/PET3.ESMF_LogFile
+ESMX_AtmOcnFortranAndCProto/build/
+ESMX_AtmOcnFortranAndCProto/install/
+ESMX_AtmOcnFortranAndCProto/esmx_app.stdout
+ESMX_AtmOcnFortranAndCProto/PET0.ESMF_LogFile
+ESMX_AtmOcnFortranAndCProto/PET1.ESMF_LogFile
+ESMX_AtmOcnFortranAndCProto/PET2.ESMF_LogFile
+ESMX_AtmOcnFortranAndCProto/PET3.ESMF_LogFile
 ExternalDriverAPIProto/PET0.ESMF_LogFile
 ExternalDriverAPIProto/PET1.ESMF_LogFile
 ExternalDriverAPIProto/PET2.ESMF_LogFile

@@ -1,0 +1,33 @@
+ESMX:
+
+  App:
+    globalResourceControl:  true
+    logKindFlag:            ESMF_LOGKIND_Multi
+    logAppendFlag:          false
+    logFlush:               true
+    startTime:              2012-10-24T18:00:00
+    stopTime:               2012-10-24T19:00:00
+
+  Driver:
+    componentList:          [ATM, OCN]
+    attributes:
+      Verbosity: high
+    runSequence: |
+      @900
+        ATM -> OCN
+        OCN -> ATM
+        ATM
+        OCN
+      @
+
+ATM:
+  model:            ./install/lib/libCatmos.so
+  attributes:
+    Verbosity:  high
+#    Diagnostic: max
+
+OCN:
+  model:            lumo
+  attributes:
+    Verbosity:  high
+#    Diagnostic: max
