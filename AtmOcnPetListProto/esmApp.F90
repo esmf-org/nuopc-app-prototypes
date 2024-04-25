@@ -55,7 +55,8 @@ program esmApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-  call ESMF_VMLog(vm, "esmApp VM init: ", ESMF_LOGMSG_INFO, rc=rc)
+  call ESMF_VMLog(vm, prefix="esmApp VM init: ", logMsgFlag=ESMF_LOGMSG_INFO, &
+    rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
@@ -90,7 +91,7 @@ program esmApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-  call ESMF_VMLog(vm, "esmApp VM: ", ESMF_LOGMSG_INFO, rc=rc)
+  call ESMF_VMLog(vm, prefix="esmApp VM: ", logMsgFlag=ESMF_LOGMSG_INFO, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &
@@ -125,7 +126,8 @@ program esmApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-  call ESMF_VMLog(vm, "esmApp VM final: ", ESMF_LOGMSG_INFO, rc=rc)
+  call ESMF_VMLog(vm, prefix="esmApp VM final: ", logMsgFlag=ESMF_LOGMSG_INFO, &
+    rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
     line=__LINE__, &
     file=__FILE__)) &

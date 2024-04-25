@@ -126,7 +126,8 @@ module ESM
       return  ! bail out
 #endif
 
-    call ESMF_VMLog(vm, "ESM SetModelServices() enter: ", ESMF_LOGMSG_INFO, rc=rc)
+    call ESMF_VMLog(vm, prefix="ESM SetModelServices() enter: ", &
+      logMsgFlag=ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -414,7 +415,8 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call ESMF_VMLog(vm, "ESM SetModelServices() exit: ", ESMF_LOGMSG_INFO, rc=rc)
+    call ESMF_VMLog(vm, prefix="ESM SetModelServices() exit: ", &
+      logMsgFlag=ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

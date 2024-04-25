@@ -466,7 +466,8 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
 
-    call ESMF_VMLog(vm, "OCN Advance(): ", ESMF_LOGMSG_INFO, rc=rc)
+    call ESMF_VMLog(vm, prefix="OCN Advance(): ", logMsgFlag=ESMF_LOGMSG_INFO, &
+      rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
