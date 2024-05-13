@@ -276,6 +276,53 @@ echo ---------------------------------------------------------------------------
 echo
 }
 
+function TestESMXwDLProto {
+((count++))
+testList[count]=$1
+echo ---------------------------------------------------------------------------
+date
+echo STARTING: $1
+cd $1
+make distclean
+make
+set -x
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./install/bin/$2 > $2.stdout 2>&1
+local result=$?
+set +x
+if [ $result -eq 0 ]
+then
+testResult[count]="PASS"
+else
+testResult[count]="FAIL"
+fi
+mkdir -p ../$RESULTSDIR
+cp $2.stdout ../$RESULTSDIR/$1.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.Log
+echo ---------------------------------------------------------------------------
+((count++))
+testList[count]=$1-DL
+make distclean
+make DL
+set -x
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./install/bin/$2 esmxRunDL.yaml > $2.stdout 2>&1
+local result=$?
+set +x
+if [ $result -eq 0 ]
+then
+testResult[count]="PASS"
+else
+testResult[count]="FAIL"
+fi
+mkdir -p ../$RESULTSDIR
+cp $2.stdout ../$RESULTSDIR/$1-DL.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1-DL.Log
+echo FINISHED: $1
+cd ..
+date
+echo ---------------------------------------------------------------------------
+echo
+}
+
 # function    # proto directory                           # executable
 TestProto     AsyncIOBlockingProto                        asyncIOApp
 TestProto     AsyncIONonblockingProto                     asyncIOApp
@@ -329,8 +376,9 @@ export OMP_NUM_THREADS=3
 TestProto     SingleModelOpenMPUnawareProto               mainApp
 export OMP_NUM_THREADS=1
 # - ESMX tests ----------------------------------------------------------------
-TestESMXwAltProto ESMX_AtmOcnProto                        esmx_app
 TestESMXProto ESMX_ExternalDriverAPIProto                 externalApp
+TestESMXwAltProto ESMX_AtmOcnProto                        esmx_app
+TestESMXwDLProto ESMX_SingleModelInFortranProto           esmx_app
 
 date
 echo "== TEST SUMMARY START =="
