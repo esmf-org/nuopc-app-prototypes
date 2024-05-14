@@ -21,7 +21,7 @@ ESMX:
       @
 
 ATM:
-  model:            ./install/lib/libCatmos.so
+  model:            ./install/lib/libCatmos.*
   attributes:
     Verbosity:  high
 #    Diagnostic: max

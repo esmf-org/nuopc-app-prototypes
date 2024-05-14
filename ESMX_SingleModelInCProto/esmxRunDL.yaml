@@ -14,4 +14,4 @@ ESMX:
       Verbosity: low
 
 MDL:
-  model:            ./install/lib/libSiMoCoC.so
+  model:            ./install/lib/libSiMoCoC.*
