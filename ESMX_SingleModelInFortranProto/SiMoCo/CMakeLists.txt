@@ -23,7 +23,7 @@ else()
 endif()
 
 add_library(SiMoCo SHARED simoco.F90)
-target_link_libraries(SiMoCo PUBLIC ESMF)
+target_link_libraries(SiMoCo PUBLIC ESMF::ESMF)
 
 install(TARGETS SiMoCo
         EXPORT SiMoCo

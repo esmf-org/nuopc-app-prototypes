@@ -23,7 +23,7 @@ else()
 endif()
 
 add_library(Catmos SHARED catmos.c)
-target_link_libraries(Catmos PUBLIC ESMF)
+target_link_libraries(Catmos PUBLIC ESMF::ESMC)
 
 install(TARGETS Catmos
         EXPORT Catmos

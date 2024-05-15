@@ -23,7 +23,7 @@ else()
 endif()
 
 add_library(SiMoCoC SHARED simococ.c)
-target_link_libraries(SiMoCoC PUBLIC ESMF)
+target_link_libraries(SiMoCoC PUBLIC ESMF::ESMC)
 
 install(TARGETS SiMoCoC
         EXPORT SiMoCoC

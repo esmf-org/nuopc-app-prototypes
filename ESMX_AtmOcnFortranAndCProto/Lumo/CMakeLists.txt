@@ -25,7 +25,7 @@ else()
 endif()
 
 add_library(Lumo lumo.F90)
-target_link_libraries(Lumo PUBLIC ESMF)
+target_link_libraries(Lumo PUBLIC ESMF::ESMF)
 target_link_libraries(Lumo PUBLIC OpenMP::OpenMP_Fortran)
 
 install(TARGETS Lumo
