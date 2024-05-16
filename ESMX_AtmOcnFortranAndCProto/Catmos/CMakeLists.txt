@@ -25,6 +25,8 @@ endif()
 add_library(Catmos SHARED catmos.c)
 target_link_libraries(Catmos PUBLIC ESMF::ESMC)
 
+set_target_properties(Catmos PROPERTIES C_STANDARD 99)
+
 install(TARGETS Catmos
         EXPORT Catmos
         LIBRARY DESTINATION lib
