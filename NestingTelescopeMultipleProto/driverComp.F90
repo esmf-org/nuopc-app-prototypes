@@ -69,7 +69,7 @@ module driverComp
       return  ! bail out
 
     ! set driver verbosity
-    call NUOPC_CompAttributeSet(driver, name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(driver, name="Verbosity", value="low", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
