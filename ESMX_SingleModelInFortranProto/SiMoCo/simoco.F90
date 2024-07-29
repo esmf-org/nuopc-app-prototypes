@@ -500,7 +500,8 @@ module SIMOCO
       file=__FILE__)) &
       return  ! bail out
 
-    call ESMF_VMLog(vm, "SIMOCO Advance(): ", ESMF_LOGMSG_INFO, rc=rc)
+    call ESMF_VMLog(vm, prefix="SIMOCO Advance(): ", &
+      logMsgFlag=ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
