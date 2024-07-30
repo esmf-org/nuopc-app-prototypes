@@ -23,7 +23,7 @@ Files and sub-directories that implement the fundamental concepts demonstrated b
    ```
    mpirun -np 4 ./install/bin/esmx_app
    ```
-Or using any of the alternative configurations, e.g.
+   Or using any of the alternative configurations, e.g.
    ```
    mpirun -np 4 ./install/bin/esmx_app esmxRunStep1.yaml
    ```
