@@ -1,6 +1,6 @@
-# ESMX_BeginnerProto
+# ESMX_StartHereProto
 
-This is the best prototype for anyone new to [ESMX](https://github.com/esmf-org/esmf/tree/develop/src/addon/ESMX), wanting to learn the basic use of the tool. The prototype exclusively leverages features that are built into ESMX itself. Since no external code is built into the ESMX executable, this prototype does *not* require an ESMX build configuration file, such as `esmxRun.yaml`!
+Start with this prototype example if you are new to [ESMX](https://github.com/esmf-org/esmf/tree/develop/src/addon/ESMX) and want to learn the basic usage of the tool. The prototype exclusively leverages features that are built into ESMX itself. Since no external code is built into the ESMX executable, this prototype does *not* require an ESMX build configuration file, such as `esmxRun.yaml`!
 
 ## Primary Artifacts
 
