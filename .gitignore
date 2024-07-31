@@ -677,6 +677,16 @@ ESMX_AtmOcnFortranAndCProto/PET0.ESMF_LogFile
 ESMX_AtmOcnFortranAndCProto/PET1.ESMF_LogFile
 ESMX_AtmOcnFortranAndCProto/PET2.ESMF_LogFile
 ESMX_AtmOcnFortranAndCProto/PET3.ESMF_LogFile
+ESMX_StartHereProto/ABC_final_export.nc
+ESMX_StartHereProto/DEF_final_import.nc
+ESMX_StartHereProto/ESMF_Profile.summary
+ESMX_StartHereProto/PET0.ESMF_LogFile
+ESMX_StartHereProto/PET1.ESMF_LogFile
+ESMX_StartHereProto/PET2.ESMF_LogFile
+ESMX_StartHereProto/PET3.ESMF_LogFile
+ESMX_StartHereProto/build/
+ESMX_StartHereProto/esmx_app.stdout
+ESMX_StartHereProto/install/
 ExternalDriverAPIProto/PET0.ESMF_LogFile
 ExternalDriverAPIProto/PET1.ESMF_LogFile
 ExternalDriverAPIProto/PET2.ESMF_LogFile
