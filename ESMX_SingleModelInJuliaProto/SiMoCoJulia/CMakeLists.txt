@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.19)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 find_package(ESMF 8.6.0 MODULE REQUIRED)
+find_package(Julia REQUIRED)
 
 set(CMAKE_C_COMPILER "${ESMF_CCOMPILER}")
 
@@ -24,6 +25,13 @@ endif()
 
 add_library(SiMoCoJulia SHARED simocojulia_cap.c)
 target_link_libraries(SiMoCoJulia PUBLIC ESMF::ESMC)
+
+if (Julia_FOUND)
+  message("Julia_INCLUDE_DIRS: ${Julia_INCLUDE_DIRS}")
+  target_include_directories(SiMoCoJulia PRIVATE ${Julia_INCLUDE_DIRS})
+else ()
+  message(FATAL_ERROR "Julia not found.")
+endif()
 
 install(TARGETS SiMoCoJulia
         EXPORT SiMoCoJulia

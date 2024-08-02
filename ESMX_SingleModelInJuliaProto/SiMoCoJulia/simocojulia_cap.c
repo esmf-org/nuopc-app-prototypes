@@ -14,6 +14,8 @@
 #include <string.h>
 #include <math.h>
 
+#include <julia.h>
+
 // ESMF header -- provides access to the entire public ESMF C API
 #include "NUOPC.h"
 #include "ESMC.h"
