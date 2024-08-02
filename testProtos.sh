@@ -410,6 +410,10 @@ TestESMXwAltProto ESMX_AtmOcnProto                        esmx_app
 TestESMXwDLProto  ESMX_SingleModelInFortranProto          esmx_app
 TestESMXoDLProto  ESMX_SingleModelInCProto                esmx_app
 TestESMXProto     ESMX_AtmOcnFortranAndCProto             esmx_app
+if [[ $ESMF_TEST_NUOPC_JULIA = ON ]]
+then
+   TestESMXoDLProto  ESMX_SingleModelInJuliaProto         esmx_app
+fi
 
 date
 echo "== TEST SUMMARY START =="
