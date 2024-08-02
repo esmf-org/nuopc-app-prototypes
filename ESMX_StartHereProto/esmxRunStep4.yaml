@@ -30,6 +30,8 @@ ABC:
     Verbosity: high
   exportFields:
     sea_surface_temperature: {dim: 2, val: 273}
+  output:
+    write_final: false
 
 DEF:
   model:  ESMX_Data
@@ -37,3 +39,5 @@ DEF:
     Verbosity: high
   importFields:
     sea_surface_temperature: {dim: 2, min: 260, max: 280}
+  output:
+    write_final: false
