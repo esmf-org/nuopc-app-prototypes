@@ -1,0 +1,43 @@
+ESMX:
+
+  App:
+    globalResourceControl:  true
+    logKindFlag:            ESMF_LOGKIND_Multi
+    logAppendFlag:          false
+    logFlush:               true
+    startTime:              2012-10-24T08:00:00
+    stopTime:               2012-10-24T20:00:00
+
+    ESMF_RUNTIME_PROFILE:         ON
+    ESMF_RUNTIME_PROFILE_OUTPUT:  SUMMARY
+
+  Driver:
+    attributes:
+      Verbosity: high
+    componentList:  [ABC, DEF]
+
+    runSequence: |
+      @900
+        ABC -> DEF
+        DEF -> ABC
+        ABC
+        DEF
+      @
+
+ABC:
+  model:  ESMX_Data
+  attributes:
+    Verbosity: high
+  exportFields:
+    sea_surface_temperature: {dim: 2, val: 273}
+  output:
+    write_final: false
+
+DEF:
+  model:  ESMX_Data
+  attributes:
+    Verbosity: high
+  importFields:
+    sea_surface_temperature: {dim: 2, min: 260, max: 280}
+  output:
+    write_final: false
