@@ -27,16 +27,24 @@ include $(ESMFMKFILE)
 # strip quotes around the ESMF_INTERNAL_MPIRUN value
 ESMF_INTERNAL_MPIRUN := $(shell echo $(ESMF_INTERNAL_MPIRUN))
 
+# Get linker flags needed for Julia. These need to be added when building the ESMX
+# executable. (They are also needed when creating the SiMoCoJulia library, but the CMake
+# that builds that library handles that, so the LDFLAGS set here are redundant for that
+# purpose.)
+JL_SHARE := $(shell julia -e 'print(joinpath(Sys.BINDIR, Base.DATAROOTDIR, "julia"))')
+LDFLAGS += $(shell $(JL_SHARE)/julia-config.jl --ldflags)
+LDFLAGS += $(shell $(JL_SHARE)/julia-config.jl --ldlibs)
+
 ################################################################################
 ################################################################################
 EXE = install/bin/esmx_app
 .PHONY: $(EXE)
 
 $(EXE):
-	$(ESMF_APPSDIR)/ESMX_Builder -v
+	LDFLAGS="$(LDFLAGS)" $(ESMF_APPSDIR)/ESMX_Builder -v
 
 DL:
-	$(ESMF_APPSDIR)/ESMX_Builder -v esmxBuildDL.yaml
+	LDFLAGS="$(LDFLAGS)" $(ESMF_APPSDIR)/ESMX_Builder -v esmxBuildDL.yaml
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------

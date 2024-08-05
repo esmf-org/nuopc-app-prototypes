@@ -29,6 +29,24 @@ void Advertise(ESMC_GridComp model, int *rc){
 
   *rc = ESMC_LogWrite("Message from inside C component Advertise() method",
     ESMC_LOGMSG_INFO);
+
+  // jl_init should only be called once per process. If we are guaranteed to only have a
+  // single Julia-based component, then it can be called from the cap as is done here. But
+  // if there's a chance that we may have multiple Julia components, then we should do
+  // something different to ensure it only gets called once. This could mean moving this
+  // call into ESMF somehow, or at least having ESMF support some way of checking whether
+  // jl_init has already been called... the latter could be done in a way that avoids
+  // requiring ESMF to have any julia calls itself, e.g.,:
+  //
+  // if (!ESMC_Is_Julia_Initialized()) {
+  //    jl_init();
+  //    ESMC_Set_Jula_Initialized()
+  // }
+  //
+  // where ESMC_Set_Julia_Initialized and ESMC_Is_Julia_Initialized simply set and get a
+  // boolean flag.
+  jl_init();
+
   if (*rc!=ESMF_SUCCESS) return;  // bail out
 }
 
