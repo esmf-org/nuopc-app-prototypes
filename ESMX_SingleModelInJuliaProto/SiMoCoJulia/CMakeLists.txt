@@ -35,7 +35,8 @@ else ()
   message(FATAL_ERROR "Julia not found.")
 endif()
 
-add_compile_definitions(PATH_TO_SOURCE="${CMAKE_CURRENT_SOURCE_DIR}")
+target_compile_definitions(SiMoCoJulia PRIVATE PATH_TO_SOURCE="${CMAKE_CURRENT_SOURCE_DIR}")
+target_compile_definitions(SiMoCoJulia PRIVATE PATH_TO_LIBRARY="$<TARGET_FILE:SiMoCoJulia>")
 
 install(TARGETS SiMoCoJulia
         EXPORT SiMoCoJulia

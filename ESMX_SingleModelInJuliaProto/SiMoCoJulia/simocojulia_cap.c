@@ -92,7 +92,8 @@ void Advertise(ESMC_GridComp model, int *rc){
   initialize_julia(rc);
   if (*rc!=ESMF_SUCCESS) return;  // bail out
 
-  jl_call0(model_init);
+  jl_value_t *path_to_c_library = jl_cstr_to_string(PATH_TO_LIBRARY);
+  jl_call1(model_init, path_to_c_library);
 }
 
 void Advance(ESMC_GridComp model, int *rc){
