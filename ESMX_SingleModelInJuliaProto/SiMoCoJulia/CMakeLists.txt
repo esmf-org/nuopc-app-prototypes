@@ -35,6 +35,8 @@ else ()
   message(FATAL_ERROR "Julia not found.")
 endif()
 
+add_compile_definitions(PATH_TO_SOURCE="${CMAKE_CURRENT_SOURCE_DIR}")
+
 install(TARGETS SiMoCoJulia
         EXPORT SiMoCoJulia
         LIBRARY DESTINATION lib
