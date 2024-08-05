@@ -12,6 +12,10 @@ ESMX:
     componentList:          [MDL]
     attributes:
       Verbosity: low
+    runSequence: |
+      @900
+        MDL
+      @
 
 MDL:
   model:            ./install/lib/libSiMoCoJulia.*
