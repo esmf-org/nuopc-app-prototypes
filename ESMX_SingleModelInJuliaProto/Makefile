@@ -37,18 +37,14 @@ LDFLAGS += $(shell $(JL_SHARE)/julia-config.jl --ldlibs)
 
 ################################################################################
 ################################################################################
-EXE = install/bin/esmx_app
-.PHONY: $(EXE)
 
-$(EXE):
-	LDFLAGS="$(LDFLAGS)" $(ESMF_APPSDIR)/ESMX_Builder -v
-
+.PHONY: DL
 DL:
 	LDFLAGS="$(LDFLAGS)" $(ESMF_APPSDIR)/ESMX_Builder -v esmxBuildDL.yaml
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-.PHONY: dust clean distclean info run
+.PHONY: dust clean distclean info runDL
 dust:
 	rm -f PET*.ESMF_LogFile *.nc *.stdout
 clean:
@@ -62,8 +58,5 @@ info:
 	@cat $(ESMFMKFILE)
 	@echo ==================================================================
 
-run:
-	$(ESMF_INTERNAL_MPIRUN) -np 4 ./$(EXE)
-
 runDL:
-	$(ESMF_INTERNAL_MPIRUN) -np 4 ./$(EXE) esmxRunDL.yaml
+	$(ESMF_INTERNAL_MPIRUN) -np 4 ./install/bin/esmx_app esmxRunDL.yaml
