@@ -10,6 +10,9 @@
 
 mutable struct State
    times_called::Int
+
+   # The model state probably isn't the most appropriate place to put this path, but for
+   # this simple example, we're putting it there for convenience.
    path_to_c_library::String
 end
 

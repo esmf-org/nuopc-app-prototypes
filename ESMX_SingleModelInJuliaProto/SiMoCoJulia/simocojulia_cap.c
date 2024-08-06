@@ -43,7 +43,7 @@ void initialize_julia(int *rc) {
     if (!ESMC_Is_Julia_Initialized()) {
      jl_init();
      ESMC_Set_Jula_Initialized()
-  }
+    }
 
   where ESMC_Set_Julia_Initialized and ESMC_Is_Julia_Initialized simply set and get a
   boolean flag.
