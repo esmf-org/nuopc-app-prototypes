@@ -230,6 +230,34 @@ echo ---------------------------------------------------------------------------
 echo
 }
 
+function TestESMXProtoRun {
+((count++))
+testList[count]=$1-$3
+echo ---------------------------------------------------------------------------
+date
+echo STARTING: $1-$3
+cd $1
+make dust
+set -x
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./install/bin/$2 esmxRun$3.yaml > $2.stdout 2>&1
+local result=$?
+set +x
+if [ $result -eq 0 ]
+then
+testResult[count]="PASS"
+else
+testResult[count]="FAIL"
+fi
+mkdir -p ../$RESULTSDIR
+cp $2.stdout ../$RESULTSDIR/$1-$3.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1-$3.Log
+echo FINISHED: $1-$3
+cd ..
+date
+echo ---------------------------------------------------------------------------
+echo
+}
+
 function TestESMXwAltProto {
 ((count++))
 testList[count]=$1
@@ -405,11 +433,16 @@ export OMP_NUM_THREADS=3
 TestProto     SingleModelOpenMPUnawareProto               mainApp
 export OMP_NUM_THREADS=1
 # - ESMX tests ----------------------------------------------------------------
-TestESMXProto     ESMX_ExternalDriverAPIProto             externalApp
-TestESMXwAltProto ESMX_AtmOcnProto                        esmx_app
+TestESMXProto     ESMX_StartHereProto                     esmx_app
+TestESMXProtoRun  ESMX_StartHereProto                     esmx_app  Step1
+TestESMXProtoRun  ESMX_StartHereProto                     esmx_app  Step2
+TestESMXProtoRun  ESMX_StartHereProto                     esmx_app  Step3
+TestESMXProtoRun  ESMX_StartHereProto                     esmx_app  Step4
 TestESMXwDLProto  ESMX_SingleModelInFortranProto          esmx_app
 TestESMXoDLProto  ESMX_SingleModelInCProto                esmx_app
+TestESMXwAltProto ESMX_AtmOcnProto                        esmx_app
 TestESMXProto     ESMX_AtmOcnFortranAndCProto             esmx_app
+TestESMXProto     ESMX_ExternalDriverAPIProto             externalApp
 if [[ $ESMF_TEST_NUOPC_JULIA = ON ]]
 then
    TestESMXoDLProto  ESMX_SingleModelInJuliaProto         esmx_app
