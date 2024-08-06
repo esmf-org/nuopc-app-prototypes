@@ -13,16 +13,18 @@ mutable struct State
    path_to_c_library::String
 end
 
-# Initialize to garbage so we ensure that init is called
+# Initialize times_called to garbage so we ensure that init is called
 model_state = State(-10, "")
 
 function init(path_to_c_library::AbstractString)
    model_state.times_called = 0
    model_state.path_to_c_library = path_to_c_library
-   println("path to C library: ", path_to_c_library)
+   msg = "path to C library: " * path_to_c_library
+   @ccall model_state.path_to_c_library.write_logmsg(msg::Cstring)::Cvoid
 end
 
 function run()
    model_state.times_called += 1
-   println("model_state times_called: ", model_state.times_called)
+   msg = "model_state times_called: " * string(model_state.times_called)
+   @ccall model_state.path_to_c_library.write_logmsg(msg::Cstring)::Cvoid
 end

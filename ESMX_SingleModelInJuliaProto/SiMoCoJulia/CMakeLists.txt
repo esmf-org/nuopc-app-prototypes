@@ -23,7 +23,7 @@ else()
   message(WARNING "${CMAKE_C_COMPILER_ID} C compiler will be used with default options")
 endif()
 
-add_library(SiMoCoJulia SHARED simocojulia_cap.c)
+add_library(SiMoCoJulia SHARED simocojulia_utils.c simocojulia_cap.c)
 target_link_libraries(SiMoCoJulia PUBLIC ESMF::ESMC)
 
 if (Julia_FOUND)
