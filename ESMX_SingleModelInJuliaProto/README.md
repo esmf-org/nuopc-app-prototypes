@@ -104,7 +104,7 @@ if (!ESMC_Is_Julia_Initialized()) {
 }
 ```
 
-where ESMC_Set_Julia_Initialized and ESMC_Is_Julia_Initialized simply set and get a boolean flag.
+where `ESMC_Set_Julia_Initialized` and `ESMC_Is_Julia_Initialized` simply set and get a boolean flag.
 
 One other piece that is not illustrated here is: It is recommended to include this line in a C file that is part of the final executable (not in a shared library):
 
@@ -118,4 +118,4 @@ For now, we have not yet implemented error handling of the ESMF calls invoked fr
 
 ### Use of MPI
 
-This example runs using 4 MPI processes, but this simple Julia component isn't yet parallelized.
+This example runs using 4 MPI processes, but this simple Julia component isn't yet parallelized. So the same thing simply happens in all 4 processes.
