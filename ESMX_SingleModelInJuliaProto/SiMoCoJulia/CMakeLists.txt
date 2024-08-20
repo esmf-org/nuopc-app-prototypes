@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.19)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-find_package(ESMF 8.6.0 MODULE REQUIRED)
+find_package(ESMF 8.7.0 MODULE REQUIRED)
 find_package(Julia REQUIRED)
 
 set(CMAKE_C_COMPILER "${ESMF_CCOMPILER}")
