@@ -443,6 +443,10 @@ TestESMXoDLProto  ESMX_SingleModelInCProto                esmx_app
 TestESMXwAltProto ESMX_AtmOcnProto                        esmx_app
 TestESMXProto     ESMX_AtmOcnFortranAndCProto             esmx_app
 TestESMXProto     ESMX_ExternalDriverAPIProto             externalApp
+if [[ $ESMF_TEST_NUOPC_JULIA = ON ]]
+then
+   TestESMXoDLProto  ESMX_SingleModelInJuliaProto         esmx_app
+fi
 
 date
 echo "== TEST SUMMARY START =="
