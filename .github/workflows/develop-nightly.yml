@@ -19,7 +19,7 @@ jobs:
             comm: openmpi
           }
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Library Directory
       run: |
         export STACK_ROOT=${HOME}/stack
@@ -32,7 +32,7 @@ jobs:
         echo "${STACK_ROOT}/bin" >> $GITHUB_PATH
     - name: Cache Libraries
       id: cache-libraries
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ${{env.STACK_ROOT}}
         key: develop-nightly-${{matrix.config.os}}-${{matrix.config.compiler}}-${{matrix.config.comm}}
