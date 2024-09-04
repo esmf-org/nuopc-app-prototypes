@@ -20,7 +20,7 @@ Files and sub-directories that implement the fundamental concept demonstrated by
 Files that are needed for the integration into ESMF's automated testing infrastructure for regression testing. For this example, ESMX-related pieces are considered secondary artifacts, since the main purpose of the example is to demonstrate coupling a Julia-based component. These artifacts might be interesting to look at, but are less central to the concepts and patterns that this prototype is demonstrating.
 
 - `Makefile`         - GNU Makefile that defines targets that are used by the automated ESMF regression testing script. These targets can also be used to build and run this prototype manually.
-- `esmxBuildDL.yaml` - Standard ESMX YAML file describing the build dependencies of the `esmx_app` (the executable) on SiMoCoJulia via the dynamic loading at run-time approach.
+- `esmxBuildDL.yaml` - Standard ESMX YAML file describing the build dependencies of the `esmx_app` (the executable) on SiMoCoJulia via the dynamic loading at run-time approach. Note that this contains some Julia-specific pieces needed for the ESMX build.
 - `esmxRunDL.yaml`   - Standard ESMX YAML file describing the run configuration suitable for the dynamic loading at run-time approach.
 
 ## Usage
@@ -69,16 +69,12 @@ First, when building the SiMoCoJulia library, this is done from the CMake, lever
   target_link_libraries(SiMoCoJulia PUBLIC ${Julia_LIBRARY})
 ```
 
-Second, when linking the ESMX executable, we again need to include the Julia library. This is handled from the top-level Makefile via:
-```makefile
-JL_SHARE := $(shell julia -e 'print(joinpath(Sys.BINDIR, Base.DATAROOTDIR, "julia"))')
-LDFLAGS += $(shell $(JL_SHARE)/julia-config.jl --ldflags)
-LDFLAGS += $(shell $(JL_SHARE)/julia-config.jl --ldlibs)
+Second, when linking the ESMX executable, we again need to include the Julia library. This is handled from esmxBuildDL.yaml via:
+```yaml
+  link_module_paths: SiMoCoJulia/cmake
+  link_packages: Julia
+  link_libraries: ${Julia_LIBRARY}
 ```
-
-and then adding these `LDFLAGS` when invoking `ESMX_Builder` so that they will be picked up by the CMake process that builds the ESMX executable.
-
-(In this case, the specification of `LDFLAGS` at this top level makes `target_link_libraries(SiMoCoJulia PUBLIC ${Julia_LIBRARY})` unnecessary, but we still include that for illustrative purposes.)
 
 ### Specifying important paths needed for the C-Julia interface
 
