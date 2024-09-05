@@ -3,6 +3,9 @@ name: Develop - Nightly
 on:
   schedule:
     - cron:  '30 7 * * *'
+  pull_request:
+    branches:
+      - develop
   workflow_dispatch:
 
 jobs:
@@ -107,6 +110,8 @@ jobs:
         esmpy: false
         cache: true
     - name: NUOPC Tests
+      env:
+        ESMF_TEST_NUOPC_JULIA: ON
       run: |
         export TOOLRUN="--oversubscribe"
         ./testProtos.sh
