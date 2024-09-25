@@ -11,7 +11,7 @@
 module nuopc_da
 
   !-----------------------------------------------------------------------------
-  ! NUOPC - DA interface code
+  ! NUOPC - DA interface code - this is generic code that could move into NUOPC
   !-----------------------------------------------------------------------------
 
   use MPI
@@ -21,12 +21,12 @@ module nuopc_da
   implicit none
 
   private
-  
+
   type(ESMF_GridComp) :: nuopcTop
   type(ESMF_State)    :: toNuopcTop, fmNuopcTop
   type(ESMF_Clock)    :: clock
 
-  public init, connect, step, final
+  public init, commToVM, connect, step, final
 
   !-----------------------------------------------------------------------------
   contains
@@ -116,10 +116,95 @@ module nuopc_da
 
   !-----------------------------------------------------------------------------
 
-  subroutine connect(toNuopcTopStandardNames, fmNuopcTopStandardNames, rc)
-    character(*), intent(in), optional  :: toNuopcTopStandardNames(:)
-    character(*), intent(in), optional  :: fmNuopcTopStandardNames(:)
-    integer,      intent(out)           :: rc
+  function commToVM(comm, rc)
+    type(ESMF_VM) :: commToVM
+    integer,       intent(in)   :: comm ! MPI communicator
+    integer,       intent(out)  :: rc
+
+    type(ESMF_VM)         :: vm
+    integer               :: petCount, taskCount, temp_int(1)
+    integer               :: i, j, urc
+    integer, allocatable  :: temp_list(:), petList(:)
+    type(ESMF_GridComp)   :: comp
+
+    call ESMF_VMGetCurrent(vm, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__, rcToReturn=rc)) return
+
+    call ESMF_VMGet(vm, petCount=petCount, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__, rcToReturn=rc)) return
+
+    temp_int(1) = 0  ! default indicate task is not in comm
+    if (comm /= MPI_COMM_NULL) temp_int(1) = 1 ! indicate task is in comm
+
+    allocate(temp_list(petCount))
+
+    call ESMF_VMAllGather(vm, temp_int, temp_list, 1, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__, rcToReturn=rc)) return
+
+    ! determine number of tasks in comm
+    taskCount = 0
+    do i=1, petCount
+      if (temp_list(i)==1) taskCount = taskCount + 1
+    enddo
+
+    ! construct petList
+    allocate(petList(taskCount))
+    j = 1
+    do i=1, petCount
+      if (temp_list(i)==1) then
+        petList(j) = i-1  ! PETs are basis 0
+        j = j+1
+      endif
+    enddo
+
+    deallocate(temp_list)
+
+    ! create ESMF component on petList
+    comp = ESMF_GridCompCreate(petList=petList, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__, rcToReturn=rc)) return
+
+    deallocate(petList)
+
+    ! call SetServices with a dummy routine to trigger internal VM creation
+    call ESMF_GridCompSetServices(comp, dummySS, userRc=urc, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) return
+    if (ESMF_LogFoundError(rcToCheck=urc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__, rcToReturn=rc)) return
+
+    ! access the VM to be returned
+    call ESMF_GridCompGet(comp, vm=commToVM, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) return
+
+  contains
+
+    recursive subroutine dummySS(gridcomp, rc)
+      type(ESMF_GridComp)        :: gridcomp ! must not be optional
+      integer, intent(out)       :: rc       ! must not be optional
+      rc = ESMF_SUCCESS
+    end subroutine
+
+  end function commToVM
+
+  !-----------------------------------------------------------------------------
+
+  subroutine connect(vm, toNuopcTopStandardNames, fmNuopcTopStandardNames, rc)
+    type(ESMF_VM), intent(in)            :: vm
+    character(*),  intent(in), optional  :: toNuopcTopStandardNames(:)
+    character(*),  intent(in), optional  :: fmNuopcTopStandardNames(:)
+    integer,       intent(out)           :: rc
 
     integer                   :: urc, phase, i
     type(ESMF_Field)          :: field
@@ -128,7 +213,7 @@ module nuopc_da
     if (present(toNuopcTopStandardNames)) then
       call NUOPC_Advertise(toNuopcTop, StandardNames=toNuopcTopStandardNames, &
         TransferOfferGeomObject="cannot provide", SharePolicyField="share", &
-        rc=rc)
+        vm=vm, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__, rcToReturn=rc)) return
@@ -137,7 +222,7 @@ module nuopc_da
     if (present(fmNuopcTopStandardNames)) then
       call NUOPC_Advertise(fmNuopcTop, StandardNames=fmNuopcTopStandardNames, &
         TransferOfferGeomObject="cannot provide", SharePolicyField="share", &
-        rc=rc)
+        vm=vm, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__, rcToReturn=rc)) return

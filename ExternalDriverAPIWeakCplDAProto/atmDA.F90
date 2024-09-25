@@ -14,7 +14,6 @@ module atmDA
   ! ATM DA Code
   !-----------------------------------------------------------------------------
 
-  use MPI
   use ESMF
   use NUOPC
 
@@ -32,8 +31,8 @@ module atmDA
   contains
   !-----------------------------------------------------------------------------
 
-  subroutine exec(comm)
-    integer             :: comm
+  subroutine exec(vm)
+    type(ESMF_VM) :: vm ! context of this interaction
 
     integer             :: rc
 
@@ -44,7 +43,8 @@ module atmDA
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     ! Connect DA code with NUOPC system top component
-    call nuopc_da_connect(toNuopcTopStandardNames=(/"precipitation_flux"/), &
+    call nuopc_da_connect(vm=vm, &
+      toNuopcTopStandardNames=(/"precipitation_flux"/), &
       fmNuopcTopStandardNames=(/"surface_net_downward_shortwave_flux"/), rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
