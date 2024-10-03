@@ -2,7 +2,7 @@
 
 #==============================================================================
 # Earth System Modeling Framework
-# Copyright (c) 2002-2023, University Corporation for Atmospheric Research,
+# Copyright (c) 2002-2024, University Corporation for Atmospheric Research,
 # Massachusetts Institute of Technology, Geophysical Fluid Dynamics
 # Laboratory, University of Michigan, National Centers for Environmental
 # Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
@@ -230,6 +230,34 @@ echo ---------------------------------------------------------------------------
 echo
 }
 
+function TestESMXProtoRun {
+((count++))
+testList[count]=$1-$3
+echo ---------------------------------------------------------------------------
+date
+echo STARTING: $1-$3
+cd $1
+make dust
+set -x
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./install/bin/$2 esmxRun$3.yaml > $2.stdout 2>&1
+local result=$?
+set +x
+if [ $result -eq 0 ]
+then
+testResult[count]="PASS"
+else
+testResult[count]="FAIL"
+fi
+mkdir -p ../$RESULTSDIR
+cp $2.stdout ../$RESULTSDIR/$1-$3.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1-$3.Log
+echo FINISHED: $1-$3
+cd ..
+date
+echo ---------------------------------------------------------------------------
+echo
+}
+
 function TestESMXwAltProto {
 ((count++))
 testList[count]=$1
@@ -269,6 +297,82 @@ fi
 mkdir -p ../$RESULTSDIR
 cp $2.stdout ../$RESULTSDIR/$1-Alt.stdout
 cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1-Alt.Log
+echo FINISHED: $1
+cd ..
+date
+echo ---------------------------------------------------------------------------
+echo
+}
+
+function TestESMXwDLProto {
+((count++))
+testList[count]=$1
+echo ---------------------------------------------------------------------------
+date
+echo STARTING: $1
+cd $1
+make distclean
+make
+set -x
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./install/bin/$2 > $2.stdout 2>&1
+local result=$?
+set +x
+if [ $result -eq 0 ]
+then
+testResult[count]="PASS"
+else
+testResult[count]="FAIL"
+fi
+mkdir -p ../$RESULTSDIR
+cp $2.stdout ../$RESULTSDIR/$1.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1.Log
+echo ---------------------------------------------------------------------------
+((count++))
+testList[count]=$1-DL
+make distclean
+make DL
+set -x
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./install/bin/$2 esmxRunDL.yaml > $2.stdout 2>&1
+local result=$?
+set +x
+if [ $result -eq 0 ]
+then
+testResult[count]="PASS"
+else
+testResult[count]="FAIL"
+fi
+mkdir -p ../$RESULTSDIR
+cp $2.stdout ../$RESULTSDIR/$1-DL.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1-DL.Log
+echo FINISHED: $1
+cd ..
+date
+echo ---------------------------------------------------------------------------
+echo
+}
+
+function TestESMXoDLProto {
+((count++))
+testList[count]=$1-DL
+echo ---------------------------------------------------------------------------
+date
+echo STARTING: $1
+cd $1
+make distclean
+make DL
+set -x
+$ESMF_INTERNAL_MPIRUN -np 4 $TOOLRUN ./install/bin/$2 esmxRunDL.yaml > $2.stdout 2>&1
+local result=$?
+set +x
+if [ $result -eq 0 ]
+then
+testResult[count]="PASS"
+else
+testResult[count]="FAIL"
+fi
+mkdir -p ../$RESULTSDIR
+cp $2.stdout ../$RESULTSDIR/$1-DL.stdout
+cat PET*.ESMF_LogFile > ../$RESULTSDIR/$1-DL.Log
 echo FINISHED: $1
 cd ..
 date
@@ -329,8 +433,20 @@ export OMP_NUM_THREADS=3
 TestProto     SingleModelOpenMPUnawareProto               mainApp
 export OMP_NUM_THREADS=1
 # - ESMX tests ----------------------------------------------------------------
+TestESMXProto     ESMX_StartHereProto                     esmx_app
+TestESMXProtoRun  ESMX_StartHereProto                     esmx_app  Step1
+TestESMXProtoRun  ESMX_StartHereProto                     esmx_app  Step2
+TestESMXProtoRun  ESMX_StartHereProto                     esmx_app  Step3
+TestESMXProtoRun  ESMX_StartHereProto                     esmx_app  Step4
+TestESMXwDLProto  ESMX_SingleModelInFortranProto          esmx_app
+TestESMXoDLProto  ESMX_SingleModelInCProto                esmx_app
 TestESMXwAltProto ESMX_AtmOcnProto                        esmx_app
-TestESMXProto ESMX_ExternalDriverAPIProto                 externalApp
+TestESMXProto     ESMX_AtmOcnFortranAndCProto             esmx_app
+TestESMXProto     ESMX_ExternalDriverAPIProto             externalApp
+if [[ $ESMF_TEST_NUOPC_JULIA = ON ]]
+then
+   TestESMXoDLProto  ESMX_SingleModelInJuliaProto         esmx_app
+fi
 
 date
 echo "== TEST SUMMARY START =="

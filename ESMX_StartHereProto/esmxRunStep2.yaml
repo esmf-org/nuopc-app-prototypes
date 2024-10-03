@@ -1,0 +1,13 @@
+ESMX:
+
+  App:
+    globalResourceControl:  true
+    logKindFlag:            ESMF_LOGKIND_Multi
+    logAppendFlag:          false
+    logFlush:               true
+    startTime:              2012-10-24T08:00:00
+    stopTime:               2012-10-24T20:00:00
+
+  Driver:
+    attributes:
+      Verbosity: low
