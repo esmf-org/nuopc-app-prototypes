@@ -96,6 +96,7 @@ module OCN
       StandardName="air_pressure_at_sea_level", name="pmsl", &
 #ifdef TEST_SHARING
       SharePolicyGeomObject="share", &
+      SharePolicyField="share", &
 #endif
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
