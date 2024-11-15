@@ -21,8 +21,9 @@ program externalApp
   use ESM, only: esmSS => SetServices
 
   use nuopc_da, only: &
-    nuopc_da_init   => init, &
-    nuopc_da_final  => final
+    nuopc_da_init     => init, &
+    nuopc_da_commToVM => commToVM, &
+    nuopc_da_final    => final
 
   use atmDA, only: atmDAexec => exec
   use ocnDA, only: ocnDAexec => exec
@@ -31,7 +32,8 @@ program externalApp
 
   integer                 :: rc
   integer                 :: size, rank
-  integer                 :: splitComm
+  integer                 :: commAtmDA, commOcnDA, splitComm
+  type(ESMF_VM)           :: vmAtmDA, vmOcnDA
 
   ! Initialize the NUOPC-DA interface
   call nuopc_da_init(nuopcTopSetServices=esmSS, rc=rc)
@@ -41,17 +43,40 @@ program externalApp
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
   ! Split up the MPI_COMM_WORLD into atmDA (first half) and ocnDA (second half)
-  ! of MPI ranks. Call into the respective DA routine
+  ! of MPI ranks.
   call MPI_Comm_size(MPI_COMM_WORLD, size, rc)
   call MPI_Comm_rank(MPI_COMM_WORLD, rank, rc)
   if (rank < size/2) then
     ! atm DA processes
     call MPI_Comm_split(MPI_COMM_WORLD, 1, rank, splitComm, rc)
-    call atmDAexec(comm=splitComm)
+    commAtmDA = splitComm
+    commOcnDA = MPI_COMM_NULL
   else
     ! ocn DA processes
     call MPI_Comm_split(MPI_COMM_WORLD, 2, rank, splitComm, rc)
-    call ocnDAexec(comm=splitComm)
+    commOcnDA = splitComm
+    commAtmDA = MPI_COMM_NULL
+  endif
+
+  ! Create corresponding ESMF_VM objects for atmDA and ocnDA
+  vmAtmDA = nuopc_da_commToVM(commAtmDA, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  vmOcnDA = nuopc_da_commToVM(commOcnDA, rc=rc)
+  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+    line=__LINE__, &
+    file=__FILE__)) &
+    call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+  ! Call into the respective DA routine for ATM and OCN
+  if (rank < size/2) then
+    ! atm DA processes
+    call atmDAexec(vmAtmDA)
+  else
+    ! ocn DA processes
+    call ocnDAexec(vmOcnDA)
   endif
 
   ! Finalize the NUOPC-DA interface
