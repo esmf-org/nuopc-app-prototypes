@@ -294,6 +294,9 @@ module ATM
             file=__FILE__)) &
             return  ! bail out
 
+         ! convert state name to lower case
+         nestedStateName = ESMF_UtilStringLowerCase(nestedStateName)
+
          ! write out the Fields in the importState and exportState
          call NUOPC_Write(importNestedState, &
            fileNamePrefix='field_atm_import_from_'//trim(nestedStateName)//'_', &
