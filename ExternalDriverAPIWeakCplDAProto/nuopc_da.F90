@@ -116,6 +116,15 @@ module nuopc_da
 
   !-----------------------------------------------------------------------------
 
+  ! The following is used in commToVM. Some Mac configurations have issues with this being
+  ! an internal subroutine to commToVM, so we have pulled it out to a module-level
+  ! subroutine. (See https://github.com/esmf-org/nuopc-app-prototypes/issues/8.)
+  recursive subroutine dummySS(gridcomp, rc)
+    type(ESMF_GridComp)        :: gridcomp ! must not be optional
+    integer, intent(out)       :: rc       ! must not be optional
+    rc = ESMF_SUCCESS
+  end subroutine
+
   function commToVM(comm, rc)
     type(ESMF_VM) :: commToVM
     integer,       intent(in)   :: comm ! MPI communicator
@@ -187,14 +196,6 @@ module nuopc_da
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) return
-
-  contains
-
-    recursive subroutine dummySS(gridcomp, rc)
-      type(ESMF_GridComp)        :: gridcomp ! must not be optional
-      integer, intent(out)       :: rc       ! must not be optional
-      rc = ESMF_SUCCESS
-    end subroutine
 
   end function commToVM
 
