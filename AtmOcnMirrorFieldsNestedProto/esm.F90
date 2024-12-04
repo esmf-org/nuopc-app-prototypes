@@ -8,14 +8,6 @@
 ! Licensed under the University of Illinois-NCSA License.
 !==============================================================================
 
-! For testing with threading keep one or both SETVM macros active
-#define WITH_ATM_SETVM
-#define WITH_OCN_SETVM
-
-! For testing with partially overlapping components keep one active, other _off
-#define WITH_ATM_PETLIST_off
-#define WITH_OCN_PETLIST_off
-
 module ESM
 
   !-----------------------------------------------------------------------------
@@ -119,12 +111,6 @@ module ESM
       petList(i) = i-1 ! PET labeling goes from 0 to petCount-1
     enddo
     call NUOPC_DriverAddComp(driver, "ATM", atmSS, &
-#ifdef WITH_ATM_SETVM
-      atmSVM, info=info, &
-#endif
-#ifdef WITH_ATM_PETLIST
-      petList=petList, &
-#endif
       comp=child, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -149,12 +135,6 @@ module ESM
       petList(i) = petCount/2 + i-1 ! PET labeling goes from 0 to petCount-1
     enddo
     call NUOPC_DriverAddComp(driver, "OCN", ocnSS, &
-#ifdef WITH_OCN_SETVM
-      ocnSVM, info=info, &
-#endif
-#ifdef WITH_OCN_PETLIST
-      petList=petList, &
-#endif
       comp=child, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
