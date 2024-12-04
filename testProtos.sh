@@ -26,10 +26,28 @@ then
    # Darwin systems that use Apple Clang need extra environment variables
    # to find the libomp installation. These are important for the ESMX
    # tests where CMake is used under the hood to determine the correct
-   # compiler and linker flags. Set them here to be available:
-   export LDFLAGS=-L/opt/homebrew/opt/libomp/lib
-   export CXXFLAGS=-I/opt/homebrew/opt/libomp/include
-   export CFLAGS=-I/opt/homebrew/opt/libomp/include
+   # compiler and linker flags. Set them here to be available.
+
+   # We'll try to get the location from a spack installation of llvm-openmp if possible,
+   # but if we can't find that, then we'll fall back on assuming that libomp is available
+   # via homebrew.
+   homebrew_libomp_dir=/opt/homebrew/opt/libomp
+
+   if command -v spack &>/dev/null; then
+      # First try getting these from a spack-installed llvm-openmp:
+      omp_dir=$(spack location -i --first llvm-openmp 2>/dev/null)
+      if [ $? -ne 0 ]; then
+         # llvm-openmp isn't installed with spack; fall back on the homebrew location
+         omp_dir=${homebrew_libomp_dir}
+      fi
+   else
+      # spack isn't found; fall back on the homebrew location
+      omp_dir=${homebrew_libomp_dir}
+   fi
+
+   export LDFLAGS="-L${omp_dir}/lib -Wl,-rpath,${omp_dir}/lib"
+   export CXXFLAGS=-I${omp_dir}/include
+   export CFLAGS=-I${omp_dir}/include
 fi
 
 function TestProto {
