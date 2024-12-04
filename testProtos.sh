@@ -45,6 +45,7 @@ then
       omp_dir=${homebrew_libomp_dir}
    fi
 
+   # The spack-based setup requires -Wl,-rpath in addition to -L
    export LDFLAGS="-L${omp_dir}/lib -Wl,-rpath,${omp_dir}/lib"
    export CXXFLAGS=-I${omp_dir}/include
    export CFLAGS=-I${omp_dir}/include
