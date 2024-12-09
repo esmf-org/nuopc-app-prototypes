@@ -85,8 +85,8 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
     
-    call NUOPC_SetAttribute(importState, "FieldTransferPolicy", "transferAllAsNests", &
-      rc=rc)
+    call NUOPC_SetAttribute(importState, "FieldTransferPolicy", &
+      "transferAllAsNests", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -133,7 +133,8 @@ module ATM
     allocate(importItemTypeList(importItemCount))
 
     ! query importState
-    call ESMF_StateGet(importState, nestedFlag=.false., itemNameList=importItemNameList, itemTypeList=importItemTypeList, rc=rc)
+    call ESMF_StateGet(importState, nestedFlag=.false., &
+      itemNameList=importItemNameList, itemTypeList=importItemTypeList, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -144,14 +145,16 @@ module ATM
        ! query item
        if (importItemTypeList(i) == ESMF_STATEITEM_STATE) then
           ! pull out nested state
-          call ESMF_StateGet(importState, itemName=importItemNameList(i), nestedState=importNestedState, rc=rc)
+          call ESMF_StateGet(importState, itemName=importItemNameList(i), &
+            nestedState=importNestedState, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
-            return  ! bail out          
+            return  ! bail out
 
           ! query nested state
-          call ESMF_StateGet(importNestedState, name=nestedStateName, itemCount=importNestedItemCount, rc=rc)
+          call ESMF_StateGet(importNestedState, name=nestedStateName, &
+            itemCount=importNestedItemCount, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
             file=__FILE__)) &
@@ -162,7 +165,8 @@ module ATM
           allocate(importNestedItemTypeList(importNestedItemCount))
 
           ! query item name and types in the nested state
-          call ESMF_StateGet(importNestedState, itemNameList=importNestedItemNameList, &
+          call ESMF_StateGet(importNestedState, &
+            itemNameList=importNestedItemNameList, &
             itemTypeList=importNestedItemTypeList, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
@@ -171,9 +175,13 @@ module ATM
 
           ! loop over items in importNestedState
           do j = 1, importNestedItemCount
-             call ESMF_LogWrite('realize '//trim(importNestedItemNameList(j))//' import field received from '//trim(nestedStateName), ESMF_LOGMSG_INFO)
+             call ESMF_LogWrite('realize '//&
+              trim(importNestedItemNameList(j))//&
+              ' import field received from '//trim(nestedStateName), &
+              ESMF_LOGMSG_INFO)
 
-             call NUOPC_Realize(importNestedState, fieldName=trim(importNestedItemNameList(j)), rc=rc)
+             call NUOPC_Realize(importNestedState, &
+              fieldName=trim(importNestedItemNameList(j)), rc=rc)
              if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                line=__LINE__, &
                file=__FILE__)) &
@@ -197,12 +205,12 @@ module ATM
   subroutine Advance(model, rc)
     type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
-    
+
     ! local variables
     type(ESMF_Clock)            :: clock
     type(ESMF_State)            :: importState, exportState
     type(ESMF_State)            :: importNestedState
-    character(ESMF_MAXSTR)      :: nestedStateName
+    character(ESMF_MAXSTR)      :: namespace
     character(ESMF_MAXSTR), allocatable    :: importItemNameList(:)
     type(ESMF_StateItem_Flag), allocatable :: importItemTypeList(:)
     integer                     :: i, importItemCount
@@ -210,7 +218,7 @@ module ATM
     character(len=160)          :: msgString
 
     rc = ESMF_SUCCESS
-    
+
     ! query for clock, importState and exportState
     call NUOPC_ModelGet(model, modelClock=clock, importState=importState, &
       exportState=exportState, rc=rc)
@@ -220,12 +228,12 @@ module ATM
       return  ! bail out
 
     ! HERE THE MODEL ADVANCES: currTime -> currTime + timeStep
-    
+
     ! Because of the way that the internal Clock was set by default,
     ! its timeStep is equal to the parent timeStep. As a consequence the
     ! currTime + timeStep is equal to the stopTime of the internal Clock
     ! for this call of the Advance() routine.
-    
+
     call ESMF_ClockPrint(clock, options="currTime", &
       preString="------>Advancing ATM from: ", unit=msgString, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -237,7 +245,7 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    
+
     call ESMF_ClockPrint(clock, options="stopTime", &
       preString="---------------------> to: ", unit=msgString, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -258,7 +266,7 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
-   ! query number of item in importState
+    ! query number of item in importState
     call ESMF_StateGet(importState, itemCount=importItemCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -270,7 +278,8 @@ module ATM
     allocate(importItemTypeList(importItemCount))
 
     ! query importState
-    call ESMF_StateGet(importState, nestedFlag=.false., itemNameList=importItemNameList, itemTypeList=importItemTypeList, rc=rc)
+    call ESMF_StateGet(importState, nestedFlag=.false., &
+      itemNameList=importItemNameList, itemTypeList=importItemTypeList, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -278,35 +287,36 @@ module ATM
 
     ! loop over items in importState
     do i = 1, importItemCount
-       ! query item
-       if (importItemTypeList(i) == ESMF_STATEITEM_STATE) then
-          ! pull out nested state
-          call ESMF_StateGet(importState, &
-            itemName=importItemNameList(i), nestedState=importNestedState, rc=rc)
-          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=__LINE__, &
-            file=__FILE__)) &
-            return  ! bail out          
+      ! query item
+      if (importItemTypeList(i) == ESMF_STATEITEM_STATE) then
+        ! pull out nested state
+        call ESMF_StateGet(importState, &
+          itemName=importItemNameList(i), nestedState=importNestedState, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
 
-          call ESMF_StateGet(importNestedState, name=nestedStateName, rc=rc)
-          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=__LINE__, &
-            file=__FILE__)) &
-            return  ! bail out
+        call NUOPC_GetAttribute(importNestedState, name="Namespace", &
+          value=namespace, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
 
-         ! convert state name to lower case
-         nestedStateName = ESMF_UtilStringLowerCase(nestedStateName)
+        ! convert state name to lower case
+        namespace = ESMF_UtilStringLowerCase(namespace)
 
-         ! write out the Fields in the importState and exportState
-         call NUOPC_Write(importNestedState, &
-           fileNamePrefix='field_atm_import_from_'//trim(nestedStateName)//'_', &
-           timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
-         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-           line=__LINE__, &
-           file=__FILE__)) &
-           return  ! bail out
-       end if
-    end do   
+        ! write out the Fields in the importState and exportState
+        call NUOPC_Write(importNestedState, &
+          fileNamePrefix='field_atm_import_namespace:'//trim(namespace)//'_', &
+          timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+      end if
+    end do
     slice = slice+1
 
   end subroutine
