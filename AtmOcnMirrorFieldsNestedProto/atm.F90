@@ -86,7 +86,7 @@ module ATM
       return  ! bail out
     
     call NUOPC_SetAttribute(importState, "FieldTransferPolicy", &
-      "transferAllAsNests", rc=rc)
+      "transferAllWithNamespace", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
