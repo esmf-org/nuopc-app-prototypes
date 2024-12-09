@@ -418,7 +418,7 @@ TestProto     AtmOcnMedPetListTimescalesProto             esmApp
 TestProto     AtmOcnMedPetListTimescalesSplitFastProto    esmApp
 TestProto     AtmOcnMedProto                              esmApp
 TestProto     AtmOcnMirrorFieldsProto                     esmApp
-TestProto     AtmOcnMirrorFieldsNestedProto               esmApp
+TestProto     AtmOcnMirrorFieldsWithNamespaceProto        esmApp
 TestProto     AtmOcnPetListProto                          esmApp
 TestProto     AtmOcnProto                                 esmApp
 TestProto     AtmOcnRtmTwoTimescalesProto                 esmApp
