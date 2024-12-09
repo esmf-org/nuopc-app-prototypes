@@ -8,6 +8,10 @@
 ! Licensed under the University of Illinois-NCSA License.
 !==============================================================================
 
+! For testing with partially overlapping components keep one active, other _off
+#define WITH_ATM_PETLIST
+#define WITH_OCN_PETLIST
+
 module ESM
 
   !-----------------------------------------------------------------------------
@@ -19,8 +23,8 @@ module ESM
   use NUOPC_Driver, &
     driverSS             => SetServices
 
-  use ATM, only: atmSVM => SetVM, atmSS => SetServices
-  use OCN, only: ocnSVM => SetVM, ocnSS => SetServices
+  use ATM, only: atmSS => SetServices
+  use OCN, only: ocnSS => SetServices
 
   use NUOPC_Connector, only: cplSS => SetServices
 
@@ -81,22 +85,8 @@ module ESM
     type(ESMF_CplComp)            :: connector
     integer                       :: petCount, i
     integer, allocatable          :: petList(:)
-    type(ESMF_Info)               :: info
 
     rc = ESMF_SUCCESS
-
-    ! Create and set the info object that is used to pass hints into methods
-    info = ESMF_InfoCreate(rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/MaxCount", value=2, &
-      rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
 
     ! get the petCount
     call ESMF_GridCompGet(driver, petCount=petCount, rc=rc)
@@ -111,6 +101,9 @@ module ESM
       petList(i) = i-1 ! PET labeling goes from 0 to petCount-1
     enddo
     call NUOPC_DriverAddComp(driver, "ATM", atmSS, &
+#ifdef WITH_ATM_PETLIST
+      petList=petList, &
+#endif
       comp=child, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -124,17 +117,14 @@ module ESM
     deallocate(petList)
 
     ! SetServices for OCN with petList on second half of PETs
-    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/MaxCount", value=4, &
-      rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
     allocate(petList(petCount/2))
     do i=1, petCount/2
       petList(i) = petCount/2 + i-1 ! PET labeling goes from 0 to petCount-1
     enddo
     call NUOPC_DriverAddComp(driver, "OCN", ocnSS, &
+#ifdef WITH_OCN_PETLIST
+      petList=petList, &
+#endif
       comp=child, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
