@@ -269,6 +269,13 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
 
+    ! write out the Fields in the exportState
+    call NUOPC_Write(exportState, fileNamePrefix="field_ocn_export_", &
+      timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
     slice = slice+1
 
   end subroutine
