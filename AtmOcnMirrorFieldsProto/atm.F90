@@ -1,6 +1,6 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright (c) 2002-2023, University Corporation for Atmospheric Research,
+! Copyright (c) 2002-2024, University Corporation for Atmospheric Research,
 ! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
 ! Laboratory, University of Michigan, National Centers for Environmental
 ! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
@@ -245,7 +245,13 @@ module ATM
 !TODO: settings, and go between components on different threading levels.
 !TODO: This is an edge case, but long term it should be supported.
 
-#if 0    
+!TODO: The problem in StateReconcile() comes from the UNIQUE_GEOM_INFO_TREAT_on
+!TODO: handling. Once that part is reworked inside StateReconcile() the mixed
+!TODO: sharing case should work again!
+
+!TODO: For now share Grid and Field for both fields.
+
+#if 1
     ! set SharePolicyGeomObject = "share"
     call NUOPC_SetAttribute(field, name="SharePolicyGeomObject", &
       value="share", rc=rc)
@@ -254,7 +260,7 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 #endif
-#if 0
+#if 1
     ! set SharePolicyField = "share"
     call NUOPC_SetAttribute(field, name="SharePolicyField", &
       value="share", rc=rc)

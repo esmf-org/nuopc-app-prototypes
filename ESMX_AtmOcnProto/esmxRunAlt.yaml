@@ -46,6 +46,8 @@ ATM:
     precipitation_flux:                   {dim: 2, val: 3.5}
     surface_net_downward_shortwave_flux:  {dim: 2, val: 4.5}
 
+  output:
+    write_final: false
 
 OCN:
   model:            lumo

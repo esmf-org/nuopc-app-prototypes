@@ -1,0 +1,17 @@
+ESMX:
+
+  App:
+    globalResourceControl:  true
+    logKindFlag:            ESMF_LOGKIND_Multi
+    logAppendFlag:          false
+    logFlush:               true
+    startTime:              2012-10-24T18:00:00
+    stopTime:               2012-10-24T19:00:00
+
+  Driver:
+    componentList:          [MDL]
+    attributes:
+      Verbosity: low
+
+MDL:
+  model:            ./install/lib/libSiMoCo.*

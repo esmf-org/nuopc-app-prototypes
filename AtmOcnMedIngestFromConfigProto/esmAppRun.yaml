@@ -93,21 +93,25 @@ runSeq4: |
     @
 #-------------------------------------------------------------------------------
 
+generalAttributes: &general # YAML anchor
+  Verbosity:  4609  # decimal representation of explicit bit pattern
+
 #-------------------------------------------------------------------------------
 # Attributes for components
 driverAttributes:
-  Verbosity:  "4609"
-  Profiling:  "0"
+  <<: *general    # merge key with alias, brings in Verbosity
+#  Verbosity:  0  # still able to override Verbosity here
+  Profiling:  0
 
 # Another way of specifying the ConnectionOptions Attribute for a Connector is
 # to explicitly set the Attribute here:
 MED-TO-ATM-Attributes:
   ConnectionOptions: :remapMethod=nearest_stod
-  Verbosity:  "4609"              # must explicitly quote this integer
-  Profiling:  low                 # this is naturally a string
-  Diagnostic: "0"                 # again explicitly quote the zero
-  CustomSeq1: [1, 2, 3, 4]        # sequence of integers
-  CustomSeq2: [1., 2., 3., 4.]    # sequence of floats
-  CustomSeq3: [true, false]       # sequence of bools
+  <<: *general                 # merge key with alias, brings in Verbosity
+  Profiling:  low              # pre-defined NUOPC setting
+  Diagnostic: 0                # explicit 0 turns OFF feature
+  CustomSeq1: [1, 2, 3, 4]     # sequence of integers
+  CustomSeq2: [1., 2., 3., 4.] # sequence of floats
+  CustomSeq3: [true, false]    # sequence of bools
   CustomType: {k1: [a, aa, aaa], k2: b, k3: c}  # complex structure
 #-------------------------------------------------------------------------------

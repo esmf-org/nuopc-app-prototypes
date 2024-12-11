@@ -1,6 +1,6 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright (c) 2002-2023, University Corporation for Atmospheric Research,
+! Copyright (c) 2002-2024, University Corporation for Atmospheric Research,
 ! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
 ! Laboratory, University of Michigan, National Centers for Environmental
 ! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
@@ -466,7 +466,8 @@ module OCN
       file=__FILE__)) &
       return  ! bail out
 
-    call ESMF_VMLog(vm, "OCN Advance(): ", ESMF_LOGMSG_INFO, rc=rc)
+    call ESMF_VMLog(vm, prefix="OCN Advance(): ", logMsgFlag=ESMF_LOGMSG_INFO, &
+      rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

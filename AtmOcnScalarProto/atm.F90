@@ -1,6 +1,6 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright (c) 2002-2023, University Corporation for Atmospheric Research,
+! Copyright (c) 2002-2024, University Corporation for Atmospheric Research,
 ! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
 ! Laboratory, University of Michigan, National Centers for Environmental
 ! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
@@ -307,9 +307,9 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
     ! access the scalars through a 1D array
-    scalars => fptr(:,1)
     if (size(fptr)>0) then
       ! only use fptr on that PET which holds allocation
+      scalars => fptr(:,1)
       do i=lbound(scalars,1), ubound(scalars,1)
         scalars(i)=(i-1)*10+step
       enddo
