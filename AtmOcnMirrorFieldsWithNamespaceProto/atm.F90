@@ -23,18 +23,18 @@ module ATM
 
   private
 
-  public SetServices
+  public SetVM, SetServices
 
   !-----------------------------------------------------------------------------
   contains
   !-----------------------------------------------------------------------------
-
+  
   subroutine SetServices(model, rc)
     type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
-
+    
     rc = ESMF_SUCCESS
-
+    
     ! derive from NUOPC_Model
     call NUOPC_CompDerive(model, modelSS, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -49,19 +49,21 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompSpecialize(model, specLabel=label_RealizeProvided, &
-      specRoutine=Realize, rc=rc)
+
+    call NUOPC_CompSpecialize(model, specLabel=label_RealizeAccepted, &
+      specRoutine=RealizeAccepted, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
     call NUOPC_CompSpecialize(model, specLabel=label_Advance, &
       specRoutine=Advance, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-
+    
   end subroutine
 
   !-----------------------------------------------------------------------------
@@ -82,33 +84,9 @@ module ATM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-
-    ! importable field: sea_surface_temperature
-    call NUOPC_Advertise(importState, &
-      StandardName="sea_surface_temperature", name="sst", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    ! exportable field: air_pressure_at_sea_level
-    call NUOPC_Advertise(exportState, &
-      StandardName="air_pressure_at_sea_level", name="pmsl", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    ! exportable field: surface_net_downward_shortwave_flux
-    call NUOPC_Advertise(exportState, &
-      StandardName="surface_net_downward_shortwave_flux", name="rsns", rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-
-    ! exportable scalar field: scalar_test
-    call NUOPC_Advertise(exportState, StandardName="scalar_test", rc=rc)
+    
+    call NUOPC_SetAttribute(importState, "FieldTransferPolicy", &
+      "transferAllWithNamespace", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -118,23 +96,23 @@ module ATM
 
   !-----------------------------------------------------------------------------
 
-  subroutine Realize(model, rc)
+  subroutine RealizeAccepted(model, rc)
     type(ESMF_GridComp)  :: model
     integer, intent(out) :: rc
 
     ! local variables
+    integer                 :: i, j
     type(ESMF_State)        :: importState, exportState
-    type(ESMF_Field)        :: field
-    type(ESMF_Grid)         :: gridIn
-    type(ESMF_Grid)         :: gridOut
-
-    type(ESMF_ArraySpec)    :: arrayspec  !!!!!! TODO: remove arrayspec once
-    !!!! FieldCreate is fixed to allow direct typekind spec with replicated dims
-    type(ESMF_DistGrid)     :: distgrid
-    type(ESMF_Grid)         :: grid
-
+    integer                 :: importItemCount, importNestedItemCount
+    type(ESMF_State)        :: importNestedState
+    character(ESMF_MAXSTR)  :: nestedStateName
+    character(ESMF_MAXSTR), allocatable     :: importItemNameList(:)
+    type(ESMF_StateItem_Flag), allocatable  :: importItemTypeList(:)
+    character(ESMF_MAXSTR), allocatable     :: importNestedItemNameList(:)
+    type(ESMF_StateItem_Flag), allocatable  :: importNestedItemTypeList(:)
+    
     rc = ESMF_SUCCESS
-
+    
     ! query for importState and exportState
     call NUOPC_ModelGet(model, importState=importState, &
       exportState=exportState, rc=rc)
@@ -143,97 +121,82 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
-    ! create a Grid object for Fields
-    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/10, 100/), &
-      minCornerCoord=(/10._ESMF_KIND_R8, 20._ESMF_KIND_R8/), &
-      maxCornerCoord=(/100._ESMF_KIND_R8, 200._ESMF_KIND_R8/), &
-      coordSys=ESMF_COORDSYS_CART, staggerLocList=(/ESMF_STAGGERLOC_CENTER/), &
-      rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    gridOut = gridIn ! for now out same as in
-
-    ! importable field: sea_surface_temperature
-    field = ESMF_FieldCreate(name="sst", grid=gridIn, &
-      typekind=ESMF_TYPEKIND_R8, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_Realize(importState, field=field, rc=rc)
+    ! query nested States
+    call ESMF_StateGet(importState, itemCount=importItemCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 
-    ! exportable field: air_pressure_at_sea_level
-    field = ESMF_FieldCreate(name="pmsl", grid=gridOut, &
-      typekind=ESMF_TYPEKIND_R8, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_Realize(exportState, field=field, rc=rc)
+    ! allocate temporary data structures
+    allocate(importItemNameList(importItemCount))
+    allocate(importItemTypeList(importItemCount))
+
+    ! query importState
+    call ESMF_StateGet(importState, nestedFlag=.false., &
+      itemNameList=importItemNameList, itemTypeList=importItemTypeList, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 
-    ! exportable field: surface_net_downward_shortwave_flux
-    field = ESMF_FieldCreate(name="rsns", grid=gridOut, &
-      typekind=ESMF_TYPEKIND_R8, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    call NUOPC_Realize(exportState, field=field, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
+    ! loop over items in importState
+    do i = 1, importItemCount
+       ! query item
+       if (importItemTypeList(i) == ESMF_STATEITEM_STATE) then
+          ! pull out nested state
+          call ESMF_StateGet(importState, itemName=importItemNameList(i), &
+            nestedState=importNestedState, rc=rc)
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
 
-#ifdef REPLICATED_WORKING
-    ! exportable field: scalar_test
-    ! - use the gridOut to provide the underlying decomposition and distribution
-    ! - however, replicate the field across all DEs of gridOut via gridToFieldMap
-    call ESMF_ArraySpecSet(arrayspec, 1, ESMF_TYPEKIND_R8, rc=rc)
-    field = ESMF_FieldCreate(name="scalar_test", grid=gridOut, &
-      gridToFieldMap=(/0,0/), &
-      arrayspec=arrayspec, &
-!      typekind=ESMF_TYPEKIND_R8, &
-      ungriddedLBound=(/1/), ungriddedUBound=(/1/), & ! single ungridded value
-      rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-#else
-    ! create a DistGrid with a single index space element, which gets mapped
-    ! onto DE 0.
-    distgrid = ESMF_DistGridCreate(minIndex=(/1/), maxIndex=(/1/), rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    grid = ESMF_GridCreate(distgrid, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
-    ! create Field on the single DE of the DistGrid, and add an ungridded dim
-    ! as the first dimension to store multiple scalar values
-    field = ESMF_FieldCreate(name="scalar_test", grid=grid, &
-      typekind=ESMF_TYPEKIND_I4, gridToFieldMap=(/2/), &
-      ungriddedLBound=(/1/), ungriddedUBound=(/2/), & ! 2 scalar values
-      rc=rc)
-#endif
-    call NUOPC_Realize(exportState, field=field, rc=rc)
-    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      line=__LINE__, &
-      file=__FILE__)) &
-      return  ! bail out
+          ! query nested state
+          call ESMF_StateGet(importNestedState, name=nestedStateName, &
+            itemCount=importNestedItemCount, rc=rc)
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+
+          ! allocate temporary data structures
+          allocate(importNestedItemNameList(importNestedItemCount))
+          allocate(importNestedItemTypeList(importNestedItemCount))
+
+          ! query item name and types in the nested state
+          call ESMF_StateGet(importNestedState, &
+            itemNameList=importNestedItemNameList, &
+            itemTypeList=importNestedItemTypeList, rc=rc)
+          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, &
+            file=__FILE__)) &
+            return  ! bail out
+
+          ! loop over items in importNestedState
+          do j = 1, importNestedItemCount
+             call ESMF_LogWrite('realize '//&
+              trim(importNestedItemNameList(j))//&
+              ' import field received from '//trim(nestedStateName), &
+              ESMF_LOGMSG_INFO)
+
+             call NUOPC_Realize(importNestedState, &
+              fieldName=trim(importNestedItemNameList(j)), rc=rc)
+             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+               line=__LINE__, &
+               file=__FILE__)) &
+               return  ! bail out
+          end do
+
+          ! clean memory
+          deallocate(importNestedItemNameList)
+          deallocate(importNestedItemTypeList)
+       end if
+    end do
+
+    ! clean memory
+    deallocate(importItemNameList)
+    deallocate(importItemTypeList)
 
   end subroutine
 
@@ -246,13 +209,13 @@ module ATM
     ! local variables
     type(ESMF_Clock)            :: clock
     type(ESMF_State)            :: importState, exportState
+    type(ESMF_State)            :: importNestedState
+    character(ESMF_MAXSTR)      :: namespace
+    character(ESMF_MAXSTR), allocatable    :: importItemNameList(:)
+    type(ESMF_StateItem_Flag), allocatable :: importItemTypeList(:)
+    integer                     :: i, importItemCount
+    integer, save               :: slice=1
     character(len=160)          :: msgString
-
-    integer, save                 :: step=1
-    integer                       :: i
-    type(ESMF_Field)              :: field
-    integer(ESMF_KIND_I4), pointer:: fptr(:,:), scalars(:)
-    type(ESMF_FileStatus_Flag)    :: status
 
     rc = ESMF_SUCCESS
 
@@ -295,37 +258,66 @@ module ATM
       file=__FILE__)) &
       return  ! bail out
 
-    ! update the scalar field
-    call ESMF_StateGet(exportState, field=field, itemName="scalar_test", rc=rc)
+    ! query nested States
+    call ESMF_StateGet(importState, nestedFlag=.false., &
+      itemCount=importItemCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call ESMF_FieldGet(field, farrayPtr=fptr, rc=rc)
+
+    ! query number of item in importState
+    call ESMF_StateGet(importState, itemCount=importItemCount, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    ! access the scalars through a 1D array
-    if (size(fptr)>0) then
-      ! only use fptr on that PET which holds allocation
-      scalars => fptr(:,1)
-      do i=lbound(scalars,1), ubound(scalars,1)
-        scalars(i)=(i-1)*10+step
-      enddo
-    endif
-    status=ESMF_FILESTATUS_OLD
-    if (step==1) status=ESMF_FILESTATUS_REPLACE
-#ifdef IOLAYER_CAN_WRITE_SMALL_SINGLE_DE
-    ! Currently the IO layer cannot deal with writing small single DEs
-    call NUOPC_Write(exportState, fileNamePrefix="field_atm_export_adv_", &
-      timeslice=step, status=status, relaxedFlag=.true., rc=rc)
+
+    ! allocate temporary data structures
+    allocate(importItemNameList(importItemCount))
+    allocate(importItemTypeList(importItemCount))
+
+    ! query importState
+    call ESMF_StateGet(importState, nestedFlag=.false., &
+      itemNameList=importItemNameList, itemTypeList=importItemTypeList, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-#endif
-    step=step+1
+
+    ! loop over items in importState
+    do i = 1, importItemCount
+      ! query item
+      if (importItemTypeList(i) == ESMF_STATEITEM_STATE) then
+        ! pull out nested state
+        call ESMF_StateGet(importState, &
+          itemName=importItemNameList(i), nestedState=importNestedState, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+
+        call NUOPC_GetAttribute(importNestedState, name="Namespace", &
+          value=namespace, rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+
+        ! convert state name to lower case
+        namespace = ESMF_UtilStringLowerCase(namespace)
+
+        ! write out the Fields in the importState and exportState
+        call NUOPC_Write(importNestedState, &
+          fileNamePrefix='field_atm_import_namespace:'//trim(namespace)//'_', &
+          timeslice=slice, overwrite=.true., relaxedFlag=.true., rc=rc)
+        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+          line=__LINE__, &
+          file=__FILE__)) &
+          return  ! bail out
+      end if
+    end do
+    slice = slice+1
 
   end subroutine
 

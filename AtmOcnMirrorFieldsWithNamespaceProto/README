@@ -2,8 +2,7 @@ README for ATM-OCN with field mirroring NUOPC prototype
 -------------------------------------------------------
 
 A simple two model system, where one Model component requests field mirroring
-on one of its States. Optional switching of Field/GeomObject accepting and
-sharing is demonstrated.
+with Namesapces on one of its States.
 
 Description:
 
@@ -22,7 +21,7 @@ Description:
   advertise and realize.
 
   The ATM component uses a three-phase initialization, consisting of
-  advertise/request-mirror with FieldTransferPolicy="transferAll",
+  advertise/request-mirror with FieldTransferPolicy="transferAllWithNamespace",
   modify mirror-advertised fields, realize.
 
 
@@ -46,3 +45,4 @@ Code structure:
   - esm.F90     - The Earth System Model (ESM) component, specializing generic
                   NUOPC_Driver. Define partial petLists for ATM and OCN.
   - esmApp.F90  - ESM application.
+
