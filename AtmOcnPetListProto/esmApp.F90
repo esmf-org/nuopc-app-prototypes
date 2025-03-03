@@ -80,6 +80,8 @@ program esmApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
+  print *, "Writing to stdout before ESM Initialize"
+
   ! Call Initialize for the earth system Component
   call ESMF_GridCompInitialize(esmComp, userRc=urc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -97,6 +99,8 @@ program esmApp
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
+  print *, "Writing to stdout before ESM Run"
+
   ! Call Run  for earth the system Component
   call ESMF_GridCompRun(esmComp, userRc=urc, rc=rc)
   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -107,6 +111,8 @@ program esmApp
     line=__LINE__, &
     file=__FILE__)) &
     call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+  print *, "Writing to stdout before ESM Finalize"
 
   ! Call Finalize for the earth system Component
   call ESMF_GridCompFinalize(esmComp, userRc=urc, rc=rc)

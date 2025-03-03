@@ -167,8 +167,15 @@ module ESM
       return  ! bail out
 #endif
     ! - set /NUOPC/Hint/PePerPet/MaxCount
-    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/MaxCount", value=1, &
+    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/MaxCount", value=2, &
       rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! - set /NUOPC/Hint/stdout/filename
+    call ESMF_InfoSet(info, key="/NUOPC/Hint/stdout/filename", &
+      value="atm.stdout.*", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -288,6 +295,13 @@ module ESM
     ! - set /NUOPC/Hint/PePerPet/MaxCount
     call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/MaxCount", value=1, &
       rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! - set /NUOPC/Hint/stdout/filename
+    call ESMF_InfoSet(info, key="/NUOPC/Hint/stdout/filename", &
+      value="ocn.stdout", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

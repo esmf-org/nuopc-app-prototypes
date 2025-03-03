@@ -446,7 +446,7 @@ module OCN
     type(ESMF_Time)             :: currTime
     type(ESMF_TimeInterval)     :: timeStep
     type(ESMF_VM)               :: vm
-    integer                     :: currentSsiPe
+    integer                     :: currentSsiPe, localPet
     character(len=160)          :: msgString
 
     rc = ESMF_SUCCESS
@@ -460,7 +460,7 @@ module OCN
       return  ! bail out
 
     ! Query for VM
-    call ESMF_GridCompGet(model, vm=vm, rc=rc)
+    call ESMF_GridCompGet(model, vm=vm, localPet=localPet, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -478,13 +478,15 @@ module OCN
 !$omp parallel private(msgString, currentSsiPe)
 !$omp critical
 !$    call ESMF_VMGet(vm, currentSsiPe=currentSsiPe)
-!$    write(msgString,'(A,I4,A,I4,A,I4,A,I4,A,I4)') &
-!$      "thread_num=", omp_get_thread_num(), &
+!$    write(msgString,'(A,I4,A,I4,A,I4,A,I4,A,I4,A,I4)') &
+!$      "OCN: localPet=", localPet, &
+!$      "   thread_num=", omp_get_thread_num(), &
 !$      "   currentSsiPe=", currentSsiPe, &
 !$      "   num_threads=", omp_get_num_threads(), &
 !$      "   max_threads=", omp_get_max_threads(), &
 !$      "   num_procs=", omp_get_num_procs()
 !$    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+!$    print *, msgString
 !$omp end critical
 !$omp end parallel
 
