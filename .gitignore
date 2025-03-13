@@ -685,6 +685,13 @@ ESMX_SingleModelInCProto/PET0.ESMF_LogFile
 ESMX_SingleModelInCProto/PET1.ESMF_LogFile
 ESMX_SingleModelInCProto/PET2.ESMF_LogFile
 ESMX_SingleModelInCProto/PET3.ESMF_LogFile
+ESMX_SingleModelInJuliaProto/build/
+ESMX_SingleModelInJuliaProto/install/
+ESMX_SingleModelInJuliaProto/esmx_app.stdout
+ESMX_SingleModelInJuliaProto/PET0.ESMF_LogFile
+ESMX_SingleModelInJuliaProto/PET1.ESMF_LogFile
+ESMX_SingleModelInJuliaProto/PET2.ESMF_LogFile
+ESMX_SingleModelInJuliaProto/PET3.ESMF_LogFile
 ESMX_AtmOcnFortranAndCProto/build/
 ESMX_AtmOcnFortranAndCProto/install/
 ESMX_AtmOcnFortranAndCProto/esmx_app.stdout
