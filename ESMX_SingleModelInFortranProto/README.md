@@ -12,6 +12,11 @@ Files and sub-directories that implement the fundamental concept demonstrated by
 - `esmxBuildDL.yaml`- Standard ESMX YAML file describing the build dependencies of the `esmx_app` (the executable) on SiMoCo via the dynamic loading at run-time approach.
 - `esmxRunDL.yaml`  - Standard ESMX YAML file describing the run configuration suitable for the dynamic loading at run-time approach.
 
+Two additional primary items exist for the direct CMake approach:
+
+- `cmake`             - Subdirectory holding the `FindESMF.cmake`. This is used by the `CMakeLists.txt` file to find and access ESMF.
+- `CMakeLists.txt`    - The top-level CMake file.
+
 ### Usage
 
 #### Building the ESMX application
@@ -42,7 +47,7 @@ The user has two options when it comes to building the ESMX application:
   ```
   2. Build:
   ```
-  cmake --build ./build --verbose
+  cmake --build ./build --parallel --verbose
   ```
   3. Install:
   ```

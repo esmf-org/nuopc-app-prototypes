@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.22)
 
 # Where to look for the local Find<Package>.cmake files
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/SiMoCo/cmake")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 # Find ESMF
 find_package(ESMF 8.9.0 MODULE REQUIRED)
