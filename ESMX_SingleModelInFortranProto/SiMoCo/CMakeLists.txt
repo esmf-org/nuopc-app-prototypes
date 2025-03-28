@@ -37,4 +37,6 @@ target_link_libraries(SiMoCo PUBLIC ESMF::ESMF)
 install(
   TARGETS SiMoCo
   EXPORT  SiMoCo
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
 )

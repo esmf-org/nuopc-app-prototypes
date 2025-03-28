@@ -42,4 +42,6 @@ set_target_properties(Catmos PROPERTIES C_STANDARD 99)
 install(
   TARGETS Catmos
   EXPORT  Catmos
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
 )
