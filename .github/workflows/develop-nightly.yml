@@ -1,4 +1,4 @@
-name: Develop - Nightly
+name: NUOPC App Prototypes Test
 
 on:
   schedule:
