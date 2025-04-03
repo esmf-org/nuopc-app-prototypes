@@ -37,6 +37,10 @@ if (Julia_FOUND)
   message("Julia_LIBRARY: ${Julia_LIBRARY}")
   target_include_directories(SiMoCoJulia PRIVATE ${Julia_INCLUDE_DIRS})
   target_link_libraries(SiMoCoJulia PUBLIC ${Julia_LIBRARY})
+  # make sure the rpath is set correctly when installing to find Julia
+  set_target_properties(SiMoCoJulia PROPERTIES
+    INSTALL_RPATH "${Julia_LIBRARY_DIR}"
+  )
 else ()
   message(FATAL_ERROR "Julia not found.")
 endif()
@@ -51,4 +55,6 @@ target_compile_definitions(SiMoCoJulia PRIVATE PATH_TO_LIBRARY="$<TARGET_FILE:Si
 install(
   TARGETS SiMoCoJulia
   EXPORT  SiMoCoJulia
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
 )
