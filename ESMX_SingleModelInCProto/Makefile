@@ -30,17 +30,16 @@ ESMF_INTERNAL_MPIRUN := $(shell echo $(ESMF_INTERNAL_MPIRUN))
 ################################################################################
 ################################################################################
 EXE = install/bin/esmx_app
-.PHONY: $(EXE)
+.PHONY: $(EXE) DL
 
-$(EXE):
-	$(ESMF_APPSDIR)/ESMX_Builder -v
+$(EXE): DL
 
 DL:
 	$(ESMF_APPSDIR)/ESMX_Builder -v esmxBuildDL.yaml
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-.PHONY: dust clean distclean info run
+.PHONY: dust clean distclean info run runDL
 dust:
 	rm -f PET*.ESMF_LogFile *.nc *.stdout
 clean:
@@ -54,8 +53,7 @@ info:
 	@cat $(ESMFMKFILE)
 	@echo ==================================================================
 
-run:
-	$(ESMF_INTERNAL_MPIRUN) -np 4 ./$(EXE)
+run: runDL
 
 runDL:
 	$(ESMF_INTERNAL_MPIRUN) -np 4 ./$(EXE) esmxRunDL.yaml
