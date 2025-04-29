@@ -72,6 +72,7 @@ module PHY
 
     ! local variables
     type(ESMF_State)        :: importState, exportState
+    type(ESMF_State)        :: nestedState
 
     rc = ESMF_SUCCESS
 
@@ -106,8 +107,21 @@ module PHY
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+#define WITHCPLSET_off
+#ifdef WITHCPLSET
+    call NUOPC_AddNestedState(exportState, &
+      CplSet="TestCplSet", nestedState=nestedState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#else
+    nestedState = exportState
+#endif
+
     ! exportable field: PHYEX
-    call NUOPC_Advertise(exportState, &
+    call NUOPC_Advertise(nestedState, &
       StandardName="PHYEX", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -129,6 +143,7 @@ module PHY
     type(ESMF_Grid)           :: gridOut
     type(ESMF_Field)          :: field
     type(ESMF_StateItem_Flag) :: itemType
+    type(ESMF_State)          :: nestedState
 
     rc = ESMF_SUCCESS
 
@@ -172,8 +187,20 @@ module PHY
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+#ifdef WITHCPLSET
+    call ESMF_StateGet(exportState, itemName="TestCplSet", &
+      nestedState=nestedState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#else
+    nestedState = exportState
+#endif
+
     ! exportable field: PHYEX
-    call NUOPC_Realize(exportState, grid=gridOut, &
+    call NUOPC_Realize(nestedState, grid=gridOut, &
       fieldName="PHYEX", &
       selection="realize_connected_remove_others", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -202,14 +229,14 @@ module PHY
         return  ! bail out
     endif
 
-    call ESMF_StateGet(exportState, itemName="PHYEX", &
+    call ESMF_StateGet(nestedState, itemName="PHYEX", &
       itemType=itemType, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     if (itemType==ESMF_STATEITEM_FIELD) then
-      call ESMF_StateGet(exportState, field=field, itemName="PHYEX", rc=rc)
+      call ESMF_StateGet(nestedState, field=field, itemName="PHYEX", rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
