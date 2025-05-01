@@ -1,8 +1,5 @@
 application:
   disable_comps: ESMX_Data
-  link_module_paths: SiMoCoJulia/cmake
-  link_packages: Julia
-  link_libraries: ${Julia_LIBRARY}
 
 components:
   SiMoCoJulia:
