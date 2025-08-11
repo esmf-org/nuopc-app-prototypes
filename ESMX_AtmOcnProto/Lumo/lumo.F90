@@ -1,6 +1,6 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright (c) 2002-2024, University Corporation for Atmospheric Research,
+! Copyright (c) 2002-2025, University Corporation for Atmospheric Research,
 ! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
 ! Laboratory, University of Michigan, National Centers for Environmental
 ! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
@@ -34,7 +34,6 @@ module LUMO
     integer, intent(out) :: rc
 
     ! local variables
-    type(ESMF_Config)         :: config
     type(ESMF_HConfig)        :: hconfig, hconfigNode
     character(80)             :: compLabel
     character(:), allocatable :: badKey
@@ -75,19 +74,14 @@ module LUMO
       return  ! bail out
 
     ! validate config
-    call ESMF_GridCompGet(model, name=compLabel, configIsPresent=isFlag, rc=rc)
+    call ESMF_GridCompGet(model, name=compLabel, hconfigIsPresent=isFlag, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
     if (isFlag) then
-      ! Config present, assert it is in the ESMX YAML format
-      call ESMF_GridCompGet(model, config=config, rc=rc)
-      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-        line=__LINE__, &
-        file=__FILE__)) &
-        return  ! bail out
-      call ESMF_ConfigGet(config, hconfig=hconfig, rc=rc)
+      ! Hconfig object present
+      call ESMF_GridCompGet(model, hconfig=hconfig, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
@@ -103,6 +97,8 @@ module LUMO
         vocabulary=["model        ", &  ! ESMX handled option
                     "petList      ", &  ! ESMX handled option
                     "ompNumThreads", &  ! ESMX handled option
+                    "stdout       ", &  ! ESMX handled option
+                    "stderr       ", &  ! ESMX handled option
                     "attributes   "  &  ! ESMX handled option
                    ], badKey=badKey, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -481,7 +477,7 @@ module LUMO
     type(ESMF_Time)             :: currTime
     type(ESMF_TimeInterval)     :: timeStep
     type(ESMF_VM)               :: vm
-    integer                     :: currentSsiPe
+    integer                     :: currentSsiPe, localPet
     character(len=160)          :: msgString
 
     rc = ESMF_SUCCESS
@@ -495,7 +491,7 @@ module LUMO
       return  ! bail out
 
     ! Query for VM
-    call ESMF_GridCompGet(model, vm=vm, rc=rc)
+    call ESMF_GridCompGet(model, vm=vm, localPet=localPet, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -513,13 +509,15 @@ module LUMO
 !$omp parallel private(msgString, currentSsiPe)
 !$omp critical
 !$    call ESMF_VMGet(vm, currentSsiPe=currentSsiPe)
-!$    write(msgString,'(A,I4,A,I4,A,I4,A,I4,A,I4)') &
-!$      "thread_num=", omp_get_thread_num(), &
+!$    write(msgString,'(A,I4,A,I4,A,I4,A,I4,A,I4,A,I4)') &
+!$      "LUMO: localPet=", localPet, &
+!$      "   thread_num=", omp_get_thread_num(), &
 !$      "   currentSsiPe=", currentSsiPe, &
 !$      "   num_threads=", omp_get_num_threads(), &
 !$      "   max_threads=", omp_get_max_threads(), &
 !$      "   num_procs=", omp_get_num_procs()
 !$    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+!$    print *, msgString
 !$omp end critical
 !$omp end parallel
 

@@ -1,6 +1,6 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright (c) 2002-2024, University Corporation for Atmospheric Research,
+! Copyright (c) 2002-2025, University Corporation for Atmospheric Research,
 ! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
 ! Laboratory, University of Michigan, National Centers for Environmental
 ! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
@@ -167,8 +167,15 @@ module ESM
       return  ! bail out
 #endif
     ! - set /NUOPC/Hint/PePerPet/MaxCount
-    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/MaxCount", value=1, &
+    call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/MaxCount", value=2, &
       rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! - set /NUOPC/Hint/stdout/filename
+    call ESMF_InfoSet(info, key="/NUOPC/Hint/stdout/filename", &
+      value="atm.stdout.*", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -288,6 +295,13 @@ module ESM
     ! - set /NUOPC/Hint/PePerPet/MaxCount
     call ESMF_InfoSet(info, key="/NUOPC/Hint/PePerPet/MaxCount", value=1, &
       rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! - set /NUOPC/Hint/stdout/filename
+    call ESMF_InfoSet(info, key="/NUOPC/Hint/stdout/filename", &
+      value="ocn.stdout", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

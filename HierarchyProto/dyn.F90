@@ -1,6 +1,6 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright (c) 2002-2024, University Corporation for Atmospheric Research,
+! Copyright (c) 2002-2025, University Corporation for Atmospheric Research,
 ! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
 ! Laboratory, University of Michigan, National Centers for Environmental
 ! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
@@ -102,8 +102,21 @@ module DYN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+#define WITHCPLSET_off
+#ifdef WITHCPLSET
+    call NUOPC_AddNestedState(importState, &
+      CplSet="TestCplSet", nestedState=nestedState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#else
+    nestedState = importState
+#endif
+
     ! importable field: PHYEX
-    call NUOPC_Advertise(importState, &
+    call NUOPC_Advertise(nestedState, &
       StandardName="PHYEX", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
@@ -133,7 +146,7 @@ module DYN
       file=__FILE__)) &
       return  ! bail out
 
-#if 1
+#if 0
     call NUOPC_AddNestedState(exportState, &
       CplSet="TestingSet", nestedState=nestedState, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -165,6 +178,7 @@ module DYN
     type(ESMF_State)        :: importState, exportState
     type(ESMF_Grid)         :: gridIn
     type(ESMF_Grid)         :: gridOut
+    type(ESMF_State)        :: nestedState
 
     rc = ESMF_SUCCESS
 
@@ -197,8 +211,20 @@ module DYN
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+
+#ifdef WITHCPLSET
+    call ESMF_StateGet(importState, itemName="TestCplSet", &
+      nestedState=nestedState, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#else
+    nestedState = importState
+#endif
+
     ! importable field: PHYEX
-    call NUOPC_Realize(importState, grid=gridIn, &
+    call NUOPC_Realize(nestedState, grid=gridIn, &
       fieldName="PHYEX", &
       selection="realize_connected_remove_others", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &

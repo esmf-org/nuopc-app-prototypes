@@ -1,6 +1,6 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright (c) 2002-2024, University Corporation for Atmospheric Research,
+! Copyright (c) 2002-2025, University Corporation for Atmospheric Research,
 ! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
 ! Laboratory, University of Michigan, National Centers for Environmental
 ! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
@@ -9,6 +9,7 @@
 !==============================================================================
 
 #define CUSTOMRUNSEQUENCE_on
+#define HIERARCHYCONNECTORSMANUAL_on
 
 module ATM
 
@@ -65,12 +66,20 @@ module ATM
       return  ! bail out
 #endif
 
-    ! set driver verbosity
+    ! set driver attributes
     call NUOPC_CompAttributeSet(driver, name="Verbosity", value="high", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+#ifdef HIERARCHYCONNECTORSMANUAL_on
+    call NUOPC_CompAttributeSet(driver, name="HierarchyConnectors", &
+      value="manual", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
 
   end subroutine
 
@@ -128,6 +137,34 @@ module ATM
 #ifndef CUSTOMRUNSEQUENCE_on
     ! SetServices for PHY2DYN
     call NUOPC_DriverAddComp(driver, srcCompLabel="PHY", dstCompLabel="DYN", &
+      compSetServicesRoutine=cplSS, comp=conn, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="high", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+#endif
+
+#ifdef HIERARCHYCONNECTORSMANUAL_on
+    ! HierarchyConnectors=manual setting requires explicit Connectors created
+    ! SetServices for ATM2DYN
+    call NUOPC_DriverAddComp(driver, srcCompLabel="ATM", dstCompLabel="DYN", &
+      compSetServicesRoutine=cplSS, comp=conn, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompAttributeSet(conn, name="Verbosity", value="high", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    ! SetServices for PHY2ATM
+    call NUOPC_DriverAddComp(driver, srcCompLabel="PHY", dstCompLabel="ATM", &
       compSetServicesRoutine=cplSS, comp=conn, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &

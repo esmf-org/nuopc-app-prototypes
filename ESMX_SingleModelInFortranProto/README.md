@@ -12,21 +12,66 @@ Files and sub-directories that implement the fundamental concept demonstrated by
 - `esmxBuildDL.yaml`- Standard ESMX YAML file describing the build dependencies of the `esmx_app` (the executable) on SiMoCo via the dynamic loading at run-time approach.
 - `esmxRunDL.yaml`  - Standard ESMX YAML file describing the run configuration suitable for the dynamic loading at run-time approach.
 
+Two additional primary items exist for the direct CMake approach:
+
+- `cmake`             - Subdirectory holding the `FindESMF.cmake`. This is used by the `CMakeLists.txt` file to find and access ESMF.
+- `CMakeLists.txt`    - The top-level CMake file.
+
 ### Usage
 
-1. Build the ESMX executable by using the command line tool:
-   ```
-   ESMX_Builder
-   ```
-   This assumes that the `bin` directory of the desired ESMF installation is present in the user's `PATH` environemnt variable. Using `ESMX_Builder` with the default `esmxBuild.yaml` file first builds the SiMoCo component, and then links it into the final executable. Alternatively, using `ESMX_Builder` with `esmxBuildDL.yaml`, builds SiMoCo, but does not link it into the final executable.
-2. Run the `./install/bin/esmx_app` executable on 4 PETs using the appropriate MPI launch procedure. E.g.:
-   ```
-   mpirun -np 4 ./install/bin/esmx_app
-   ```
-   Or using the alternative `esmxRunDL.yaml` configuration that loads the SiMoCo component dynamically at run-time:
-   ```
-   mpirun -np 4 ./install/bin/esmx_app esmxRunAlt.yaml
-   ```
+#### Building the ESMX application
+
+The user has two options when it comes to building the ESMX application:
+
+- Use the ***ESMX_Builder*** utility
+
+  Building the ESMX executable using the `ESMX_Builder` utility that comes with ESMF is a single step process. The approach does *not* require a top-level `CMakeLists.txt` file. The following assumes that the `bin` directory of the desired ESMF installation is present in the user's `PATH` environemnt variable.
+     
+     ```
+     ESMX_Builder -v
+     ```
+  This uses the default `esmxBuild.yaml` in the current directory. An alternative ESMX build configuration can be specified on the command line:
+     
+     ```
+     ESMX_Builder -v esmxBuildDL.yaml
+     ```
+  This build the dynamic library version of the test, where the SiMoCo component is built, but not linked into the executable. In this case, the shared object is loaded at run-time.
+   
+- Use ***CMake*** directly
+
+  This approach requires a top-level `CMakeFiles.txt` file, which is provided with the example for demonstration. The standard 3 step CMake approach of configure/build/install is used:
+  
+  1. Configure:
+  ```
+  cmake -DCMAKE_INSTALL_PREFIX=./install -B build
+  ```
+  2. Build:
+  ```
+  cmake --build ./build --parallel --verbose
+  ```
+  3. Install:
+  ```
+  cmake --install ./build --verbose
+  ```
+
+  Use the `ESMX_BUILD_FILE` variable to specify an alternative ESMX build configuration, e.g. `esmxBuildDL.yaml` during the configuration step:
+  
+  ```
+  cmake -DCMAKE_INSTALL_PREFIX=./install -DESMX_BUILD_FILE=esmxBuildDL.yaml -B build
+  ```
+
+#### Running the ESMX application
+
+Run the `./install/bin/esmx_app` executable on 4 PETs using the appropriate MPI launch procedure. E.g.:
+
+  ```
+  mpirun -np 4 ./install/bin/esmx_app
+  ```
+Or using the alternative `esmxRunDL.yaml` configuration that loads the SiMoCo component dynamically at run-time:
+
+  ```
+  mpirun -np 4 ./install/bin/esmx_app esmxRunDL.yaml
+  ```
 
 ## Secondary Artifacts
 
