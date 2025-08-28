@@ -54,5 +54,7 @@ info:
 	@cat $(ESMFMKFILE)
 	@echo ==================================================================
 
+NP = 4
+
 run:
-	$(ESMF_INTERNAL_MPIRUN) -np 4 ./$(EXE)
+	$(ESMF_INTERNAL_MPIRUN) -np $(NP) ./$(EXE)
