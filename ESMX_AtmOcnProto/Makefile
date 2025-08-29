@@ -39,7 +39,7 @@ $(EXE):
 # -----------------------------------------------------------------------------
 .PHONY: dust clean distclean info run
 dust:
-	rm -f PET*.ESMF_LogFile *.nc *.stdout
+	rm -f PET*.ESMF_LogFile *.nc *.stdout* *.stderr*
 clean:
 	rm -rf build install
 distclean: dust clean
@@ -52,7 +52,9 @@ info:
 	@cat $(ESMFMKFILE)
 	@echo ==================================================================
 
+NP = 4
+
 run:
-	$(ESMF_INTERNAL_MPIRUN) -np 4 ./$(EXE)
+	$(ESMF_INTERNAL_MPIRUN) -np $(NP) ./$(EXE)
 runAlt:
-	$(ESMF_INTERNAL_MPIRUN) -np 4 ./$(EXE) esmxRunAlt.yaml
+	$(ESMF_INTERNAL_MPIRUN) -np $(NP) ./$(EXE) esmxRunAlt.yaml

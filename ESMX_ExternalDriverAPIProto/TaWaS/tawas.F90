@@ -98,6 +98,8 @@ module TAWAS
         vocabulary=["model        ", &  ! ESMX handled option
                     "petList      ", &  ! ESMX handled option
                     "ompNumThreads", &  ! ESMX handled option
+                    "stdout       ", &  ! ESMX handled option
+                    "stderr       ", &  ! ESMX handled option
                     "attributes   "  &  ! ESMX handled option
                    ], badKey=badKey, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &

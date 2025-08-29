@@ -50,5 +50,7 @@ info:
 	@cat $(ESMFMKFILE)
 	@echo ==================================================================
 
+run: runDL
+
 runDL:
-	$(ESMF_INTERNAL_MPIRUN) -np 4 ./install/bin/esmx_app esmxRunDL.yaml
+	$(ESMF_INTERNAL_MPIRUN) -np $(NP) ./install/bin/esmx_app esmxRunDL.yaml

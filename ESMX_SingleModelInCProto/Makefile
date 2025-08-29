@@ -53,7 +53,9 @@ info:
 	@cat $(ESMFMKFILE)
 	@echo ==================================================================
 
+NP = 4
+
 run: runDL
 
 runDL:
-	$(ESMF_INTERNAL_MPIRUN) -np 4 ./$(EXE) esmxRunDL.yaml
+	$(ESMF_INTERNAL_MPIRUN) -np $(NP) ./$(EXE) esmxRunDL.yaml

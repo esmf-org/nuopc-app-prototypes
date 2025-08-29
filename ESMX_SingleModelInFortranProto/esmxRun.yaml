@@ -15,3 +15,5 @@ ESMX:
 
 MDL:
   model:            SiMoCo
+  stdout:
+    filename:       my.stdout.*

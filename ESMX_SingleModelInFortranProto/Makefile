@@ -42,7 +42,7 @@ DL:
 # -----------------------------------------------------------------------------
 .PHONY: dust clean distclean info run runDL
 dust:
-	rm -f PET*.ESMF_LogFile *.nc *.stdout
+	rm -f PET*.ESMF_LogFile *.nc *.stdout* *.stderr*
 clean:
 	rm -rf build install
 distclean: dust clean
@@ -54,8 +54,10 @@ info:
 	@cat $(ESMFMKFILE)
 	@echo ==================================================================
 
+NP = 4
+
 run:
-	$(ESMF_INTERNAL_MPIRUN) -np 4 ./$(EXE)
+	$(ESMF_INTERNAL_MPIRUN) -np $(NP) ./$(EXE)
 
 runDL:
-	$(ESMF_INTERNAL_MPIRUN) -np 4 ./$(EXE) esmxRunDL.yaml
+	$(ESMF_INTERNAL_MPIRUN) -np $(NP) ./$(EXE) esmxRunDL.yaml
