@@ -1,6 +1,10 @@
 # ESMX_SingleModelInFortran CMake
 
-[ESMX](https://github.com/esmf-org/esmf/tree/develop/src/addon/ESMX) is used to implement an uncoupled application, consisting of only a single model component (SiMoCo). Here the SiMoCo component is implemented as a NUOPC component in Fortran. The build system of SiMoCo is CMake based, and thus hooks easily into the ESMX build procedure. The SiMoCo component is built in form of a shared library. It can be used through direct linking into the ESMX application, or by dynamic loading at run-time. Both options are available through ESMX and demonstrated here.
+[ESMX](https://github.com/esmf-org/esmf/tree/develop/src/addon/ESMX) is used to implement an uncoupled application, consisting of only a single model component (SiMoCo). Here the SiMoCo component is implemented as a NUOPC component in Fortran.
+
+In this version of the prototype, the build system of SiMoCo is CMake based, and thus hooks easily into the ESMX build procedure.
+
+The SiMoCo component is built in form of a shared library. It can be used through direct linking into the ESMX application, or by dynamic loading at run-time. Both options are available through ESMX and demonstrated here.
 
 This version of the prototype demonstrates the ESMX build approach based on integration into a **CMake** based build system.
 

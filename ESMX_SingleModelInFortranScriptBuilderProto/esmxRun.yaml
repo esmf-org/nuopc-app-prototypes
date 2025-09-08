@@ -14,6 +14,6 @@ ESMX:
       Verbosity: low
 
 MDL:
-  model:            ./install/lib/libSiMoCo.*
+  model:            SiMoCo
   stdout:
-    filename:       myDL.stdout.*
+    filename:       my.stdout.*

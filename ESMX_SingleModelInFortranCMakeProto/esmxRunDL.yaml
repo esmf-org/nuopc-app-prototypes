@@ -15,3 +15,5 @@ ESMX:
 
 MDL:
   model:            ./install/lib/libSiMoCo.*
+  stdout:
+    filename:       myDL.stdout.*

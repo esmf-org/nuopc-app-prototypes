@@ -1,0 +1,7 @@
+application:
+  disable_comps: ESMX_Data
+
+components:
+  SiMoCo:
+    install_prefix: SiMoCo
+    link_into_app:  False
