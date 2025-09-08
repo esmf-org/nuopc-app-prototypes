@@ -12,20 +12,13 @@ Files and sub-directories that implement the fundamental concept demonstrated by
 - `esmxBuildDL.yaml`- Standard ESMX YAML file describing the build dependencies of the `esmx_app` (the executable) on SiMoCo via the dynamic loading at run-time approach.
 - `esmxRunDL.yaml`  - Standard ESMX YAML file describing the run configuration suitable for the dynamic loading at run-time approach.
 
-Two additional primary items exist for the direct CMake approach:
-
-- `cmake`             - Subdirectory holding the `FindESMF.cmake`. This is used by the `CMakeLists.txt` file to find and access ESMF.
-- `CMakeLists.txt`    - The top-level CMake file.
-
 ### Usage
 
 #### Building the ESMX application
 
-The user has two options when it comes to building the ESMX application:
+The user has two options when it comes to building an ESMX application: leveage the ESMX_Builder utility, or use CMake directly. Here the ESMX_Builder utility is used.
 
-- Use the ***ESMX_Builder*** utility
-
-  Building the ESMX executable using the `ESMX_Builder` utility that comes with ESMF is a single step process. The approach does *not* require a top-level `CMakeLists.txt` file. The following assumes that the `bin` directory of the desired ESMF installation is present in the user's `PATH` environemnt variable.
+Building the ESMX executable using the `ESMX_Builder` utility that comes with ESMF is a single step process. The approach does *not* require a top-level `CMakeLists.txt` file. The following assumes that the `bin` directory of the desired ESMF installation is present in the user's `PATH` environemnt variable.
      
      ```
      ESMX_Builder -v
@@ -36,29 +29,6 @@ The user has two options when it comes to building the ESMX application:
      ESMX_Builder -v esmxBuildDL.yaml
      ```
   This build the dynamic library version of the test, where the SiMoCo component is built, but not linked into the executable. In this case, the shared object is loaded at run-time.
-   
-- Use ***CMake*** directly
-
-  This approach requires a top-level `CMakeFiles.txt` file, which is provided with the example for demonstration. The standard 3 step CMake approach of configure/build/install is used:
-  
-  1. Configure:
-  ```
-  cmake -DCMAKE_INSTALL_PREFIX=./install -B build
-  ```
-  2. Build:
-  ```
-  cmake --build ./build --parallel --verbose
-  ```
-  3. Install:
-  ```
-  cmake --install ./build --verbose
-  ```
-
-  Use the `ESMX_BUILD_FILE` variable to specify an alternative ESMX build configuration, e.g. `esmxBuildDL.yaml` during the configuration step:
-  
-  ```
-  cmake -DCMAKE_INSTALL_PREFIX=./install -DESMX_BUILD_FILE=esmxBuildDL.yaml -B build
-  ```
 
 #### Running the ESMX application
 
