@@ -33,10 +33,14 @@ EXE = install/bin/esmx_app
 .PHONY: $(EXE) DL
 
 $(EXE):
-	$(ESMF_APPSDIR)/ESMX_Builder -v
+	cmake -DCMAKE_INSTALL_PREFIX=./install -B build
+	cmake --build ./build --parallel --verbose
+	cmake --install ./build --verbose
 
 DL:
-	$(ESMF_APPSDIR)/ESMX_Builder -v esmxBuildDL.yaml
+	cmake -DCMAKE_INSTALL_PREFIX=./install -DESMX_BUILD_FILE=./esmxBuildDL.yaml -B build
+	cmake --build ./build --parallel --verbose
+	cmake --install ./build --verbose
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------

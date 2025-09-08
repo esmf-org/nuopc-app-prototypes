@@ -1,6 +1,8 @@
-# ESMX_SingleModelInFortran
+# ESMX_SingleModelInFortran Builder
 
-[ESMX](https://github.com/esmf-org/esmf/tree/develop/src/addon/ESMX) is used to implement an uncoupled application, consisting of only a single model component (SiMoCo). Here the SiMoCo component is implemented as a NUOPC component in Fortran. The build system of SiMoCo is CMake based, and thus hooks easily into the ESMX build procedure. The SiMoCo component is built in form of a shared library. It can be used through direct linking into the ESMX application, or by dynamic loading at run-time. Both options are available through ESMX, and demonstrated here.
+[ESMX](https://github.com/esmf-org/esmf/tree/develop/src/addon/ESMX) is used to implement an uncoupled application, consisting of only a single model component (SiMoCo). Here the SiMoCo component is implemented as a NUOPC component in Fortran. The build system of SiMoCo is CMake based, and thus hooks easily into the ESMX build procedure. The SiMoCo component is built in form of a shared library. It can be used through direct linking into the ESMX application, or by dynamic loading at run-time. Both options are available through ESMX and demonstrated here.
+
+This version of the prototype demonstrates the ESMX build approach based on the **ESMX_Builder** utility.
 
 ## Primary Artifacts
 
@@ -15,8 +17,6 @@ Files and sub-directories that implement the fundamental concept demonstrated by
 ### Usage
 
 #### Building the ESMX application
-
-The user has two options when it comes to building an ESMX application: leveage the ESMX_Builder utility, or use CMake directly. Here the ESMX_Builder utility is used.
 
 Building the ESMX executable using the `ESMX_Builder` utility that comes with ESMF is a single step process. The approach does *not* require a top-level `CMakeLists.txt` file. The following assumes that the `bin` directory of the desired ESMF installation is present in the user's `PATH` environemnt variable.
      

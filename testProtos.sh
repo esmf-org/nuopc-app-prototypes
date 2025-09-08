@@ -459,6 +459,7 @@ TestESMXProtoRun  ESMX_StartHereProto                     esmx_app  Step2
 TestESMXProtoRun  ESMX_StartHereProto                     esmx_app  Step3
 TestESMXProtoRun  ESMX_StartHereProto                     esmx_app  Step4
 TestESMXwDLProto  ESMX_SingleModelInFortranBuilderProto   esmx_app
+TestESMXwDLProto  ESMX_SingleModelInFortranCMakeProto     esmx_app
 TestESMXoDLProto  ESMX_SingleModelInCProto                esmx_app
 TestESMXwAltProto ESMX_AtmOcnProto                        esmx_app
 TestESMXProto     ESMX_AtmOcnFortranAndCProto             esmx_app
