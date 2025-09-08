@@ -39,7 +39,7 @@ $(EXE):
 # -----------------------------------------------------------------------------
 .PHONY: dust clean distclean info run
 dust:
-	rm -f PET*.ESMF_LogFile *.nc *.stdout* *.stderr*
+	rm -f PET*.ESMF_LogFile *.nc *.stdout* *.stderr* *.out *.err
 clean:
 	rm -rf build install
 distclean: dust clean
