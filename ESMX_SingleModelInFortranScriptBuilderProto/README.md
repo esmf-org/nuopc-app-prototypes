@@ -1,6 +1,12 @@
-# ESMX_SingleModelInFortran
+# ESMX_SingleModelInFortran Script Builder
 
-[ESMX](https://github.com/esmf-org/esmf/tree/develop/src/addon/ESMX) is used to implement an uncoupled application, consisting of only a single model component (SiMoCo). Here the SiMoCo component is implemented as a NUOPC component in Fortran. The build system of SiMoCo is CMake based, and thus hooks easily into the ESMX build procedure. The SiMoCo component is built in form of a shared library. It can be used through direct linking into the ESMX application, or by dynamic loading at run-time. Both options are available through ESMX, and demonstrated here.
+[ESMX](https://github.com/esmf-org/esmf/tree/develop/src/addon/ESMX) is used to implement an uncoupled application, consisting of only a single model component (SiMoCo). Here the SiMoCo component is implemented as a NUOPC component in Fortran.
+
+In this version of the prototype, the build system of SiMoCo is based on a `compile` script. It hooks into the ESMX build procedure easily, using the `install_prefix` option under `esmxBuild*.yaml` to account for the custom location of the resulting library.
+
+The SiMoCo component is built in form of a shared library. It can be used through direct linking into the ESMX application, or by dynamic loading at run-time. Both options are available through ESMX and demonstrated here.
+
+This version of the prototype demonstrates the ESMX build approach based on the **ESMX_Builder** utility.
 
 ## Primary Artifacts
 
@@ -12,20 +18,11 @@ Files and sub-directories that implement the fundamental concept demonstrated by
 - `esmxBuildDL.yaml`- Standard ESMX YAML file describing the build dependencies of the `esmx_app` (the executable) on SiMoCo via the dynamic loading at run-time approach.
 - `esmxRunDL.yaml`  - Standard ESMX YAML file describing the run configuration suitable for the dynamic loading at run-time approach.
 
-Two additional primary items exist for the direct CMake approach:
-
-- `cmake`             - Subdirectory holding the `FindESMF.cmake`. This is used by the `CMakeLists.txt` file to find and access ESMF.
-- `CMakeLists.txt`    - The top-level CMake file.
-
 ### Usage
 
 #### Building the ESMX application
 
-The user has two options when it comes to building the ESMX application:
-
-- Use the ***ESMX_Builder*** utility
-
-  Building the ESMX executable using the `ESMX_Builder` utility that comes with ESMF is a single step process. The approach does *not* require a top-level `CMakeLists.txt` file. The following assumes that the `bin` directory of the desired ESMF installation is present in the user's `PATH` environemnt variable.
+Building the ESMX executable using the `ESMX_Builder` utility that comes with ESMF is a single step process. The approach does *not* require a top-level `CMakeLists.txt` file. The following assumes that the `bin` directory of the desired ESMF installation is present in the user's `PATH` environemnt variable.
      
      ```
      ESMX_Builder -v
@@ -36,29 +33,6 @@ The user has two options when it comes to building the ESMX application:
      ESMX_Builder -v esmxBuildDL.yaml
      ```
   This build the dynamic library version of the test, where the SiMoCo component is built, but not linked into the executable. In this case, the shared object is loaded at run-time.
-   
-- Use ***CMake*** directly
-
-  This approach requires a top-level `CMakeFiles.txt` file, which is provided with the example for demonstration. The standard 3 step CMake approach of configure/build/install is used:
-  
-  1. Configure:
-  ```
-  cmake -DCMAKE_INSTALL_PREFIX=./install -B build
-  ```
-  2. Build:
-  ```
-  cmake --build ./build --parallel --verbose
-  ```
-  3. Install:
-  ```
-  cmake --install ./build --verbose
-  ```
-
-  Use the `ESMX_BUILD_FILE` variable to specify an alternative ESMX build configuration, e.g. `esmxBuildDL.yaml` during the configuration step:
-  
-  ```
-  cmake -DCMAKE_INSTALL_PREFIX=./install -DESMX_BUILD_FILE=esmxBuildDL.yaml -B build
-  ```
 
 #### Running the ESMX application
 

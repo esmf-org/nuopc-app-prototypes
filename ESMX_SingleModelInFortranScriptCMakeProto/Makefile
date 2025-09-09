@@ -30,20 +30,27 @@ ESMF_INTERNAL_MPIRUN := $(shell echo $(ESMF_INTERNAL_MPIRUN))
 ################################################################################
 ################################################################################
 EXE = install/bin/esmx_app
-.PHONY: $(EXE)
+.PHONY: $(EXE) DL
 
 $(EXE):
-	$(ESMF_APPSDIR)/ESMX_Builder -v
+	cmake -DCMAKE_INSTALL_PREFIX=./install -B build
+	cmake --build ./build --parallel --verbose
+	cmake --install ./build --verbose
+
+DL:
+	cmake -DCMAKE_INSTALL_PREFIX=./install -DESMX_BUILD_FILE=./esmxBuildDL.yaml -B build
+	cmake --build ./build --parallel --verbose
+	cmake --install ./build --verbose
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-.PHONY: dust clean distclean info run
+.PHONY: dust clean distclean info run runDL
 dust:
-	rm -f PET*.ESMF_LogFile *.nc *.stdout* *.stderr* *.out *.err
+	rm -f PET*.ESMF_LogFile *.nc *.stdout* *.stderr*
 clean:
 	rm -rf build install
 distclean: dust clean
-	cd TaWaS; make distclean
+	make -C SiMoCo -f Makefile.nuopc distclean
 
 info:
 	@echo ==================================================================
@@ -56,5 +63,6 @@ NP = 4
 
 run:
 	$(ESMF_INTERNAL_MPIRUN) -np $(NP) ./$(EXE)
-runAlt:
-	$(ESMF_INTERNAL_MPIRUN) -np $(NP) ./$(EXE) esmxRunAlt.yaml
+
+runDL:
+	$(ESMF_INTERNAL_MPIRUN) -np $(NP) ./$(EXE) esmxRunDL.yaml

@@ -10,6 +10,9 @@ ESMX:
 
   Driver:
     componentList:          [ATM, OCN]
+    logSystem:              true
+    stdout:                 {filename: driver.out}
+    stderr:                 {filename: driver.err}
     attributes:
       Verbosity: low
     runSequence: |

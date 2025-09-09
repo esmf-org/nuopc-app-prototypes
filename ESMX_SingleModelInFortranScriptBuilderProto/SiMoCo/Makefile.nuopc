@@ -1,4 +1,4 @@
-# GNU Makefile template for user ESMF application
+# GNU Makefile template for user ESMF component
 
 ################################################################################
 ################################################################################
@@ -24,37 +24,37 @@ endif
 
 include $(ESMFMKFILE)
 
-# strip quotes around the ESMF_INTERNAL_MPIRUN value
-ESMF_INTERNAL_MPIRUN := $(shell echo $(ESMF_INTERNAL_MPIRUN))
-
 ################################################################################
 ################################################################################
-EXE = install/bin/esmx_app
-.PHONY: $(EXE)
 
-$(EXE):
-	$(ESMF_APPSDIR)/ESMX_Builder -v
+.SUFFIXES: .f90 .F90 .c .C
+
+%.o : %.f90
+	$(ESMF_F90COMPILER) -c $(ESMF_F90COMPILEOPTS) $(ESMF_F90COMPILEPATHS) $(ESMF_F90COMPILEFREENOCPP) $<
+
+%.o : %.F90
+	$(ESMF_F90COMPILER) -c $(ESMF_F90COMPILEOPTS) $(ESMF_F90COMPILEPATHS) $(ESMF_F90COMPILEFREECPP) $(ESMF_F90COMPILECPPFLAGS) $<
+        
+%.o : %.c
+	$(ESMF_CXXCOMPILER) -c $(ESMF_CXXCOMPILEOPTS) $(ESMF_CXXCOMPILEPATHSLOCAL) $(ESMF_CXXCOMPILEPATHS) $(ESMF_CXXCOMPILECPPFLAGS) $<
+
+%.o : %.C
+	$(ESMF_CXXCOMPILER) -c $(ESMF_CXXCOMPILEOPTS) $(ESMF_CXXCOMPILEPATHSLOCAL) $(ESMF_CXXCOMPILEPATHS) $(ESMF_CXXCOMPILECPPFLAGS) $<
+
+lib%.so: %.o
+	$(ESMF_CXXLINKER) -shared -o $@ $<
+
+lib%.a: %.o
+	ar cr $@ $<
+
+# -----------------------------------------------------------------------------
+all: libSiMoCo.so
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-.PHONY: dust clean distclean info run
+.PHONY: dust clean distclean info edit
 dust:
-	rm -f PET*.ESMF_LogFile *.nc *.stdout* *.stderr* *.out *.err
+	rm -f PET*.ESMF_LogFile
 clean:
-	rm -rf build install
+	rm -f *.o *.a *.so *.mod *.mk
 distclean: dust clean
-	cd TaWaS; make distclean
-
-info:
-	@echo ==================================================================
-	@echo ESMFMKFILE=$(ESMFMKFILE)
-	@echo ==================================================================
-	@cat $(ESMFMKFILE)
-	@echo ==================================================================
-
-NP = 4
-
-run:
-	$(ESMF_INTERNAL_MPIRUN) -np $(NP) ./$(EXE)
-runAlt:
-	$(ESMF_INTERNAL_MPIRUN) -np $(NP) ./$(EXE) esmxRunAlt.yaml
