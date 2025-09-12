@@ -41,14 +41,16 @@ include $(ESMFMKFILE)
 %.o : %.C
 	$(ESMF_CXXCOMPILER) -c $(ESMF_SO_CXXCOMPILEOPTS) $(ESMF_CXXCOMPILEOPTS) $(ESMF_CXXCOMPILEPATHSLOCAL) $(ESMF_CXXCOMPILEPATHS) $(ESMF_CXXCOMPILECPPFLAGS) $<
 
+lib%.dylib: %.o
+	$(ESMF_CXXLINKER) $(ESMF_SO_CXXLINKOPTS) -install_name @rpath/$@ -o $@ $< $(ESMF_CXXLINKPATHS) $(ESMF_CXXLINKRPATHS) $(ESMF_CXXESMFLINKLIBS)
 lib%.so: %.o
-	$(ESMF_CXXLINKER) $(ESMF_SO_CXXLINKOPTS) -o $@ $< $(ESMF_CXXESMFLINKPATHS) $(ESMF_CXXESMFLINKRPATHS) $(ESMF_CXXESMFLINKLIBS)
+	$(ESMF_CXXLINKER) $(ESMF_SO_CXXLINKOPTS) -o $@ $<
 
 lib%.a: %.o
 	ar cr $@ $<
 
 # -----------------------------------------------------------------------------
-all: libSiMoCo.so libSiMoCo.a
+all: libSiMoCo.$(ESMF_SL_SUFFIX) libSiMoCo.a
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -56,5 +58,5 @@ all: libSiMoCo.so libSiMoCo.a
 dust:
 	rm -f PET*.ESMF_LogFile
 clean:
-	rm -f *.o *.a *.so *.mod *.mk
+	rm -f *.o *.a *.so *.dylib *.dll *.mod *.mk
 distclean: dust clean
