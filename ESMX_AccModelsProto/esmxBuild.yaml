@@ -1,0 +1,9 @@
+application:
+  disable_comps: ESMX_Data
+
+components:
+
+  CompA:
+
+  CompB:
+    build_args: USE_OPENACC=ON

@@ -1,0 +1,44 @@
+ESMX:
+
+  App:
+    globalResourceControl:  true
+    logKindFlag:            ESMF_LOGKIND_Multi
+    logAppendFlag:          false
+    logFlush:               true
+    startTime:              2012-10-24T18:00:00
+    stopTime:               2012-10-24T19:00:00
+
+    ESMF_RUNTIME_PROFILE:         ON
+    ESMF_RUNTIME_PROFILE_OUTPUT:  SUMMARY
+
+  Driver:
+    componentList:          [A,B]
+    attributes:
+      Verbosity:  low
+    logSystem:    true
+    runSequence: |
+      @300
+        A
+        B
+      @
+
+
+A:
+  model:            CompA
+  petList:          [0]
+#  ompNumThreads:    64
+  devList:          [0]
+  stdout:
+    filename:       A.stdout.*
+  attributes:
+    Verbosity: low
+    Diagnostic: low
+
+B:
+  model:            CompB
+#  devList:          [2,3]
+  stdout:
+    filename:       B.stdout.*
+  attributes:
+    Verbosity: low
+    Diagnostic: low
