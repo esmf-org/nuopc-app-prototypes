@@ -18,6 +18,7 @@ module CompA
   use NUOPC
   use NUOPC_Model, &
     modelSS      => SetServices
+
   use OpenACC
 
   implicit none
@@ -127,11 +128,10 @@ module CompA
 
     ! local variables
     type(ESMF_State)        :: importState, exportState
-
-    type(ESMF_VM)         :: vm
-    integer               :: ssiLocalPet, ssiLocalDevCount, ssiLocalDev
-    integer, allocatable  :: ssiLocalDevList(:)
-    character(len=160)    :: msgString
+    type(ESMF_VM)           :: vm
+    integer                 :: ssiLocalPet, ssiLocalDevCount, ssiLocalDev
+    integer, allocatable    :: ssiLocalDevList(:)
+    character(len=160)      :: msgString
 
     rc = ESMF_SUCCESS
 
@@ -157,7 +157,7 @@ module CompA
 
     write(msgString,'(A,I4,A,I4,A,I4)') &
       "ssiLocalPet=", ssiLocalPet, &
-      "   ssiLocalDevCount=", size(ssiLocalDevList), &
+      "   ssiLocalDevCount=", ssiLocalDevCount, &
       "   ssiLocalDev=", ssiLocalDev
     call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -234,7 +234,7 @@ module CompA
       return  ! bail out
 
     ! create Grid objects for Fields
-    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/100, 50/), &
+    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/2000, 1000/), &
       minCornerCoord=(/-180._ESMF_KIND_R8, -89._ESMF_KIND_R8/), &
       maxCornerCoord=(/180._ESMF_KIND_R8, 89._ESMF_KIND_R8/), &
       coordSys=ESMF_COORDSYS_SPH_DEG, &
@@ -361,7 +361,7 @@ module CompA
     iL = lbound(fptr,1)
     iU = ubound(fptr,1)
 
-    wU = 1000000
+    wU = 100
 
     realB = 0.1_ESMF_KIND_R8 / wU
     realA = 1._ESMF_KIND_R8 + realB
@@ -369,13 +369,13 @@ module CompA
     call ESMF_TraceRegionEnter("ComputeLoop", rc=rc)
 
 #define DOCON_CODE
-
 #ifdef DOCON_CODE
-    !$acc data copy(fptr)
-    !$acc udpate device(fptr)
-    do concurrent (w=1:wU, j=jL:jU, i=iL:iU )
-#else
+    !$acc data copy(fptr(iL:iU, jL:jU))
+#endif
     do w=1, wU
+#ifdef DOCON_CODE
+    do concurrent (j=jL:jU, i=iL:iU )
+#else
     do j=jL, jU
     do i=iL, iU
 #endif
@@ -384,16 +384,16 @@ module CompA
 
 #ifdef DOCON_CODE
     enddo
-    !$acc end data
-    !$acc udpate self(fptr)
 #else
     enddo
     enddo
+#endif
     enddo
+#ifdef DOCON_CODE
+    !$acc end data
 #endif
 
     call ESMF_TraceRegionExit("ComputeLoop", rc=rc)
-
 
   end subroutine
 

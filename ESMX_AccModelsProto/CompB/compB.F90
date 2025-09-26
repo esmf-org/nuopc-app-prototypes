@@ -19,6 +19,8 @@ module CompB
   use NUOPC_Model, &
     modelSS      => SetServices
 
+  use OpenACC
+
   implicit none
 
   private
@@ -126,8 +128,71 @@ module CompB
 
     ! local variables
     type(ESMF_State)        :: importState, exportState
+    type(ESMF_VM)           :: vm
+    integer                 :: ssiLocalPet, ssiLocalDevCount, ssiLocalDev
+    integer, allocatable    :: ssiLocalDevList(:)
+    character(len=160)      :: msgString
 
     rc = ESMF_SUCCESS
+
+    ! query for VM
+    call ESMF_GridCompGet(model, vm=vm, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=__FILE__)) return  ! bail out
+
+    ! Obtain device and host information from VM
+    call ESMF_VMGet(vm, ssiLocalPet=ssiLocalPet, &
+      ssiLocalDevCount=ssiLocalDevCount, &
+      ssiLocalDevList=ssiLocalDevList, &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=__FILE__)) return  ! bail out
+
+    if (ssiLocalDevCount > 0) then
+      ! Simple round-robin device assignment on local SSI
+      ssiLocalDev = ssiLocalDevList(mod(ssiLocalPet,ssiLocalDevCount))
+    else
+      ssiLocalDev = -1
+    endif
+
+    write(msgString,'(A,I4,A,I4,A,I4)') &
+      "ssiLocalPet=", ssiLocalPet, &
+      "   ssiLocalDevCount=", ssiLocalDevCount, &
+      "   ssiLocalDev=", ssiLocalDev
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=__FILE__)) return  ! bail out
+
+    write(msgString,*) &
+      "ssiLocalDevList=", ssiLocalDevList
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=__FILE__)) return  ! bail out
+
+    ! OpenACC for fine grained parallelism...
+    ! Here just write info about the PET-local OpenACC resources to Log.
+    write(msgString,'(A,I4,A,I4,A,I4)') &
+      "num_devices=", acc_get_num_devices(acc_device_not_host), &
+      "   device_num=", acc_get_device_num(acc_device_not_host), &
+      "   device_type=", acc_get_device_type()
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=__FILE__)) return  ! bail out
+
+    if (ssiLocalDev>=0) then
+      ! Associated local PET with specific device
+      call acc_set_device_num(ssiLocalDev, acc_device_not_host)
+    else
+      ! Associated local PET with host
+      call acc_set_device_type(acc_device_host)
+    endif
+
+    write(msgString,'(A,I4,A,I4)') &
+      "ssiLocalDev=", ssiLocalDev, &
+      "   device_num=", acc_get_device_num(acc_device_not_host)
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=__FILE__)) return  ! bail out
 
     ! query for importState and exportState
     call NUOPC_ModelGet(model, importState=importState, &
@@ -169,7 +234,7 @@ module CompB
       return  ! bail out
 
     ! create Grid objects for Fields
-    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/100, 50/), &
+    gridIn = ESMF_GridCreateNoPeriDimUfrm(maxIndex=(/2000, 1000/), &
       minCornerCoord=(/-180._ESMF_KIND_R8, -89._ESMF_KIND_R8/), &
       maxCornerCoord=(/180._ESMF_KIND_R8, 89._ESMF_KIND_R8/), &
       coordSys=ESMF_COORDSYS_SPH_DEG, &
@@ -296,19 +361,21 @@ module CompB
     iL = lbound(fptr,1)
     iU = ubound(fptr,1)
 
-    wU = 1000000
+    wU = 100
 
     realB = 0.1_ESMF_KIND_R8 / wU
     realA = 1._ESMF_KIND_R8 + realB
 
     call ESMF_TraceRegionEnter("ComputeLoop", rc=rc)
 
-#define DOCON_CODE_off
-
+#define DOCON_CODE
 #ifdef DOCON_CODE
-    do concurrent (w=1:wU, j=jL:jU, i=iL:iU )
-#else
+    !$acc data copy(fptr(iL:iU, jL:jU))
+#endif
     do w=1, wU
+#ifdef DOCON_CODE
+    do concurrent (j=jL:jU, i=iL:iU )
+#else
     do j=jL, jU
     do i=iL, iU
 #endif
@@ -320,7 +387,10 @@ module CompB
 #else
     enddo
     enddo
+#endif
     enddo
+#ifdef DOCON_CODE
+    !$acc end data
 #endif
 
     call ESMF_TraceRegionExit("ComputeLoop", rc=rc)

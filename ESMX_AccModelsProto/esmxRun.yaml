@@ -25,20 +25,22 @@ ESMX:
 
 A:
   model:            CompA
-  petList:          [0]
-#  ompNumThreads:    64
-  devList:          [0]
+  petList:          [0-2]
+#  ompNumThreads:    4
+  devList:          [0-2]
   stdout:
     filename:       A.stdout.*
   attributes:
     Verbosity: low
-    Diagnostic: low
+#    Diagnostic: low
 
 B:
   model:            CompB
-#  devList:          [2,3]
+  petList:          [3]
+#  ompNumThreads:    4
+  devList:          [3]
   stdout:
     filename:       B.stdout.*
   attributes:
     Verbosity: low
-    Diagnostic: low
+#    Diagnostic: low

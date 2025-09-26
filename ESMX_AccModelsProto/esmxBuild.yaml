@@ -4,6 +4,7 @@ application:
 components:
 
   CompA:
+    build_args: USE_OPENACC=OFF
 
   CompB:
-    build_args: USE_OPENACC=ON
+    build_args: USE_OPENACC=OFF
