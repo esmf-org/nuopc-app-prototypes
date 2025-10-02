@@ -26,7 +26,7 @@ ESMX:
 A:
   model:            CompA
   petList:          [0-2]
-#  ompNumThreads:    4
+#  ompNumThreads:    3
   devList:          [0-2]
   stdout:
     filename:       A.stdout.*

@@ -19,7 +19,9 @@ module CompB
   use NUOPC_Model, &
     modelSS      => SetServices
 
+#ifdef _OPENACC
   use OpenACC
+#endif
 
   implicit none
 
@@ -169,6 +171,7 @@ module CompB
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=__FILE__)) return  ! bail out
 
+#ifdef _OPENACC
     ! OpenACC for fine grained parallelism...
     ! Here just write info about the PET-local OpenACC resources to Log.
     write(msgString,'(A,I4,A,I4,A,I4)') &
@@ -193,6 +196,7 @@ module CompB
     call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=__FILE__)) return  ! bail out
+#endif
 
     ! query for importState and exportState
     call NUOPC_ModelGet(model, importState=importState, &
