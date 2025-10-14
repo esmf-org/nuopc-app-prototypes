@@ -22,6 +22,7 @@ module CompA
 #ifdef _OPENACC
   use OpenACC
 #endif
+!$  use OMP_LIB
 
   implicit none
 
@@ -182,6 +183,7 @@ module CompA
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=__FILE__)) return  ! bail out
 
+#if 0
     if (ssiLocalDev>=0) then
       ! Associated local PET with specific device
       call acc_set_device_num(ssiLocalDev, acc_device_not_host)
@@ -189,10 +191,41 @@ module CompA
       ! Associated local PET with host
       call acc_set_device_type(acc_device_host)
     endif
+#endif
 
     write(msgString,'(A,I4,A,I4)') &
       "ssiLocalDev=", ssiLocalDev, &
       "   device_num=", acc_get_device_num(acc_device_not_host)
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=__FILE__)) return  ! bail out
+#endif
+
+#ifdef _OPENMP
+    ! OpenMP for fine grained parallelism...
+    ! Here just write info about the PET-local OpenMP resources to Log.
+!    write(msgString,'(A,I4,A,I4,A,I4,A,I4,A,I4,A,I8)') &
+    write(msgString,'(A,I4,A,I4,A,I4,A,I4,A,I8)') &
+      "num_devices=", omp_get_num_devices(), &
+!      "   device_num=", omp_get_device_num(), &
+      "   default_device=", omp_get_default_device(), &
+      "   num_threads=", omp_get_num_threads(), &
+      "   max_threads=", omp_get_max_threads(), &
+      "   thread_limit=", omp_get_thread_limit()
+    call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=__FILE__)) return  ! bail out
+
+#if 1
+    if (ssiLocalDev>=0) then
+      ! Associated local PET with specific device
+      call omp_set_default_device(ssiLocalDev)
+    endif
+#endif
+
+!    write(msgString,'(A,I4,A,I4)') &
+!      "ssiLocalDev=", ssiLocalDev, &
+!      "   device_num=", omp_get_device_num()
     call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=__FILE__)) return  ! bail out
@@ -372,13 +405,22 @@ module CompA
 
     call ESMF_TraceRegionEnter("ComputeLoop", rc=rc)
 
-#define DOCON_CODE
+#define DOCON_CODE_off
+#define OPENMP_CODE
+#define OPENMP_DATA
+
 #ifdef DOCON_CODE
     !$acc data copy(fptr(iL:iU, jL:jU))
+#elif defined (OPENMP_CODE) && defined (OPENMP_DATA)
+    !$omp target data map(tofrom: fptr(iL:iU, jL:jU))
 #endif
     do w=1, wU
 #ifdef DOCON_CODE
     do concurrent (j=jL:jU, i=iL:iU )
+#elif defined OPENMP_CODE
+    !$omp target teams distribute parallel do collapse(2)
+    do j=jL, jU
+    do i=iL, iU
 #else
     do j=jL, jU
     do i=iL, iU
@@ -388,6 +430,10 @@ module CompA
 
 #ifdef DOCON_CODE
     enddo
+#elif defined OPENMP_CODE
+    enddo
+    enddo
+    !$omp end target teams distribute parallel do
 #else
     enddo
     enddo
@@ -395,6 +441,8 @@ module CompA
     enddo
 #ifdef DOCON_CODE
     !$acc end data
+#elif defined (OPENMP_CODE) && defined (OPENMP_DATA)
+    !$omp end target data
 #endif
 
     call ESMF_TraceRegionExit("ComputeLoop", rc=rc)
