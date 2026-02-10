@@ -610,6 +610,7 @@ module OCN
     ! local variables    
     integer                   :: stat
     type(type_InternalState)  :: is_local
+    type(type_InternalStateStruct), pointer :: wrap
 
     rc = ESMF_SUCCESS
 
@@ -618,7 +619,8 @@ module OCN
     call ESMF_GridCompGetInternalState(model, is_local, rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=__FILE__, rcToReturn=rc)) return  ! bail out
-    deallocate(is_local%wrap, stat=stat)
+    wrap => is_local%wrap
+    deallocate(wrap, stat=stat) ! LLVM workaround for deallocate() runtime error!
     if (ESMF_LogFoundDeallocError(statusToCheck=stat, &
       msg="Deallocation of internal state memory failed.", &
       line=__LINE__, file=__FILE__, rcToReturn=rc)) return  ! bail out

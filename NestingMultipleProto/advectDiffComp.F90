@@ -785,6 +785,7 @@ module advectDiffComp
 
     ! local variables
     type(InternalState)  :: is
+    type(InternalStateStruct), pointer :: wrap
     integer              :: stat
 
     rc = ESMF_SUCCESS
@@ -818,11 +819,12 @@ module advectDiffComp
       return
 
     ! -> deallocate internal state memory
-    deallocate(is%wrap, stat=stat)
+    wrap => is%wrap ! LLVM workaround for deallocate() runtime error!
+    deallocate(wrap, stat=stat)
     if (ESMF_LogFoundDeallocError(statusToCheck=stat, &
       msg="Deallocation of internal state memory failed.", &
       line=__LINE__, &
-      file=__FILE__)) &
+      file=__FILE__, rcToReturn=rc)) &
       return  ! bail out
 
   end subroutine
