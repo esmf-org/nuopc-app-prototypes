@@ -40,7 +40,7 @@ jobs:
         path: ${{env.STACK_ROOT}}
         key: develop-nightly-${{matrix.config.os}}-${{matrix.config.compiler}}-${{matrix.config.comm}}
     - name: Install OPENMPI
-      if: ${{matrix.config.comm}} == 'openmpi'
+      if: matrix.config.comm == 'openmpi'
       env:
         CACHE_HIT: ${{steps.cache-libraries.outputs.cache-hit}}
       run: |
