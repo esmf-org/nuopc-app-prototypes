@@ -14,6 +14,7 @@ ESMX:
     componentList:  [ABC]
 
 ABC:
-  model:  ESMX_Data
+  model:        ESMX_Data
   attributes:
-    Verbosity: low
+    Verbosity:  low
+  timeKeeping:  Model

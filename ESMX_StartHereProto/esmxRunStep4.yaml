@@ -25,19 +25,37 @@ ESMX:
       @
 
 ABC:
-  model:  ESMX_Data
+  model:        ESMX_Data
   attributes:
-    Verbosity: high
+    Verbosity:  high
+    Diagnostic: 131072  # bit-17 (netcdf field output)
+  timeKeeping:  Model
+  geometries:
+    global:
+      geom:           grid1PeriDim
+      minCornerCoord: [-180, -89]
+      maxCornerCoord: [+180, +89]
+      maxIndex:       [ 100,  50]
+      staggerLoc:     center
   exportFields:
-    sea_surface_temperature: {dim: 2, val: 273}
-  output:
-    write_final: false
+    sea_surface_temperature: {geometry: global, typekind: r8, dataInit: 273}
 
 DEF:
-  model:  ESMX_Data
+  model:        ESMX_Data
   attributes:
-    Verbosity: high
+    Verbosity:  high
+    Diagnostic: 131072  # bit-17 (netcdf field output)
+  timeKeeping:  Model
+  geometries:
+    global:
+      geom:           grid1PeriDim
+      minCornerCoord: [-180, -89]
+      maxCornerCoord: [+180, +89]
+      maxIndex:       [ 200, 100]
+      staggerLoc:     center
   importFields:
-    sea_surface_temperature: {dim: 2, min: 260, max: 280}
-  output:
-    write_final: false
+    sea_surface_temperature:
+      geometry: global
+      typekind: r8
+      dataMin:  260
+      dataMax:  280
