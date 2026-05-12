@@ -6,7 +6,7 @@ ESMX:
     logAppendFlag:          false
     logFlush:               true
     startTime:              2012-10-24T08:00:00
-    stopTime:               2012-10-24T20:00:00
+    stopTime:               2012-10-25T08:00:00
 
     ESMF_RUNTIME_PROFILE:         ON
     ESMF_RUNTIME_PROFILE_OUTPUT:  SUMMARY
@@ -18,8 +18,7 @@ ESMX:
 
     runSequence: |
       @900
-        ABC -> DEF
-        DEF -> ABC
+        ABC -> DEF :poleMethod=allavg
         ABC
         DEF
       @
@@ -38,7 +37,13 @@ ABC:
       maxIndex:       [ 100,  50]
       staggerLoc:     center
   exportFields:
-    sea_surface_temperature: {geometry: global, typekind: r8, dataInit: 273}
+    sea_surface_temperature:
+      geometry:     global
+      typekind:     r8
+      dataInit:     &testfunc
+        10*(sin(_step/24*deg2rad(_coord1)) * cos(deg2rad(_coord2))) + 270
+      dataAdvance:  *testfunc
+      dataValidate: {diagnose: yes}
 
 DEF:
   model:        ESMX_Data
@@ -55,7 +60,6 @@ DEF:
       staggerLoc:     center
   importFields:
     sea_surface_temperature:
-      geometry: global
-      typekind: r8
-      dataMin:  260
-      dataMax:  280
+      geometry:     global
+      typekind:     r4
+      dataValidate: {min: 265, max: 280, diagnose: yes, action: warning}
