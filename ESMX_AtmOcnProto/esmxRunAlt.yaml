@@ -42,23 +42,21 @@ ATM:
 
   importFields:
     sea_surface_temperature:
-      geometry: global
-      typekind: r8
-      dataMin:    0.0
-      dataMax:  100.1
+      geometry:     global
+      typekind:     r8
+      dataValidate: {min: 0.0, max: 100.1}
     sea_surface_salinity:
-      geometry: global
-      typekind: r8
-      dataMin:  199.9
-      dataMax:  200.1
+      geometry:     global
+      typekind:     r8
+      dataValidate: {min: 199.9, max: 200.1}
 
   exportFields:
     air_pressure_at_sea_level:  {geometry: global, typekind: r8, dataInit: 2.5}
     precipitation_flux:         {geometry: global, typekind: r8, dataInit: 3.5}
     surface_net_downward_shortwave_flux:
-      geometry: global
-      typekind: r8
-      dataInit: 4.5
+      geometry:   global
+      typekind:   r8
+      dataInit:   4.5
 
 OCN:
   model:            lumo
