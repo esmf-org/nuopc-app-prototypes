@@ -11,6 +11,7 @@ on:
     branches:
       - develop
   workflow_dispatch:
+    inputs:
       esmf_version: 
         description: 'ESMF version or tag like develop or v8.5.0b23'
         required: false
