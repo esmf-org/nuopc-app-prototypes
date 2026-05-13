@@ -1,5 +1,9 @@
 name: NUOPC App Prototypes Test
 
+env:
+  esmf_version: 'develop'
+  nuopc_app_version: 'develop'
+
 on:
   schedule:
     - cron:  '30 7 * * *'
@@ -7,6 +11,16 @@ on:
     branches:
       - develop
   workflow_dispatch:
+      esmf_version: 
+        description: 'ESMF version or tag like develop or v8.5.0b23'
+        required: false
+        type: string
+        default: 'develop'
+      nuopc_app_version:
+        description: 'NUOPC Application Prototypes version or tag like develop or v8.5.0b23'
+        required: false
+        type: string
+        default: 'develop'
 
 jobs:
   nuopc-test:
@@ -22,7 +36,22 @@ jobs:
             comm: openmpi
           }
     steps:
-    - uses: actions/checkout@v4
+    - name: Setup ESMF and NUOPC Application Prototypes versions
+      run: |
+        if [ -z "${{ inputs.esmf_version }}" ]; then
+          echo "ESMF_VERSION=${{ env.esmf_version }}" >> $GITHUB_ENV
+        else
+          echo "ESMF_VERSION=${{ inputs.esmf_version }}" >> $GITHUB_ENV
+        fi
+        if [ -z "${{ inputs.nuopc_app_version }}" ]; then
+          echo "NUOPC_APP_VERSION=${{ env.nuopc_app_version }}" >> $GITHUB_ENV
+        else
+          echo "NUOPC_APP_VERSION=${{ inputs.nuopc_app_version }}" >> $GITHUB_ENV
+        fi
+    - name: Checkout Base Repository
+      uses: actions/checkout@v6
+      with:
+        ref: ${{ env.NUOPC_APP_VERSION }}
     - name: Library Directory
       run: |
         export STACK_ROOT=${HOME}/stack
@@ -38,7 +67,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ${{env.STACK_ROOT}}
-        key: develop-nightly-${{matrix.config.os}}-${{matrix.config.compiler}}-${{matrix.config.comm}}
+        key: ${{ env.ESMF_VERSION }}-nightly-${{matrix.config.os}}-${{matrix.config.compiler}}-${{matrix.config.comm}}
     - name: Install OPENMPI
       if: matrix.config.comm == 'openmpi'
       env:
@@ -104,8 +133,8 @@ jobs:
         ESMF_COMM: ${{matrix.config.comm}}
         ESMF_NETCDF: 'nc-config'
       with:
-        build-key: 'develop-nightly-${{matrix.config.os}}-${{matrix.config.compiler}}-${{matrix.config.comm}}'
-        version: 'develop'
+        build-key: '${{ env.ESMF_VERSION }}-nightly-${{matrix.config.os}}-${{matrix.config.compiler}}-${{matrix.config.comm}}'
+        version: '${{ env.ESMF_VERSION }}'
         rebuild-check: quick
         esmpy: false
         cache: true
