@@ -14,8 +14,8 @@ ESMX:
       Verbosity: low
     runSequence: |
       @900
-        ATM -> OCN
-        OCN -> ATM
+        ATM -> OCN  :unmappedAction=ignore
+        OCN -> ATM  :unmappedAction=ignore
         ATM
         OCN
       @

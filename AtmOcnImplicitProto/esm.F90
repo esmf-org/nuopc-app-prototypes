@@ -28,8 +28,6 @@ module ESM
   use ATM, only: atmSS => SetServices
   use OCN, only: ocnSS => SetServices
 
-  use NUOPC_Connector, only: cplSS => SetServices
-
   implicit none
 
   private
@@ -208,18 +206,18 @@ module ESM
 
     ! set up free format run sequence
     runSeqFF = NUOPC_FreeFormatCreate(stringList=(/ &
-      " @*                    ",    &
-      "   OCN -> ATM          ",    &
-      "   @*                  ",    &
-      "     ATM down          ",    &
-      "     ATM -> OCN        ",    &
-      "     OCN fast          ",    &
-      "     OCN -> ATM        ",    &
-      "     ATM up            ",    &
-      "   @                   ",    &
-      "   ATM -> OCN          ",    &
-      "   OCN slow            ",    &
-      " @                     " /), &
+      " @*                                  ",    &
+      "   OCN -> ATM :unmappedAction=ignore ",    &
+      "   @*                                ",    &
+      "     ATM down                        ",    &
+      "     ATM -> OCN                      ",    &
+      "     OCN fast                        ",    &
+      "     OCN -> ATM                      ",    &
+      "     ATM up                          ",    &
+      "   @                                 ",    &
+      "   ATM -> OCN :unmappedAction=ignore ",    &
+      "   OCN slow                          ",    &
+      " @                                   " /), &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
