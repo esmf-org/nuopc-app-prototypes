@@ -33,9 +33,21 @@ jobs:
             comm: openmpi
           }
     env:
-      ESMF_VERSION: ${{ inputs.esmf_version || 'develop' }}
+      ESMF_VERSION: ${{ inputs.esmf_version || steps.pr_override.outputs.esmf_version || 'develop' }}
       NUOPC_APP_VERSION: ${{ inputs.nuopc_app_version || github.head_ref || 'develop' }}
     steps:
+    - name: Check PR body for ESMF version override
+      id: pr_override
+      if: github.event_name == 'pull_request'
+      run: |
+        PR_BODY="${{ github.event.pull_request.body }}"
+        VERSION_OVERRIDE=$(echo "$PR_BODY" | grep -iE 'esmf_version\s*:\s*' | head -n 1 | sed -E 's/.*esmf_version\s*:\s*([^ ]+).*/\1/' | tr -d '\r\n')
+        if [ -n "$VERSION_OVERRIDE" ]; then
+          echo "Found ESMF version override in PR body: $VERSION_OVERRIDE"
+          echo "esmf_version=$VERSION_OVERRIDE" >> $GITHUB_OUTPUT
+        else
+          echo "No ESMF version override found in PR body."
+        fi
     - name: Report ESMF and NUOPC Application Prototypes versions
       run: |
         echo "ESMF_VERSION: ${ESMF_VERSION}" >> $GITHUB_STEP_SUMMARY
