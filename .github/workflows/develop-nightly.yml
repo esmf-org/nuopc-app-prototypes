@@ -34,7 +34,7 @@ jobs:
           }
     env:
       ESMF_VERSION: ${{ inputs.esmf_version || 'develop' }}
-      NUOPC_APP_VERSION: ${{ inputs.nuopc_app_version || 'develop' }}
+      NUOPC_APP_VERSION: ${{ inputs.nuopc_app_version || github.head_ref || 'develop' }}
     steps:
     - name: Report ESMF and NUOPC Application Prototypes versions
       run: |
