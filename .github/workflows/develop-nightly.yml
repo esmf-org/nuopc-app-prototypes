@@ -32,12 +32,13 @@ jobs:
             compiler: gfortran,
             comm: openmpi
           }
+    env:
+      ESMF_VERSION: ${{ inputs.esmf_version || 'develop' }}
+      NUOPC_APP_VERSION: ${{ inputs.nuopc_app_version || 'develop' }}
     steps:
-    - name: Setup ESMF and NUOPC Application Prototypes versions
+    - name: Report ESMF and NUOPC Application Prototypes versions
       run: |
-        echo "ESMF_VERSION=${{ inputs.esmf_version }}" >> $GITHUB_ENV
         echo "ESMF_VERSION: ${ESMF_VERSION}" >> $GITHUB_STEP_SUMMARY
-        echo "NUOPC_APP_VERSION=${{ inputs.nuopc_app_version }}" >> $GITHUB_ENV
         echo "NUOPC_APP_VERSION: ${NUOPC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
     - name: Checkout Base Repository
       uses: actions/checkout@v6
