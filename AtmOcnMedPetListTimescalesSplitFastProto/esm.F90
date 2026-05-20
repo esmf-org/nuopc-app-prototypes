@@ -204,19 +204,19 @@ module ESM
 
     ! set up free format run sequence
     runSeqFF = NUOPC_FreeFormatCreate(stringList=(/ &
-      " @*                                  ",    &
-      "   OCN -> MED :unmappedAction=ignore ",    &
-      "   MED RunPhase1                     ",    &
-      "   MED -> OCN :unmappedAction=ignore ",    &
-      "   OCN                               ",    &
-      "   @*                                ",    &
-      "     MED RunPhaseFastBefore          ",    &
-      "     MED -> ATM                      ",    &
-      "     ATM                             ",    &
-      "     ATM -> MED                      ",    &
-      "     MED RunPhaseFastAfter           ",    &
-      "   @                                 ",    &
-      " @                                   " /), &
+      " @*                                      ",    &
+      "   OCN -> MED :extrapMethod=nearest_stod ",    &
+      "   MED RunPhase1                         ",    &
+      "   MED -> OCN :extrapMethod=nearest_stod ",    &
+      "   OCN                                   ",    &
+      "   @*                                    ",    &
+      "     MED RunPhaseFastBefore              ",    &
+      "     MED -> ATM                          ",    &
+      "     ATM                                 ",    &
+      "     ATM -> MED                          ",    &
+      "     MED RunPhaseFastAfter               ",    &
+      "   @                                     ",    &
+      " @                                       " /), &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out

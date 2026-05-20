@@ -173,7 +173,7 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompAttributeSet(connector, name="ConnectionOptions", &
-      value=":unmappedAction=ignore", rc=rc)
+      value=":extrapMethod=nearest_stod", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -193,7 +193,7 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompAttributeSet(connector, name="ConnectionOptions", &
-      value=":unmappedAction=ignore", rc=rc)
+      value=":extrapMethod=nearest_stod", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -227,7 +227,7 @@ module ESM
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompAttributeSet(connector, name="ConnectionOptions", &
-      value=":unmappedAction=ignore", rc=rc)
+      value=":extrapMethod=nearest_stod", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -287,22 +287,22 @@ module ESM
 
     ! set up free format run sequence
     runSeqFF = NUOPC_FreeFormatCreate(stringList=(/ &
-      " @1800                                ",    &
-      "   MED                                ",    &
-      "   MED -> ATM                         ",    &
-      "   MED -> OCN :unmappedAction=ignore  ",    &
-      "   @@3600                             ",    &
-      "    ATM                               ",    &
-      "    OCN                               ",    &
-      "    @1800                             ",    &
-      "    ATM -> MED :unmappedAction=ignore ",    &
-      "    @                                 ",    &
-      "   @@                                 ",    &
-      "   @@3600                             ",    &
-      "   OCN -> MED :unmappedAction=ignore  ",    &
-      "   @@                                 ",    &
-      "   MED                                ",    &
-      " @                                    " /), &
+      " @1800                                     ",    &
+      "   MED                                     ",    &
+      "   MED -> ATM                              ",    &
+      "   MED -> OCN :extrapMethod=nearest_stod   ",    &
+      "   @@3600                                  ",    &
+      "    ATM                                    ",    &
+      "    OCN                                    ",    &
+      "    @1800                                  ",    &
+      "    ATM -> MED :extrapMethod=nearest_stod  ",    &
+      "    @                                      ",    &
+      "   @@                                      ",    &
+      "   @@3600                                  ",    &
+      "   OCN -> MED :extrapMethod=nearest_stod   ",    &
+      "   @@                                      ",    &
+      "   MED                                     ",    &
+      " @                                         " /), &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out

@@ -215,22 +215,22 @@ module ESM
 
     ! set up free format run sequence
     runSeqFF = NUOPC_FreeFormatCreate(stringList=(/ &
-      " @*                                  ",    &
-      "   OCN -> ATM :unmappedAction=ignore ",    &
-      "   ICE -> ATM :unmappedAction=ignore ",    &
-      "   ATM                               ",    &
-      "   ATM -> ICE :unmappedAction=ignore ",    &
-      "   OCN -> ICE :unmappedAction=ignore ",    &
+      " @*                                      ",    &
+      "   OCN -> ATM :extrapMethod=nearest_stod ",    &
+      "   ICE -> ATM :extrapMethod=nearest_stod ",    &
+      "   ATM                                   ",    &
+      "   ATM -> ICE :extrapMethod=nearest_stod ",    &
+      "   OCN -> ICE :extrapMethod=nearest_stod ",    &
 #ifdef OCN_ICE_LEAPFROG_on
-      "   ICE                               ",    &
+      "   ICE                                   ",    &
 #endif
-      "   ATM -> OCN :unmappedAction=ignore ",    &
-      "   ICE -> OCN :unmappedAction=ignore ",    &
+      "   ATM -> OCN :extrapMethod=nearest_stod ",    &
+      "   ICE -> OCN :extrapMethod=nearest_stod ",    &
 #ifndef OCN_ICE_LEAPFROG_on
-      "   ICE                               ",    &
+      "   ICE                                   ",    &
 #endif
-      "   OCN                               ",    &
-      " @                                   " /), &
+      "   OCN                                   ",    &
+      " @                                       " /), &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out

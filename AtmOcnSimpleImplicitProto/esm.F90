@@ -201,12 +201,12 @@ module ESM
 
     ! set up free format run sequence
     runSeqFF = NUOPC_FreeFormatCreate(stringList=(/ &
-      " @*                                  ",    &
-      "   OCN -> ATM :unmappedAction=ignore ",    &
-      "   ATM                               ",    &
-      "   ATM -> OCN :unmappedAction=ignore ",    &
-      "   OCN                               ",    &
-      " @                                   " /), &
+      " @*                                      ",    &
+      "   OCN -> ATM :extrapMethod=nearest_stod ",    &
+      "   ATM                                   ",    &
+      "   ATM -> OCN :extrapMethod=nearest_stod ",    &
+      "   OCN                                   ",    &
+      " @                                       " /), &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
