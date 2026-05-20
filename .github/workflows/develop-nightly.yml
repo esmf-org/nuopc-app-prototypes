@@ -8,7 +8,7 @@ on:
       - develop
   workflow_dispatch:
     inputs:
-      esmf_version: 
+      esmf_version:
         description: 'ESMF version or tag like develop or v8.5.0b23'
         required: false
         type: string
@@ -18,6 +18,10 @@ on:
         required: false
         type: string
         default: 'develop'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   nuopc-test:
@@ -36,6 +40,17 @@ jobs:
       ESMF_VERSION: ${{ inputs.esmf_version || 'develop' }}
       NUOPC_APP_VERSION: ${{ inputs.nuopc_app_version || github.head_ref || 'develop' }}
     steps:
+    - name: Check PR body for ESMF version override
+      if: github.event_name == 'pull_request'
+      run: |
+        PR_BODY="${{ github.event.pull_request.body }}"
+        VERSION_OVERRIDE=$(echo "$PR_BODY" | grep -iE 'esmf_version\s*:' | head -n 1 | awk -F':' '{print $2}' | xargs)
+        if [ -n "$VERSION_OVERRIDE" ]; then
+          echo "Found version override in PR body: ESMF_VERSION=$VERSION_OVERRIDE"
+          echo "ESMF_VERSION=$VERSION_OVERRIDE" >> $GITHUB_ENV
+        else
+          echo "No PR override found. Sticking with: ESMF_VERSION=$ESMF_VERSION"
+        fi
     - name: Report ESMF and NUOPC Application Prototypes versions
       run: |
         echo "ESMF_VERSION: ${ESMF_VERSION}" >> $GITHUB_STEP_SUMMARY
