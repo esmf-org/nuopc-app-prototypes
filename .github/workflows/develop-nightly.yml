@@ -44,7 +44,7 @@ jobs:
       if: github.event_name == 'pull_request'
       run: |
         PR_BODY="${{ github.event.pull_request.body }}"
-        VERSION_OVERRIDE=$(echo "$PR_BODY" | grep -iE 'esmf_version\s*:' | head -n 1 | awk -F':' '{print $2}' | xargs)
+        VERSION_OVERRIDE=$(grep -iE 'esmf_version\s*:' <<< "$PR_BODY" | head -n 1 | awk -F':' '{print $2}' | xargs)
         if [ -n "$VERSION_OVERRIDE" ]; then
           echo "Found version override in PR body: ESMF_VERSION=$VERSION_OVERRIDE"
           echo "ESMF_VERSION=$VERSION_OVERRIDE" >> $GITHUB_ENV
