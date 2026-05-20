@@ -40,13 +40,9 @@ jobs:
     - name: Setup ESMF and NUOPC Application Prototypes versions
       run: |
         if [ -z "${{ inputs.esmf_version }}" ]; then
-          echo "ESMF_VERSION=${{ env.esmf_version }}" >> $GITHUB_ENV
-        else
           echo "ESMF_VERSION=${{ inputs.esmf_version }}" >> $GITHUB_ENV
         fi
         if [ -z "${{ inputs.nuopc_app_version }}" ]; then
-          echo "NUOPC_APP_VERSION=${{ env.nuopc_app_version }}" >> $GITHUB_ENV
-        else
           echo "NUOPC_APP_VERSION=${{ inputs.nuopc_app_version }}" >> $GITHUB_ENV
         fi
         echo "ESMF_VERSION: ${ESMF_VERSION}" >> $GITHUB_STEP_SUMMARY
