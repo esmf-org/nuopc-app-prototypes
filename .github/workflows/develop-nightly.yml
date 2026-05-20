@@ -1,9 +1,5 @@
 name: NUOPC App Prototypes Test
 
-env:
-  esmf_version: 'develop'
-  nuopc_app_version: 'develop'
-
 on:
   schedule:
     - cron:  '30 7 * * *'
@@ -39,13 +35,9 @@ jobs:
     steps:
     - name: Setup ESMF and NUOPC Application Prototypes versions
       run: |
-        if [ -z "${{ inputs.esmf_version }}" ]; then
-          echo "ESMF_VERSION=${{ inputs.esmf_version }}" >> $GITHUB_ENV
-        fi
-        if [ -z "${{ inputs.nuopc_app_version }}" ]; then
-          echo "NUOPC_APP_VERSION=${{ inputs.nuopc_app_version }}" >> $GITHUB_ENV
-        fi
+        echo "ESMF_VERSION=${{ inputs.esmf_version }}" >> $GITHUB_ENV
         echo "ESMF_VERSION: ${ESMF_VERSION}" >> $GITHUB_STEP_SUMMARY
+        echo "NUOPC_APP_VERSION=${{ inputs.nuopc_app_version }}" >> $GITHUB_ENV
         echo "NUOPC_APP_VERSION: ${NUOPC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
     - name: Checkout Base Repository
       uses: actions/checkout@v6
