@@ -49,6 +49,8 @@ jobs:
         else
           echo "NUOPC_APP_VERSION=${{ inputs.nuopc_app_version }}" >> $GITHUB_ENV
         fi
+        echo "ESMF_VERSION: ${ESMF_VERSION}" >> $GITHUB_STEP_SUMMARY
+        echo "NUOPC_APP_VERSION: ${NUOPC_APP_VERSION}" >> $GITHUB_STEP_SUMMARY
     - name: Checkout Base Repository
       uses: actions/checkout@v6
       with:
