@@ -23,8 +23,6 @@ module ESM
   use OCN, only: ocnSS => SetServices
   use MED, only: medSS => SetServices
 
-  use NUOPC_Connector, only: cplSS => SetServices
-
   implicit none
 
   private
@@ -193,18 +191,18 @@ module ESM
 
     ! set up free format run sequence
     runSeqFF = NUOPC_FreeFormatCreate(stringList=(/ &
-      " @*                    ",    &
-      "   OCN -> MED          ",    &
-      "   MED                 ",    &
-      "   MED -> OCN          ",    &
-      "   OCN                 ",    &
-      "   @*                  ",    &
-      "     MED -> ATM        ",    &
-      "     ATM               ",    &
-      "     ATM -> MED        ",    &
-      "     MED RunPhaseFast  ",    &
-      "   @                   ",    &
-      " @                     " /), &
+      " @*                                        ",    &
+      "   OCN -> MED :extrapMethod=nearest_stod   ",    &
+      "   MED                                     ",    &
+      "   MED -> OCN :extrapMethod=nearest_stod   ",    &
+      "   OCN                                     ",    &
+      "   @*                                      ",    &
+      "     MED -> ATM                            ",    &
+      "     ATM                                   ",    &
+      "     ATM -> MED :extrapMethod=nearest_stod ",    &
+      "     MED RunPhaseFast                      ",    &
+      "   @                                       ",    &
+      " @                                         " /), &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out

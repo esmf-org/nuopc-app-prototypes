@@ -371,7 +371,14 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompAttributeSet(connector, name="ConnectionOptions", &
+      value=":extrapMethod=nearest_stod", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -384,7 +391,14 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompAttributeSet(connector, name="ConnectionOptions", &
+      value=":extrapMethod=nearest_stod", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -495,7 +509,7 @@ module ESM
           return  ! bail out
         ! go through all of the entries in the cplList
         do j=1, cplListSize
-          if (trim(cplList(j))=="sea_surface_height_above_sea_level") then
+          if (index(cplList(j), "sea_surface_height_above_sea_level") > 0) then
             ! switch to ESMF_REGRIDMETHOD_NEAREST_STOD
             cplList(j) = trim(cplList(j))//":REMAPMETHOD=nearest_stod"// &
               ":srcMaskValues=1:dstMaskValues=2"
