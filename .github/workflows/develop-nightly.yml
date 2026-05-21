@@ -45,7 +45,7 @@ jobs:
       env:
         PR_BODY: ${{ github.event.pull_request.body }}
       run: |
-        VERSION_OVERRIDE=$(grep -m 1 -iE 'esmf_version\s*:' <<< "$PR_BODY" | awk -F':' '{print $2}' | xargs)
+        VERSION_OVERRIDE=$(grep -m 1 -iE 'esmf_version\s*:' <<< "$PR_BODY" | awk -F':' '{print $2}' | tr -d '\r\n' | xargs)
         if [ -n "$VERSION_OVERRIDE" ]; then
           echo "Found version override in PR body: ESMF_VERSION=$VERSION_OVERRIDE"
           echo "ESMF_VERSION=$VERSION_OVERRIDE" >> $GITHUB_ENV
