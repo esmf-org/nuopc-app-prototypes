@@ -20,7 +20,7 @@ on:
         default: 'develop'
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
 jobs:
@@ -37,14 +37,15 @@ jobs:
             comm: openmpi
           }
     env:
-      PR_BODY: ${{ github.event.pull_request.body }}
       ESMF_VERSION: ${{ inputs.esmf_version || 'develop' }}
       NUOPC_APP_VERSION: ${{ inputs.nuopc_app_version || github.head_ref || 'develop' }}
     steps:
     - name: Check PR body for ESMF version override
       if: github.event_name == 'pull_request'
+      env:
+        PR_BODY: ${{ github.event.pull_request.body }}
       run: |
-        VERSION_OVERRIDE=$(grep -iE 'esmf_version\s*:' <<< "$PR_BODY" | head -n 1 | awk -F':' '{print $2}' | xargs)
+        VERSION_OVERRIDE=$(grep -m 1 -iE 'esmf_version\s*:' <<< "$PR_BODY" | awk -F':' '{print $2}' | xargs)
         if [ -n "$VERSION_OVERRIDE" ]; then
           echo "Found version override in PR body: ESMF_VERSION=$VERSION_OVERRIDE"
           echo "ESMF_VERSION=$VERSION_OVERRIDE" >> $GITHUB_ENV
