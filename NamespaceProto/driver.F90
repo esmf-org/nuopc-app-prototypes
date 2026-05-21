@@ -133,6 +133,12 @@ module driver
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    call NUOPC_CompAttributeSet(connector, name="ConnectionOptions", &
+      value=":extrapMethod=nearest_stod", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 
     ! SetServices for MED->ATM1
     call NUOPC_DriverAddComp(driver, srcCompLabel="MED", dstCompLabel="ATM1", &
@@ -155,6 +161,12 @@ module driver
       file=__FILE__)) &
       return  ! bail out
     call NUOPC_CompAttributeSet(connector, name="Verbosity", value="1", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompAttributeSet(connector, name="ConnectionOptions", &
+      value=":extrapMethod=nearest_stod", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

@@ -7,8 +7,8 @@ ESMX:
 
     runSequence: |
       @*
-        ATM -> OCN
-        OCN -> ATM
+        ATM -> OCN :unmappedAction=ignore
+        OCN -> ATM :unmappedAction=ignore
         ATM
         OCN
       @

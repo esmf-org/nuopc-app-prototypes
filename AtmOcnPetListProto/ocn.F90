@@ -323,7 +323,7 @@ module OCN
 
     ! importable field on Mesh or Grid: magnitude_of_surface_downward_stress
     field = ESMF_FieldCreate(name="msds", &
-#if 1
+#if 0
       mesh=meshIn, &
 #else
       grid=gridIn, &
