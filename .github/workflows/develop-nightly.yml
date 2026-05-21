@@ -20,7 +20,7 @@ on:
         default: 'develop'
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
 jobs:
@@ -42,9 +42,10 @@ jobs:
     steps:
     - name: Check PR body for ESMF version override
       if: github.event_name == 'pull_request'
+      env:
+        PR_BODY: ${{ github.event.pull_request.body }}
       run: |
-        PR_BODY="${{ github.event.pull_request.body }}"
-        VERSION_OVERRIDE=$(echo "$PR_BODY" | grep -iE 'esmf_version\s*:' | head -n 1 | awk -F':' '{print $2}' | xargs)
+        VERSION_OVERRIDE=$(grep -m 1 -iE 'esmf_version\s*:' <<< "$PR_BODY" | awk -F':' '{print $2}' | tr -d '\r\n' | xargs)
         if [ -n "$VERSION_OVERRIDE" ]; then
           echo "Found version override in PR body: ESMF_VERSION=$VERSION_OVERRIDE"
           echo "ESMF_VERSION=$VERSION_OVERRIDE" >> $GITHUB_ENV
