@@ -1,16 +1,13 @@
 cmake_minimum_required(VERSION 3.22)
 
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-find_package(ESMF 8.9.0 MODULE REQUIRED)
-find_package(Julia REQUIRED)
-
-if(NOT DEFINED CMAKE_C_COMPILER)
-  set(CMAKE_C_COMPILER "${ESMF_CCOMPILER}")
-endif()
-
 project(SiMoCoJulia
         VERSION 1.0
         LANGUAGES C)
+
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+
+find_package(ESMF 9.0.0 REQUIRED)
+find_package(Julia REQUIRED)
 
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
   set(CMAKE_C_FLAGS "-Wall -Wextra -Wconversion -Wno-unused")
