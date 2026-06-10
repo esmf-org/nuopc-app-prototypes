@@ -1,14 +1,10 @@
 cmake_minimum_required(VERSION 3.22)
 
-find_package(ESMF 8.9.0 MODULE REQUIRED)
-
-if(NOT DEFINED CMAKE_Fortran_COMPILER)
-  set(CMAKE_Fortran_COMPILER        "${ESMF_F90COMPILER}")
-endif()
-
 project(Lumo
         VERSION 1.0
         LANGUAGES Fortran)
+
+find_package(ESMF 9.0.0 REQUIRED)
 
 find_package(OpenMP REQUIRED)
 
