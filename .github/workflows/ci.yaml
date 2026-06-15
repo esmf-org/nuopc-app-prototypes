@@ -28,12 +28,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  nuopc-test:
+  nuopc-app-protos-test:
+    name: ${{matrix.config.name}}
     if: |
       github.event_name != 'pull_request' || 
       github.event.action != 'labeled' || 
       github.event.label.name == 'trigger-tests'
-    name: ${{matrix.config.name}}
+    permissions:
+      pull-requests: write
+      contents: read
     runs-on: ${{matrix.config.os}}
     strategy:
       matrix:
