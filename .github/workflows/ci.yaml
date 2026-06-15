@@ -1,20 +1,24 @@
-name: NUOPC App Prototypes Test
+name: NUOPC App Prototypes CI Test
 
 on:
   schedule:
     - cron:  '30 7 * * *'
+  push:
+    branches:
+      - develop
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
     branches:
       - develop
   workflow_dispatch:
     inputs:
       esmf_version:
-        description: 'ESMF version or tag like develop or v8.5.0b23'
+        description: 'ESMF version (Git hash, tag, or branch).  Examples: develop, v8.5.0b23'
         required: false
         type: string
         default: 'develop'
       nuopc_app_version:
-        description: 'NUOPC Application Prototypes version or tag like develop or v8.5.0b23'
+        description: 'NUOPC Application Prototypes version (Git hash, tag, or branch).  Examples: develop, v8.5.0b23'
         required: false
         type: string
         default: 'develop'
@@ -25,6 +29,10 @@ concurrency:
 
 jobs:
   nuopc-test:
+    if: |
+      github.event_name != 'pull_request' || 
+      github.event.action != 'labeled' || 
+      github.event.label.name == 'trigger-tests'
     name: ${{matrix.config.name}}
     runs-on: ${{matrix.config.os}}
     strategy:
@@ -40,6 +48,16 @@ jobs:
       ESMF_VERSION: ${{ inputs.esmf_version || 'develop' }}
       NUOPC_APP_VERSION: ${{ inputs.nuopc_app_version || github.head_ref || 'develop' }}
     steps:
+    - name: Remove trigger-tests label
+      if: ${{ github.event.action == 'labeled' && github.event.label.name == 'trigger-tests' }}
+      run: |
+        curl \
+          -X DELETE \
+          -H "Authorization: token ${{ github.token }}" \
+          -H "Accept: application/vnd.github+json" \
+          -H "User-Agent: github-actions" \
+          ${{ github.api_url }}/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels/trigger-tests
+
     - name: Check PR body for ESMF version override
       if: github.event_name == 'pull_request'
       env:
