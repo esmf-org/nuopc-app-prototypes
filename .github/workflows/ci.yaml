@@ -1,4 +1,4 @@
-name: NUOPC App Prototypes Test
+name: NUOPC App Prototypes CI Test
 
 on:
   schedule:
