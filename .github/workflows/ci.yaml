@@ -7,6 +7,7 @@ on:
     branches:
       - develop
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
     branches:
       - develop
   workflow_dispatch:
@@ -28,6 +29,10 @@ concurrency:
 
 jobs:
   nuopc-test:
+    if: |
+      github.event_name != 'pull_request' || 
+      github.event.action != 'labeled' || 
+      github.event.label.name == 'trigger-tests'
     name: ${{matrix.config.name}}
     runs-on: ${{matrix.config.os}}
     strategy:
@@ -43,6 +48,16 @@ jobs:
       ESMF_VERSION: ${{ inputs.esmf_version || 'develop' }}
       NUOPC_APP_VERSION: ${{ inputs.nuopc_app_version || github.head_ref || 'develop' }}
     steps:
+    - name: Remove trigger-tests label
+      if: ${{ github.event.action == 'labeled' && github.event.label.name == 'trigger-tests' }}
+      run: |
+        curl \
+          -X DELETE \
+          -H "Authorization: token ${{ github.token }}" \
+          -H "Accept: application/vnd.github+json" \
+          -H "User-Agent: github-actions" \
+          ${{ github.api_url }}/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels/trigger-tests
+
     - name: Check PR body for ESMF version override
       if: github.event_name == 'pull_request'
       env:
