@@ -1,0 +1,65 @@
+ESMX:
+
+  App:
+    globalResourceControl:  true
+    logKindFlag:            ESMF_LOGKIND_Multi_on_error
+    logAppendFlag:          false
+    logFlush:               true
+    startTime:              2012-10-24T08:00:00
+    stopTime:               2012-10-25T08:00:00
+
+    ESMF_RUNTIME_PROFILE:         ON
+    ESMF_RUNTIME_PROFILE_OUTPUT:  SUMMARY
+
+  Driver:
+    attributes:
+      Verbosity: high
+    componentList:  [ABC, DEF]
+
+    runSequence: |
+      @900
+        ABC -> DEF :remapMethod=conserve
+        ABC
+        DEF
+      @
+
+ABC:
+  model:        ESMX_Data
+  attributes:
+    Verbosity:  high
+    Diagnostic: 131072  # bit-17 (netcdf field output)
+  timeKeeping:  Model
+  geometries:
+    global:
+      geom:           grid1PeriDimUfrm
+      minCornerCoord: [-180, -89]
+      maxCornerCoord: [+180, +89]
+      maxIndex:       [ 100,  50]
+      staggerLocList: [center, corner]
+  exportFields:
+    sea_surface_temperature:
+      geometry:     global@center
+      typekind:     r8
+      dataInit:     &testfunc
+        10*(sin(_step/24*deg2rad(_coord1)) * cos(deg2rad(_coord2))) + 270
+      dataAdvance:  *testfunc
+      dataValidate: {diagnose: yes}
+
+DEF:
+  model:        ESMX_Data
+  attributes:
+    Verbosity:  high
+    Diagnostic: 131072  # bit-17 (netcdf field output)
+  timeKeeping:  Model
+  geometries:
+    global:
+      geom:           grid1PeriDimUfrm
+      minCornerCoord: [-180, -89]
+      maxCornerCoord: [+180, +89]
+      maxIndex:       [ 200, 100]
+      staggerLocList: [center, corner]
+  importFields:
+    sea_surface_temperature:
+      geometry:     global@center
+      typekind:     r4
+      dataValidate: {min: 265, max: 280, diagnose: yes, action: warning}
