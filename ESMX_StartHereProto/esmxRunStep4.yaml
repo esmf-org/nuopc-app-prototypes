@@ -31,14 +31,14 @@ ABC:
   timeKeeping:  Model
   geometries:
     global:
-      geom:           grid1PeriDim
+      geom:           grid1PeriDimUfrm
       minCornerCoord: [-180, -89]
       maxCornerCoord: [+180, +89]
       maxIndex:       [ 100,  50]
-      staggerLoc:     center
+      staggerLocList: [corner, center]
   exportFields:
     sea_surface_temperature:
-      geometry:     global
+      geometry:     global@center
       typekind:     r8
       dataInit:     &testfunc
         10*(sin(_step/24*deg2rad(_coord1)) * cos(deg2rad(_coord2))) + 270
@@ -53,11 +53,11 @@ DEF:
   timeKeeping:  Model
   geometries:
     global:
-      geom:           grid1PeriDim
+      geom:           grid1PeriDimUfrm
       minCornerCoord: [-180, -89]
       maxCornerCoord: [+180, +89]
       maxIndex:       [ 200, 100]
-      staggerLoc:     center
+      staggerLocList: center
   importFields:
     sea_surface_temperature:
       geometry:     global

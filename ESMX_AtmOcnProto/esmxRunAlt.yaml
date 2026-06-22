@@ -34,7 +34,7 @@ ATM:
   timeKeeping:      Model
   geometries:
     global:
-      geom:           gridNoPeriDim
+      geom:           gridNoPeriDimUfrm
       minCornerCoord: [  10,  20]
       maxCornerCoord: [ 100, 200]
       maxIndex:       [  10, 100]
