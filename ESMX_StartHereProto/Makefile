@@ -57,14 +57,5 @@ NP = 4
 run:
 	$(ESMF_INTERNAL_MPIRUN) -np $(NP) ./$(EXE)
 
-runStep1:
-	$(ESMF_INTERNAL_MPIRUN) -np $(NP) ./$(EXE) esmxRunStep1.yaml
-
-runStep2:
-	$(ESMF_INTERNAL_MPIRUN) -np $(NP) ./$(EXE) esmxRunStep2.yaml
-
-runStep3:
-	$(ESMF_INTERNAL_MPIRUN) -np $(NP) ./$(EXE) esmxRunStep3.yaml
-
-runStep4:
-	$(ESMF_INTERNAL_MPIRUN) -np $(NP) ./$(EXE) esmxRunStep4.yaml
+runStep%:
+	$(ESMF_INTERNAL_MPIRUN) -np $(NP) ./$(EXE) esmxRunStep$*.yaml
