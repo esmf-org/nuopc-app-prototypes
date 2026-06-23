@@ -51,13 +51,13 @@ ABC:
         5*(sin(_step/24*deg2rad(_coord1)) * cos(deg2rad(2*_coord2)))
       dataAdvance:  *testfunc
       dataValidate: {diagnose: yes}
-      outputList:   [export_data_init]
+      outputList:   [export, export_data_init]
   outputs:
     export:
-      onDataInit: true
-      onExport:   true
+      onDataInit:         true
+      onExport:           true
     export_data_init:
-      onDataInit: true
+      onDataInit:         true
 
 DEF:
   model:        ESMX_Data
@@ -84,6 +84,9 @@ DEF:
       outputList:   [import]
   outputs:
     import:
-      onImport:   true
+      onDataInit:         true
+      onImport:           true
+      separateFieldFiles: true
+      separateTimeFiles:  true
     import_data_init:
-      onDataInit: true
+      onDataInit:         true
