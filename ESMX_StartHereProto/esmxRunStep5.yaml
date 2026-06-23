@@ -2,7 +2,7 @@ ESMX:
 
   App:
     globalResourceControl:  true
-    logKindFlag:            ESMF_LOGKIND_Multi_on_error
+    logKindFlag:            ESMF_LOGKIND_Multi
     logAppendFlag:          false
     logFlush:               true
     startTime:              2012-10-24T08:00:00
@@ -42,7 +42,7 @@ ABC:
       dataInit:     &testfunc
         10*(sin(_step/24*deg2rad(_coord1)) * cos(deg2rad(_coord2))) + 270
       dataAdvance:  *testfunc
-      dataValidate: {diagnose: yes}
+      dataValidate: {print: yes}
       outputList:   [export, export_data_init]
     sea_surface_height_above_sea_level:
       geometry:     global@center
@@ -50,7 +50,7 @@ ABC:
       dataInit:     &testfunc
         5*(sin(_step/24*deg2rad(_coord1)) * cos(deg2rad(2*_coord2)))
       dataAdvance:  *testfunc
-      dataValidate: {diagnose: yes}
+      dataValidate: {print: yes}
       outputList:   [export, export_data_init]
   outputs:
     export:
@@ -75,12 +75,12 @@ DEF:
     sea_surface_temperature:
       geometry:     global@center
       typekind:     r4
-      dataValidate: {min: 265, max: 280, diagnose: yes, action: warning}
+      dataValidate: {min: 265, max: 280, print: yes, action: warning}
       outputList:   [import, import_data_init]
     sea_surface_height_above_sea_level:
       geometry:     global@center
       typekind:     r4
-      dataValidate: {min: -10, max: 10, diagnose: yes, action: warning}
+      dataValidate: {min: -10, max: 10, print: yes}
       outputList:   [import]
   outputs:
     import:

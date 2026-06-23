@@ -42,7 +42,7 @@ ABC:
       dataInit:     &testfunc
         10*(sin(_step/24*deg2rad(_coord1)) * cos(deg2rad(_coord2))) + 270
       dataAdvance:  *testfunc
-      dataValidate: {diagnose: yes}
+      dataValidate: {print: yes}
       outputList:   export
   outputs:
     export:
@@ -65,7 +65,7 @@ DEF:
     sea_surface_temperature:
       geometry:     global
       typekind:     r4
-      dataValidate: {min: 265, max: 280, diagnose: yes, action: warning}
+      dataValidate: {min: 265, max: 280, print: yes, action: warning}
       outputList:   import
   outputs:
     import:
