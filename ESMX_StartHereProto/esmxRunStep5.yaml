@@ -27,7 +27,6 @@ ABC:
   model:        ESMX_Data
   attributes:
     Verbosity:  high
-    Diagnostic: 131072  # bit-17 (netcdf field output)
   timeKeeping:  Model
   geometries:
     global:
@@ -44,12 +43,26 @@ ABC:
         10*(sin(_step/24*deg2rad(_coord1)) * cos(deg2rad(_coord2))) + 270
       dataAdvance:  *testfunc
       dataValidate: {diagnose: yes}
+      outputList:   [export, export_data_init]
+    sea_surface_height_above_sea_level:
+      geometry:     global@center
+      typekind:     r8
+      dataInit:     &testfunc
+        5*(sin(_step/24*deg2rad(_coord1)) * cos(deg2rad(2*_coord2)))
+      dataAdvance:  *testfunc
+      dataValidate: {diagnose: yes}
+      outputList:   [export_data_init]
+  outputs:
+    export:
+      onDataInit: true
+      onExport:   true
+    export_data_init:
+      onDataInit: true
 
 DEF:
   model:        ESMX_Data
   attributes:
     Verbosity:  high
-    Diagnostic: 131072  # bit-17 (netcdf field output)
   timeKeeping:  Model
   geometries:
     global:
@@ -63,3 +76,14 @@ DEF:
       geometry:     global@center
       typekind:     r4
       dataValidate: {min: 265, max: 280, diagnose: yes, action: warning}
+      outputList:   [import, import_data_init]
+    sea_surface_height_above_sea_level:
+      geometry:     global@center
+      typekind:     r4
+      dataValidate: {min: -10, max: 10, diagnose: yes, action: warning}
+      outputList:   [import]
+  outputs:
+    import:
+      onImport:   true
+    import_data_init:
+      onDataInit: true

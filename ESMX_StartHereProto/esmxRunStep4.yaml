@@ -27,7 +27,6 @@ ABC:
   model:        ESMX_Data
   attributes:
     Verbosity:  high
-    Diagnostic: 131072  # bit-17 (netcdf field output)
   timeKeeping:  Model
   geometries:
     global:
@@ -44,12 +43,16 @@ ABC:
         10*(sin(_step/24*deg2rad(_coord1)) * cos(deg2rad(_coord2))) + 270
       dataAdvance:  *testfunc
       dataValidate: {diagnose: yes}
+      outputList:   export
+  outputs:
+    export:
+      onDataInit: true
+      onExport:   true
 
 DEF:
   model:        ESMX_Data
   attributes:
     Verbosity:  high
-    Diagnostic: 131072  # bit-17 (netcdf field output)
   timeKeeping:  Model
   geometries:
     global:
@@ -63,3 +66,8 @@ DEF:
       geometry:     global
       typekind:     r4
       dataValidate: {min: 265, max: 280, diagnose: yes, action: warning}
+      outputList:   import
+  outputs:
+    import:
+      onDataInit: true
+      onImport:   true

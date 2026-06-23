@@ -27,7 +27,6 @@ ATM:
     filename:       atm.stdout
   attributes:
     Verbosity:      low
-    Diagnostic:     131072  # bit-17 (netcdf field output)
   petList:          [3, [2-0]]  # petList is list of scalars and lists.
                                 # each list again can be of scalars and lists
                                 # recursively.
@@ -45,18 +44,29 @@ ATM:
       geometry:     global
       typekind:     r8
       dataValidate: {min: 0.0, max: 100.1}
+      outputList:   import
     sea_surface_salinity:
       geometry:     global
       typekind:     r8
       dataValidate: {min: 199.9, max: 200.1}
+      outputList:   import
 
   exportFields:
-    air_pressure_at_sea_level:  {geometry: global, typekind: r8, dataInit: 2.5}
-    precipitation_flux:         {geometry: global, typekind: r8, dataInit: 3.5}
+    air_pressure_at_sea_level:  {geometry: global, typekind: r8, dataInit: 2.5, outputList: export}
+    precipitation_flux:         {geometry: global, typekind: r8, dataInit: 3.5, outputList: export}
     surface_net_downward_shortwave_flux:
       geometry:   global
       typekind:   r8
       dataInit:   4.5
+      outputList: export
+
+  outputs:
+    import:
+      onDataInit: true
+      onImport:   true
+    export:
+      onDataInit: true
+      onExport:   true
 
 OCN:
   model:            lumo
