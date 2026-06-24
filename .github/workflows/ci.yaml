@@ -185,6 +185,6 @@ jobs:
       if: always()
       uses: actions/upload-artifact@v6
       with:
-        name: Artifacts for ${{ matrix.config.compiler }} ${{ env.ESMF_VERSION }}
+        name: Artifacts-${{matrix.config.os}}-${{matrix.config.compiler}}-${{matrix.config.comm}}
         path: ${{ github.workspace }}/Artifacts
         retention-days: 5
