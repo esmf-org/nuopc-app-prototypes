@@ -173,3 +173,18 @@ jobs:
       run: |
         export TOOLRUN="--oversubscribe"
         ./testProtos.sh
+    - name: Prepare NUOPC App Prototypes Artifacts Directory
+      if: always()
+      run: |
+        cd ${{ github.workspace }}
+        mkdir -p Artifacts
+        if [ -d "NUOPC-PROTO-RESULTS" ]; then
+          mv NUOPC-PROTO-RESULTS Artifacts/
+        fi
+    - name: Upload Artifacts
+      if: always()
+      uses: actions/upload-artifact@v6
+      with:
+        name: Artifacts for ${{ matrix.config.compiler }} ${{ env.ESMF_VERSION }}
+        path: ${{ github.workspace }}/Artifacts
+        retention-days: 5
