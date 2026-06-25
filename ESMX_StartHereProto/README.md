@@ -1,6 +1,6 @@
 # ESMX_StartHereProto
 
-Start with this prototype example if you are new to [ESMX](https://github.com/esmf-org/esmf/tree/develop/src/addon/ESMX) and want to learn the basic usage of the tool. The prototype exclusively leverages features that are built into ESMX itself. Since no external code is built into the ESMX executable, this prototype does *not* require an ESMX build configuration file, such as `esmxBuild.yaml`!
+Start with this prototype example if you are new to [ESMX](https://github.com/esmf-org/esmf/tree/develop/src/addon/ESMX) and want to learn the basic usage of the tool. The prototype exclusively leverages features that are built into ESMX itself. Since no external code is built into the ESMX executable, this prototype does *not* require an ESMX build configuration file, such as `esmxBuild.yaml`. Instead, the default built rules automatically activate the `ESMX_Data` component that comes with ESMX.
 
 ## Primary Artifacts
 
@@ -10,7 +10,9 @@ Files and sub-directories that implement the fundamental concepts demonstrated b
 - `esmxRunStep1.yaml`    - Still just driving the ESMX application, from `startTime` to `stopTime`, without any actual components present. However, demonstrate the use of a few very useful optional options under the `ESMX:App` section.
 - `esmxRunStep2.yaml`    - Add the `ESMX:Driver` section. Use it to specify driver attributes.
 - `esmxRunStep3.yaml`    - Add the `componentList` key to the `ESMX:Driver` section. Configure a single component instance `ABC` using the built-in `ESMX_Data` component.
-- `esmxRunStep4.yaml`    - Specify two components under the `componentList`. Both are configured as instances of the built-in `ESMX_Data` component. Instance `ABC` contains one export field, which is impored by instance `DEF`. An explicit `runSequence` with two-way coupling is coded. Two `ESMF_RUNTIME_*` environment variables are specified to enable ESMF profiling for this example. The profiling data is written to file `ESMF_Proflile.summary` at the end of the execution.
+- `esmxRunStep4.yaml`    - Specify two components under the `componentList`. Both are configured as instances of the built-in `ESMX_Data` component. Instance `ABC` contains one export field (`sea_surface_temperature`), which is imported by instance `DEF`. An explicit `runSequence` with one-way coupling is coded. Two `ESMF_RUNTIME_*` environment variables are specified to enable ESMF profiling for this example. The profiling data is written to file `ESMF_Proflile.summary` at the end of the execution.
+- `esmxRunStep5.yaml`    - Same two `ESMX_Data` instances interacting as before, but now using `remapMethod=conserve`, leveraging geometries that provide coordinates for the required stagger locations.
+- `esmxRunStep6.yaml`    - Same two `ESMX_Data` instances as before, but now interacting two-way coupled. Configured for more complicated data-dependencies during initialization with exports depending on imports, some locally initialized, others relying on data provided by the other component. This triggers the NUOPC resolution loop for the data-dependencies protocol during initialization.
 
 ### Usage
 
