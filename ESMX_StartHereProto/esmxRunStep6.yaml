@@ -79,7 +79,7 @@ DEF:
     sea_surface_temperature:
       geometry:     global@center
       typekind:     r4
-      dataInit:     270
+      dataInit:     10*cos(deg2rad(_coord1))+270
       outputList:   [import]
     sea_surface_height_above_sea_level:
       geometry:     global@center
