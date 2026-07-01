@@ -15,8 +15,11 @@ elseif(CMAKE_Fortran_COMPILER_ID STREQUAL "Intel")
   set(CMAKE_Fortran_FLAGS_RELEASE "-Ofast")
   set(CMAKE_Fortran_FLAGS_RELWITHDEBINFO "-g -traceback -Ofast")
   set(CMAKE_Fortran_FLAGS_DEBUG "-g -traceback -O0 -check all -fpe0 -ftrapuv -init=snan,arrays")
-else()
-  message(WARNING "${CMAKE_Fortran_COMPILER_ID} Fortran compiler will be used with default options")
+endif()
+
+if(APPLE AND CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
+    message(STATUS "Enabling CXX language for Darwin LLVMFlang linker workaround")
+    enable_language(CXX)
 endif()
 
 add_library(SiMoCo SHARED simoco.F90)
@@ -25,6 +28,10 @@ target_include_directories(SiMoCo
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 target_link_libraries(SiMoCo PUBLIC ESMF::ESMF)
+
+if(APPLE AND CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
+    set_target_properties(SiMoCo PROPERTIES LINKER_LANGUAGE CXX)
+endif()
 
 ###############################################################################
 ### Install
