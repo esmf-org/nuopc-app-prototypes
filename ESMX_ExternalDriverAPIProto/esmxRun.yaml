@@ -13,14 +13,16 @@ ESMX:
         OCN
       @
 
-ATM:
-  model:            Tawas
-  attributes:
-    Verbosity:  low
-  petList:          0-1
+  Components:
 
-OCN:
-  model:            lumo
-  petList:          2-3
-  attributes:
-    Verbosity:  low
+    ATM:
+      model:            Tawas
+      attributes:
+        Verbosity:  low
+      petList:          0-1
+
+    OCN:
+      model:            lumo
+      petList:          2-3
+      attributes:
+        Verbosity:  low

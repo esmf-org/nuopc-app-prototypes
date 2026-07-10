@@ -38,6 +38,7 @@ module TAWAS
     character(80)             :: compLabel
     character(:), allocatable :: badKey
     logical                   :: isFlag
+    character(:), allocatable :: configKey(:)
 
     rc = ESMF_SUCCESS
 
@@ -81,7 +82,9 @@ module TAWAS
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-      hconfigNode = ESMF_HConfigCreateAt(hconfig, keyString=compLabel, rc=rc)
+      configKey = [ character(len=32) :: "ESMX", "Components", compLabel]
+      hconfigNode = ESMF_HConfigCreateAt(hconfig, keyStringList=configKey, &
+        rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &
