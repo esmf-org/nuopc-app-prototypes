@@ -88,7 +88,8 @@ module LUMO
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-      configKey = [ character(len=32) :: "ESMX", "Components", compLabel]
+      configKey = [ character(len=ESMF_MAXSTR) :: "ESMX", "Components", &
+        compLabel]
       hconfigNode = ESMF_HConfigCreateAt(hconfig, keyStringList=configKey, &
         rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
