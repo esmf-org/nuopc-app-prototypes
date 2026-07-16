@@ -13,7 +13,8 @@ ESMX:
     attributes:
       Verbosity: low
 
-MDL:
-  model:            SiMoCo
-  stdout:
-    filename:       my.stdout.*
+  Components:
+    MDL:
+      model:            SiMoCo
+      stdout:
+        filename:       my.stdout.*

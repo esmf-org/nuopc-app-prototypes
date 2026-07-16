@@ -13,5 +13,6 @@ ESMX:
     attributes:
       Verbosity: low
 
-MDL:
-  model:            ./install/lib/libSiMoCoC.*
+  Components:
+    MDL:
+      model:            ./install/lib/libSiMoCoC.*

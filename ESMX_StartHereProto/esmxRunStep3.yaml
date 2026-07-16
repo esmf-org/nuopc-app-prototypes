@@ -13,7 +13,8 @@ ESMX:
       Verbosity: low
     componentList:  [ABC]
 
-ABC:
-  model:  ESMX_Data
-  attributes:
-    Verbosity: low
+  Components:
+    ABC:
+      model:  ESMX_Data
+      attributes:
+        Verbosity: low
