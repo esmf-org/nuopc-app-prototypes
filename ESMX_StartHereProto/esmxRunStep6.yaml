@@ -24,79 +24,81 @@ ESMX:
         DEF
       @
 
-ABC:
-  model:        ESMX_Data
-  attributes:
-    Verbosity:  high
-  timeKeeping:  Mediator
-  geometries:
-    global:
-      geom:           grid1PeriDimUfrm
-      minCornerCoord: [-180, -89]
-      maxCornerCoord: [+180, +89]
-      maxIndex:       [ 100,  50]
-      staggerLocList: [center, corner]
-  importFields:
-    sea_surface_temperature:
-      geometry:     global@center
-      typekind:     r8
-      outputList:   [import]
-  exportFields:
-    sea_surface_temperature:
-      geometry:     global@center
-      typekind:     r8
-      dataAdvance:
-        10*(sin(_step/24*deg2rad(_coord1)) * cos(deg2rad(_coord2))) + 270
-      outputList:   [export]
-    sea_surface_height_above_sea_level:
-      geometry:     global@center
-      typekind:     r8
-      dataInit:     &testfunc
-        5*(sin(_step/24*deg2rad(_coord1)) * cos(deg2rad(2*_coord2)))
-      dataAdvance:  *testfunc
-      outputList:   [export]
-  outputs:
-    import:
-      onDataInit:         true
-      onImport:           true
-    export:
-      onDataInit:         true
-      onExport:           true
+  Components:
 
-DEF:
-  model:        ESMX_Data
-  attributes:
-    Verbosity:  high
-  timeKeeping:  Model
-  geometries:
-    global:
-      geom:           grid1PeriDimUfrm
-      minCornerCoord: [-180, -89]
-      maxCornerCoord: [+180, +89]
-      maxIndex:       [ 200, 100]
-      staggerLocList: [center, corner]
-  importFields:
-    sea_surface_temperature:
-      geometry:     global@center
-      typekind:     r4
-      dataInit:     10*cos(deg2rad(_coord1))+270
-      outputList:   [import]
-    sea_surface_height_above_sea_level:
-      geometry:     global@center
-      typekind:     r4
-      outputList:   [import]
-  exportFields:
-    sea_surface_temperature:
-      geometry:     global@center
-      typekind:     r4
-      dataInit:     &func
-        sea_surface_temperature + sea_surface_height_above_sea_level
-      dataAdvance:  *func
-      outputList:   [export]
-  outputs:
-    import:
-      onDataInit:         true
-      onImport:           true
-    export:
-      onDataInit:         true
-      onExport:           true
+    ABC:
+      model:        ESMX_Data
+      attributes:
+        Verbosity:  high
+      timeKeeping:  Mediator
+      geometries:
+        global:
+          geom:           grid1PeriDimUfrm
+          minCornerCoord: [-180, -89]
+          maxCornerCoord: [+180, +89]
+          maxIndex:       [ 100,  50]
+          staggerLocList: [center, corner]
+      importFields:
+        sea_surface_temperature:
+          geometry:     global@center
+          typekind:     r8
+          outputList:   [import]
+      exportFields:
+        sea_surface_temperature:
+          geometry:     global@center
+          typekind:     r8
+          dataAdvance:
+            10*(sin(_step/24*deg2rad(_coord1)) * cos(deg2rad(_coord2))) + 270
+          outputList:   [export]
+        sea_surface_height_above_sea_level:
+          geometry:     global@center
+          typekind:     r8
+          dataInit:     &testfunc
+            5*(sin(_step/24*deg2rad(_coord1)) * cos(deg2rad(2*_coord2)))
+          dataAdvance:  *testfunc
+          outputList:   [export]
+      outputs:
+        import:
+          onDataInit:         true
+          onImport:           true
+        export:
+          onDataInit:         true
+          onExport:           true
+
+    DEF:
+      model:        ESMX_Data
+      attributes:
+        Verbosity:  high
+      timeKeeping:  Model
+      geometries:
+        global:
+          geom:           grid1PeriDimUfrm
+          minCornerCoord: [-180, -89]
+          maxCornerCoord: [+180, +89]
+          maxIndex:       [ 200, 100]
+          staggerLocList: [center, corner]
+      importFields:
+        sea_surface_temperature:
+          geometry:     global@center
+          typekind:     r4
+          dataInit:     10*cos(deg2rad(_coord1))+270
+          outputList:   [import]
+        sea_surface_height_above_sea_level:
+          geometry:     global@center
+          typekind:     r4
+          outputList:   [import]
+      exportFields:
+        sea_surface_temperature:
+          geometry:     global@center
+          typekind:     r4
+          dataInit:     &func
+            sea_surface_temperature + sea_surface_height_above_sea_level
+          dataAdvance:  *func
+          outputList:   [export]
+      outputs:
+        import:
+          onDataInit:         true
+          onImport:           true
+        export:
+          onDataInit:         true
+          onExport:           true

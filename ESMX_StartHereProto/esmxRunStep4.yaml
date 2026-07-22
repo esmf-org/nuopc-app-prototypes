@@ -23,51 +23,53 @@ ESMX:
         DEF
       @
 
-ABC:
-  model:        ESMX_Data
-  attributes:
-    Verbosity:  high
-  timeKeeping:  Model
-  geometries:
-    global:
-      geom:           grid1PeriDimUfrm
-      minCornerCoord: [-180, -89]
-      maxCornerCoord: [+180, +89]
-      maxIndex:       [ 100,  50]
-      staggerLocList: [corner, center]
-  exportFields:
-    sea_surface_temperature:
-      geometry:     global@center
-      typekind:     r8
-      dataInit:     &testfunc
-        10*(sin(_step/24*deg2rad(_coord1)) * cos(deg2rad(_coord2))) + 270
-      dataAdvance:  *testfunc
-      dataValidate: {print: yes}
-      outputList:   export
-  outputs:
-    export:
-      onDataInit: true
-      onExport:   true
+  Components:
 
-DEF:
-  model:        ESMX_Data
-  attributes:
-    Verbosity:  high
-  timeKeeping:  Model
-  geometries:
-    global:
-      geom:           grid1PeriDimUfrm
-      minCornerCoord: [-180, -89]
-      maxCornerCoord: [+180, +89]
-      maxIndex:       [ 200, 100]
-      staggerLocList: center
-  importFields:
-    sea_surface_temperature:
-      geometry:     global
-      typekind:     r4
-      dataValidate: {min: 265, max: 280, print: yes, action: warning}
-      outputList:   import
-  outputs:
-    import:
-      onDataInit: true
-      onImport:   true
+    ABC:
+      model:        ESMX_Data
+      attributes:
+        Verbosity:  high
+      timeKeeping:  Model
+      geometries:
+        global:
+          geom:           grid1PeriDimUfrm
+          minCornerCoord: [-180, -89]
+          maxCornerCoord: [+180, +89]
+          maxIndex:       [ 100,  50]
+          staggerLocList: [corner, center]
+      exportFields:
+        sea_surface_temperature:
+          geometry:     global@center
+          typekind:     r8
+          dataInit:     &testfunc
+            10*(sin(_step/24*deg2rad(_coord1)) * cos(deg2rad(_coord2))) + 270
+          dataAdvance:  *testfunc
+          dataValidate: {print: yes}
+          outputList:   export
+      outputs:
+        export:
+          onDataInit: true
+          onExport:   true
+
+    DEF:
+      model:        ESMX_Data
+      attributes:
+        Verbosity:  high
+      timeKeeping:  Model
+      geometries:
+        global:
+          geom:           grid1PeriDimUfrm
+          minCornerCoord: [-180, -89]
+          maxCornerCoord: [+180, +89]
+          maxIndex:       [ 200, 100]
+          staggerLocList: center
+      importFields:
+        sea_surface_temperature:
+          geometry:     global
+          typekind:     r4
+          dataValidate: {min: 265, max: 280, print: yes, action: warning}
+          outputList:   import
+      outputs:
+        import:
+          onDataInit: true
+          onImport:   true

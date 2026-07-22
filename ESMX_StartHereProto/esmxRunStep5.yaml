@@ -23,70 +23,72 @@ ESMX:
         DEF
       @
 
-ABC:
-  model:        ESMX_Data
-  attributes:
-    Verbosity:  high
-  timeKeeping:  Model
-  geometries:
-    global:
-      geom:           grid1PeriDimUfrm
-      minCornerCoord: [-180, -89]
-      maxCornerCoord: [+180, +89]
-      maxIndex:       [ 100,  50]
-      staggerLocList: [center, corner]
-  exportFields:
-    sea_surface_temperature:
-      geometry:     global@center
-      typekind:     r8
-      dataInit:     &testfunc
-        10*(sin(_step/24*deg2rad(_coord1)) * cos(deg2rad(_coord2))) + 270
-      dataAdvance:  *testfunc
-      dataValidate: {print: yes}
-      outputList:   [export, export_data_init]
-    sea_surface_height_above_sea_level:
-      geometry:     global@center
-      typekind:     r8
-      dataInit:     &testfunc
-        5*(sin(_step/24*deg2rad(_coord1)) * cos(deg2rad(2*_coord2)))
-      dataAdvance:  *testfunc
-      dataValidate: {print: yes}
-      outputList:   [export, export_data_init]
-  outputs:
-    export:
-      onDataInit:         true
-      onExport:           true
-    export_data_init:
-      onDataInit:         true
+  Components:
 
-DEF:
-  model:        ESMX_Data
-  attributes:
-    Verbosity:  high
-  timeKeeping:  Model
-  geometries:
-    global:
-      geom:           grid1PeriDimUfrm
-      minCornerCoord: [-180, -89]
-      maxCornerCoord: [+180, +89]
-      maxIndex:       [ 200, 100]
-      staggerLocList: [center, corner]
-  importFields:
-    sea_surface_temperature:
-      geometry:     global@center
-      typekind:     r4
-      dataValidate: {min: 265, max: 280, print: yes, action: warning}
-      outputList:   [import, import_data_init]
-    sea_surface_height_above_sea_level:
-      geometry:     global@center
-      typekind:     r4
-      dataValidate: {min: -10, max: 10, print: yes}
-      outputList:   [import]
-  outputs:
-    import:
-      onDataInit:         true
-      onImport:           true
-      separateFieldFiles: true
-      separateTimeFiles:  true
-    import_data_init:
-      onDataInit:         true
+    ABC:
+      model:        ESMX_Data
+      attributes:
+        Verbosity:  high
+      timeKeeping:  Model
+      geometries:
+        global:
+          geom:           grid1PeriDimUfrm
+          minCornerCoord: [-180, -89]
+          maxCornerCoord: [+180, +89]
+          maxIndex:       [ 100,  50]
+          staggerLocList: [center, corner]
+      exportFields:
+        sea_surface_temperature:
+          geometry:     global@center
+          typekind:     r8
+          dataInit:     &testfunc
+            10*(sin(_step/24*deg2rad(_coord1)) * cos(deg2rad(_coord2))) + 270
+          dataAdvance:  *testfunc
+          dataValidate: {print: yes}
+          outputList:   [export, export_data_init]
+        sea_surface_height_above_sea_level:
+          geometry:     global@center
+          typekind:     r8
+          dataInit:     &testfunc
+            5*(sin(_step/24*deg2rad(_coord1)) * cos(deg2rad(2*_coord2)))
+          dataAdvance:  *testfunc
+          dataValidate: {print: yes}
+          outputList:   [export, export_data_init]
+      outputs:
+        export:
+          onDataInit:         true
+          onExport:           true
+        export_data_init:
+          onDataInit:         true
+
+    DEF:
+      model:        ESMX_Data
+      attributes:
+        Verbosity:  high
+      timeKeeping:  Model
+      geometries:
+        global:
+          geom:           grid1PeriDimUfrm
+          minCornerCoord: [-180, -89]
+          maxCornerCoord: [+180, +89]
+          maxIndex:       [ 200, 100]
+          staggerLocList: [center, corner]
+      importFields:
+        sea_surface_temperature:
+          geometry:     global@center
+          typekind:     r4
+          dataValidate: {min: 265, max: 280, print: yes, action: warning}
+          outputList:   [import, import_data_init]
+        sea_surface_height_above_sea_level:
+          geometry:     global@center
+          typekind:     r4
+          dataValidate: {min: -10, max: 10, print: yes}
+          outputList:   [import]
+      outputs:
+        import:
+          onDataInit:         true
+          onImport:           true
+          separateFieldFiles: true
+          separateTimeFiles:  true
+        import_data_init:
+          onDataInit:         true

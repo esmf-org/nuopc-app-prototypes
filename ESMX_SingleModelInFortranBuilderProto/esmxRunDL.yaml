@@ -13,7 +13,8 @@ ESMX:
     attributes:
       Verbosity: low
 
-MDL:
-  model:            ./install/lib/libSiMoCo.*
-  stdout:
-    filename:       myDL.stdout.*
+  Components:
+    MDL:
+      model:            ./install/lib/libSiMoCo.*
+      stdout:
+        filename:       myDL.stdout.*
