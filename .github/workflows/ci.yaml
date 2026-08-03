@@ -67,7 +67,7 @@ jobs:
         PR_BODY: ${{ github.event.pull_request.body }}
       run: |
         # Strip multi-line and single-line HTML comments from PR_BODY, then search for active override
-        CLEAN_BODY=$(echo "$PR_BODY" | sed -E ':a;N;$!ba;s/<!--.*?-->//g')
+        CLEAN_BODY=$(perl -0pe 's/<!--.*?-->//gs' <<< "$PR_BODY")
         VERSION_OVERRIDE=$(grep -m 1 -iE '^\s*esmf_version\s*:' <<< "$CLEAN_BODY" | awk -F':' '{print $2}' | tr -d '\r\n' | xargs)
         
         if [ -n "$VERSION_OVERRIDE" ]; then
