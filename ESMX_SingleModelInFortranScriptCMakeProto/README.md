@@ -15,9 +15,8 @@ Files and sub-directories that implement the fundamental concept demonstrated by
 - `SiMoCo`            - Simple NUOPC-compliant Model Component, utilizing a CMake based build system.
 - `esmxBuild.yaml`    - Standard ESMX YAML file describing the build dependencies of the `esmx_app` (the executable) on SiMoCo via the direct linking approach.
 - `esmxRun.yaml`      - Standard ESMX YAML file describing the run configuration suitable for the direct linking approach.
-- `esmxBuildDL.yaml`- Standard ESMX YAML file describing the build dependencies of the `esmx_app` (the executable) on SiMoCo via the dynamic loading at run-time approach.
-- `esmxRunDL.yaml`  - Standard ESMX YAML file describing the run configuration suitable for the dynamic loading at run-time approach.
-- `cmake`             - Subdirectory holding the `FindESMF.cmake`. This is used by the `CMakeLists.txt` file to find and access ESMF.
+- `esmxBuildDL.yaml`  - Standard ESMX YAML file describing the build dependencies of the `esmx_app` (the executable) on SiMoCo via the dynamic loading at run-time approach.
+- `esmxRunDL.yaml`    - Standard ESMX YAML file describing the run configuration suitable for the dynamic loading at run-time approach.
 - `CMakeLists.txt`    - The top-level CMake file.
 
 ### Usage
