@@ -66,12 +66,15 @@ jobs:
       env:
         PR_BODY: ${{ github.event.pull_request.body }}
       run: |
-        VERSION_OVERRIDE=$(grep -m 1 -iE 'esmf_version\s*:' <<< "$PR_BODY" | awk -F':' '{print $2}' | tr -d '\r\n' | xargs)
+        # Strip multi-line and single-line HTML comments from PR_BODY, then search for active override
+        CLEAN_BODY=$(perl -0pe 's/<!--.*?-->//gs' <<< "$PR_BODY")
+        VERSION_OVERRIDE=$(grep -m 1 -iE '^\s*esmf_version\s*:' <<< "$CLEAN_BODY" | awk -F':' '{print $2}' | tr -d '\r\n' | xargs)
+        
         if [ -n "$VERSION_OVERRIDE" ]; then
-          echo "Found version override in PR body: ESMF_VERSION=$VERSION_OVERRIDE"
+          echo "Found active version override in PR body: ESMF_VERSION=$VERSION_OVERRIDE"
           echo "ESMF_VERSION=$VERSION_OVERRIDE" >> $GITHUB_ENV
         else
-          echo "No PR override found. Sticking with: ESMF_VERSION=$ESMF_VERSION"
+          echo "No active PR override found (commented out or omitted). Sticking with: ESMF_VERSION=$ESMF_VERSION"
         fi
     - name: Report ESMF and NUOPC Application Prototypes versions
       run: |
