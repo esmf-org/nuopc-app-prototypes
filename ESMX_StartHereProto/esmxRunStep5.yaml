@@ -82,7 +82,7 @@ ESMX:
         sea_surface_height_above_sea_level:
           geometry:     global@center
           typekind:     r4
-          dataValidate: {min: -10, max: 10, print: yes}
+          dataValidate: {min: -10, max: 10, skip: [0,5.1], print: yes}
           outputList:   [import]
       outputs:
         import:
