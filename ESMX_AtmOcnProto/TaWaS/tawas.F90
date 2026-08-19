@@ -1,6 +1,6 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright (c) 2002-2025, University Corporation for Atmospheric Research,
+! Copyright (c) 2002-2026, University Corporation for Atmospheric Research,
 ! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
 ! Laboratory, University of Michigan, National Centers for Environmental
 ! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
@@ -38,6 +38,7 @@ module TAWAS
     character(80)             :: compLabel
     character(:), allocatable :: badKey
     logical                   :: isFlag
+    character(:), allocatable :: configKey(:)
 
     rc = ESMF_SUCCESS
 
@@ -81,7 +82,10 @@ module TAWAS
         line=__LINE__, &
         file=__FILE__)) &
         return  ! bail out
-      hconfigNode = ESMF_HConfigCreateAt(hconfig, keyString=compLabel, rc=rc)
+      configKey = [ character(len=ESMF_MAXSTR) :: "ESMX", "Components", &
+        compLabel]
+      hconfigNode = ESMF_HConfigCreateAt(hconfig, keyStringList=configKey, &
+        rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
         line=__LINE__, &
         file=__FILE__)) &

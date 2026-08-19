@@ -1,6 +1,6 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright (c) 2002-2025, University Corporation for Atmospheric Research,
+! Copyright (c) 2002-2026, University Corporation for Atmospheric Research,
 ! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
 ! Laboratory, University of Michigan, National Centers for Environmental
 ! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
@@ -29,8 +29,6 @@ module ESM
   use ATM, only: atmSS => SetServices
   use OCN, only: ocnSS => SetServices
   use ICE, only: iceSS => SetServices
-
-  use NUOPC_Connector, only: cplSS => SetServices
 
   implicit none
 
@@ -217,22 +215,22 @@ module ESM
 
     ! set up free format run sequence
     runSeqFF = NUOPC_FreeFormatCreate(stringList=(/ &
-      " @*            ",    &
-      "   OCN -> ATM  ",    &
-      "   ICE -> ATM  ",    &
-      "   ATM         ",    &
-      "   ATM -> ICE  ",    &
-      "   OCN -> ICE  ",    &
+      " @*                                      ",    &
+      "   OCN -> ATM :extrapMethod=nearest_stod ",    &
+      "   ICE -> ATM :extrapMethod=nearest_stod ",    &
+      "   ATM                                   ",    &
+      "   ATM -> ICE :extrapMethod=nearest_stod ",    &
+      "   OCN -> ICE :extrapMethod=nearest_stod ",    &
 #ifdef OCN_ICE_LEAPFROG_on
-      "   ICE         ",    &
+      "   ICE                                   ",    &
 #endif
-      "   ATM -> OCN  ",    &
-      "   ICE -> OCN  ",    &
+      "   ATM -> OCN :extrapMethod=nearest_stod ",    &
+      "   ICE -> OCN :extrapMethod=nearest_stod ",    &
 #ifndef OCN_ICE_LEAPFROG_on
-      "   ICE         ",    &
+      "   ICE                                   ",    &
 #endif
-      "   OCN         ",    &
-      " @             " /), &
+      "   OCN                                   ",    &
+      " @                                       " /), &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out

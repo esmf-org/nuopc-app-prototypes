@@ -1,6 +1,6 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright (c) 2002-2025, University Corporation for Atmospheric Research,
+! Copyright (c) 2002-2026, University Corporation for Atmospheric Research,
 ! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
 ! Laboratory, University of Michigan, National Centers for Environmental
 ! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
@@ -188,6 +188,12 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    call NUOPC_CompAttributeSet(conn, name="ConnectionOptions", &
+      value=":unmappedAction=ignore", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 
     ! SetServices for ocn2atm
     call NUOPC_DriverAddComp(driver, srcCompLabel="OCN", dstCompLabel="ATM", &
@@ -290,16 +296,16 @@ module ESM
           return  ! bail out
         ! go through all of the entries in the cplList
         do j=1, cplListSize
-          if (trim(cplList(j))=="precipitation_flux") then
+          if (index(cplList(j), "precipitation_flux") > 0) then
             ! switch remapping to redist, b/c arbDistr Grid
             cplList(j) = trim(cplList(j))//":REMAPMETHOD=redist"
-          elseif (trim(cplList(j))=="sea_surface_salinity") then
+          elseif (index(cplList(j), "sea_surface_salinity") > 0) then
             ! switch remapping to redist, b/c holes in index space
             cplList(j) = trim(cplList(j))//":REMAPMETHOD=redist"
-          elseif (trim(cplList(j))=="sea_surface_temperature") then
+          elseif (index(cplList(j), "sea_surface_temperature") > 0) then
             ! switch remapping to redist, b/c can have holes in index space
             cplList(j) = trim(cplList(j))//":REMAPMETHOD=redist"
-          elseif (trim(cplList(j))=="sea_surface_height_above_sea_level") then
+          elseif (index(cplList(j), "sea_surface_height_above_sea_level") > 0) then
             ! switch remapping to redist, b/c can have holes in index space
             cplList(j) = trim(cplList(j))//":REMAPMETHOD=redist"
           endif

@@ -1,6 +1,6 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright (c) 2002-2025, University Corporation for Atmospheric Research,
+! Copyright (c) 2002-2026, University Corporation for Atmospheric Research,
 ! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
 ! Laboratory, University of Michigan, National Centers for Environmental
 ! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
@@ -27,8 +27,6 @@ module ESM
 
   use ATM, only: atmSS => SetServices
   use OCN, only: ocnSS => SetServices
-
-  use NUOPC_Connector, only: cplSS => SetServices
 
   implicit none
 
@@ -203,12 +201,12 @@ module ESM
 
     ! set up free format run sequence
     runSeqFF = NUOPC_FreeFormatCreate(stringList=(/ &
-      " @*            ",    &
-      "   OCN -> ATM  ",    &
-      "   ATM         ",    &
-      "   ATM -> OCN  ",    &
-      "   OCN         ",    &
-      " @             " /), &
+      " @*                                      ",    &
+      "   OCN -> ATM :extrapMethod=nearest_stod ",    &
+      "   ATM                                   ",    &
+      "   ATM -> OCN :extrapMethod=nearest_stod ",    &
+      "   OCN                                   ",    &
+      " @                                       " /), &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out

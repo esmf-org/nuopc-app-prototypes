@@ -17,5 +17,6 @@ ESMX:
         MDL
       @
 
-MDL:
-  model:            ./install/lib/libSiMoCoJulia.*
+  Components:
+    MDL:
+      model:            ./install/lib/libSiMoCoJulia.*

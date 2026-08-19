@@ -14,20 +14,22 @@ ESMX:
       Verbosity: high
     runSequence: |
       @900
-        ATM -> OCN
-        OCN -> ATM
+        ATM -> OCN :unmappedAction=ignore
+        OCN -> ATM :unmappedAction=ignore
         ATM
         OCN
       @
 
-ATM:
-  model:            ./install/lib/libCatmos.*
-  attributes:
-    Verbosity:  high
-#    Diagnostic: max
+  Components:
 
-OCN:
-  model:            lumo
-  attributes:
-    Verbosity:  high
-#    Diagnostic: max
+    ATM:
+      model:            ./install/lib/libCatmos.*
+      attributes:
+        Verbosity:  high
+#        Diagnostic: max
+
+    OCN:
+      model:            lumo
+      attributes:
+        Verbosity:  high
+#        Diagnostic: max

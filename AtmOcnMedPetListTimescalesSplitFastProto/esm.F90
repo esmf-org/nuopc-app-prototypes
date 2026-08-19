@@ -1,6 +1,6 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright (c) 2002-2025, University Corporation for Atmospheric Research,
+! Copyright (c) 2002-2026, University Corporation for Atmospheric Research,
 ! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
 ! Laboratory, University of Michigan, National Centers for Environmental
 ! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
@@ -22,8 +22,6 @@ module ESM
   use ATM, only: atmSS => SetServices
   use OCN, only: ocnSS => SetServices
   use MED, only: medSS => SetServices
-
-  use NUOPC_Connector, only: cplSS => SetServices
 
   implicit none
 
@@ -206,19 +204,19 @@ module ESM
 
     ! set up free format run sequence
     runSeqFF = NUOPC_FreeFormatCreate(stringList=(/ &
-      " @*                          ",    &
-      "   OCN -> MED                ",    &
-      "   MED RunPhase1             ",    &
-      "   MED -> OCN                ",    &
-      "   OCN                       ",    &
-      "   @*                        ",    &
-      "     MED RunPhaseFastBefore  ",    &
-      "     MED -> ATM              ",    &
-      "     ATM                     ",    &
-      "     ATM -> MED              ",    &
-      "     MED RunPhaseFastAfter   ",    &
-      "   @                         ",    &
-      " @                           " /), &
+      " @*                                      ",    &
+      "   OCN -> MED :extrapMethod=nearest_stod ",    &
+      "   MED RunPhase1                         ",    &
+      "   MED -> OCN :extrapMethod=nearest_stod ",    &
+      "   OCN                                   ",    &
+      "   @*                                    ",    &
+      "     MED RunPhaseFastBefore              ",    &
+      "     MED -> ATM                          ",    &
+      "     ATM                                 ",    &
+      "     ATM -> MED                          ",    &
+      "     MED RunPhaseFastAfter               ",    &
+      "   @                                     ",    &
+      " @                                       " /), &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out

@@ -1,6 +1,6 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright (c) 2002-2025, University Corporation for Atmospheric Research,
+! Copyright (c) 2002-2026, University Corporation for Atmospheric Research,
 ! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
 ! Laboratory, University of Michigan, National Centers for Environmental
 ! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
@@ -127,7 +127,7 @@ module driverParentComp
 ! turning this connector off will trigger an error in the driverChild
 ! InternalInitializeRealize() routine, detecting that there is no producer
 ! for this field.
-    ! SetServices for OCN2ATM
+    ! SetServices for OCN2driverChild
     call NUOPC_DriverAddComp(driver, srcCompLabel="OCN", &
       dstCompLabel="driverChild", &
       compSetServicesRoutine=cplSS, comp=connector, rc=rc)
@@ -135,13 +135,20 @@ module driverParentComp
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompAttributeSet(connector, name="ConnectionOptions", &
+      value=":extrapMethod=nearest_stod", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
 #endif
-    ! SetServices for ATM2OCN
+    ! SetServices for driverChild2OCN
     call NUOPC_DriverAddComp(driver, srcCompLabel="driverChild", &
       dstCompLabel="OCN", &
       compSetServicesRoutine=cplSS, comp=connector, rc=rc)
@@ -149,7 +156,14 @@ module driverParentComp
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", rc=rc)
+    call NUOPC_CompAttributeSet(connector, name="Verbosity", value="high", &
+      rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompAttributeSet(connector, name="ConnectionOptions", &
+      value=":extrapMethod=nearest_stod", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &

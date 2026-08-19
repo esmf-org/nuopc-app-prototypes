@@ -1,6 +1,6 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright (c) 2002-2025, University Corporation for Atmospheric Research,
+! Copyright (c) 2002-2026, University Corporation for Atmospheric Research,
 ! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
 ! Laboratory, University of Michigan, National Centers for Environmental
 ! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
@@ -172,6 +172,12 @@ module ESM
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
+    call NUOPC_CompAttributeSet(connector, name="ConnectionOptions", &
+      value=":extrapMethod=nearest_stod", rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 
     ! SetServices for ocn2med
     call NUOPC_DriverAddComp(driver, srcCompLabel="OCN", dstCompLabel="MED", &
@@ -182,6 +188,12 @@ module ESM
       return  ! bail out
     call NUOPC_CompAttributeSet(connector, name="Verbosity", value=attrStr, &
       rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompAttributeSet(connector, name="ConnectionOptions", &
+      value=":extrapMethod=nearest_stod", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -210,6 +222,12 @@ module ESM
       return  ! bail out
     call NUOPC_CompAttributeSet(connector, name="Verbosity", value=attrStr, &
       rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_CompAttributeSet(connector, name="ConnectionOptions", &
+      value=":extrapMethod=nearest_stod", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -269,22 +287,22 @@ module ESM
 
     ! set up free format run sequence
     runSeqFF = NUOPC_FreeFormatCreate(stringList=(/ &
-      " @1800         ",    &
-      "   MED         ",    &
-      "   MED -> ATM  ",    &
-      "   MED -> OCN  ",    &
-      "   @@3600      ",    &
-      "    ATM        ",    &
-      "    OCN        ",    &
-      "    @1800      ",    &
-      "    ATM -> MED ",    &
-      "    @          ",    &
-      "   @@          ",    &
-      "   @@3600      ",    &
-      "   OCN -> MED  ",    &
-      "   @@          ",    &
-      "   MED         ",    &
-      " @             " /), &
+      " @1800                                     ",    &
+      "   MED                                     ",    &
+      "   MED -> ATM                              ",    &
+      "   MED -> OCN :extrapMethod=nearest_stod   ",    &
+      "   @@3600                                  ",    &
+      "    ATM                                    ",    &
+      "    OCN                                    ",    &
+      "    @1800                                  ",    &
+      "    ATM -> MED :extrapMethod=nearest_stod  ",    &
+      "    @                                      ",    &
+      "   @@                                      ",    &
+      "   @@3600                                  ",    &
+      "   OCN -> MED :extrapMethod=nearest_stod   ",    &
+      "   @@                                      ",    &
+      "   MED                                     ",    &
+      " @                                         " /), &
       rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out

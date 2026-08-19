@@ -1,21 +1,13 @@
 cmake_minimum_required(VERSION 3.22)
 
-# Where to look for the local Find<Package>.cmake files
-list(APPEND CMAKE_MODULE_PATH "${ESMF_ESMXDIR}/cmake")
-
-# Find ESMF
-find_package(ESMF 8.9.0 MODULE REQUIRED)
-
-# Set compilers consistent with ESMF
-set(CMAKE_Fortran_COMPILER        "${ESMF_F90COMPILER}")
-set(CMAKE_CXX_COMPILER            "${ESMF_CXXCOMPILER}")
-set(CMAKE_C_COMPILER              "${ESMF_CCOMPILER}")
-
 # Project
 project(ExternalDriverAPIProto
         VERSION 1.0.0
         LANGUAGES Fortran CXX C
         )
+
+# Find ESMF
+find_package(ESMF 9.0.0 REQUIRED)
 
 # Find required packages
 find_package(OpenMP REQUIRED)

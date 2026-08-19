@@ -1,6 +1,6 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright (c) 2002-2025, University Corporation for Atmospheric Research,
+! Copyright (c) 2002-2026, University Corporation for Atmospheric Research,
 ! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
 ! Laboratory, University of Michigan, National Centers for Environmental
 ! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
@@ -323,7 +323,7 @@ module OCN
 
     ! importable field on Mesh or Grid: magnitude_of_surface_downward_stress
     field = ESMF_FieldCreate(name="msds", &
-#if 1
+#if 0
       mesh=meshIn, &
 #else
       grid=gridIn, &

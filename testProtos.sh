@@ -2,7 +2,7 @@
 
 #==============================================================================
 # Earth System Modeling Framework
-# Copyright (c) 2002-2025, University Corporation for Atmospheric Research,
+# Copyright (c) 2002-2026, University Corporation for Atmospheric Research,
 # Massachusetts Institute of Technology, Geophysical Fluid Dynamics
 # Laboratory, University of Michigan, National Centers for Environmental
 # Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
@@ -10,8 +10,15 @@
 # Licensed under the University of Illinois-NCSA License.
 #==============================================================================
 
+# Ensure ESMFMKFILE is set and valid
+if [ -z "$ESMFMKFILE" ] || [ ! -f "$ESMFMKFILE" ]; then
+  echo "Error: ESMFMKFILE environment variable is not set or file does" \
+       "not exist." >&2
+  exit 1
+fi
+
 # Obtain ESMF_INTERNAL_MPIRUN from esmf.mk
-command=`grep ESMF_INTERNAL_MPIRUN $ESMFMKFILE`
+command=$(grep ESMF_INTERNAL_MPIRUN "$ESMFMKFILE")
 eval $command
 
 #TOOLRUN="valgrind --leak-check=full"
@@ -28,16 +35,16 @@ then
    # tests where CMake is used under the hood to determine the correct
    # compiler and linker flags. Set them here to be available.
 
-   # We'll try to get the location from a spack installation of llvm-openmp if possible,
-   # but if we can't find that, then we'll fall back on assuming that libomp is available
-   # via homebrew.
+   # We'll try to get the location from a spack installation of llvm-openmp
+   # if possible, but if we can't find that, then we'll fall back on assuming
+   # that libomp is available via homebrew.
    homebrew_libomp_dir=/opt/homebrew/opt/libomp
 
    if command -v spack &>/dev/null; then
       # First try getting these from a spack-installed llvm-openmp:
       omp_dir=$(spack location -i --first llvm-openmp 2>/dev/null)
       if [ $? -ne 0 ]; then
-         # llvm-openmp isn't installed with spack; fall back on the homebrew location
+         # llvm-openmp isn't installed with spack; fall back to homebrew location
          omp_dir=${homebrew_libomp_dir}
       fi
    else

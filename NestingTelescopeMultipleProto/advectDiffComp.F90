@@ -1,6 +1,6 @@
 !==============================================================================
 ! Earth System Modeling Framework
-! Copyright (c) 2002-2025, University Corporation for Atmospheric Research,
+! Copyright (c) 2002-2026, University Corporation for Atmospheric Research,
 ! Massachusetts Institute of Technology, Geophysical Fluid Dynamics
 ! Laboratory, University of Michigan, National Centers for Environmental
 ! Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
@@ -953,10 +953,11 @@ module advectDiffComp
 
     ! local variables
     type(InternalState)  :: is
+    type(InternalStateStruct), pointer :: wrap
     integer              :: stat
 
     rc = ESMF_SUCCESS
-  
+
     ! -> get internal state from Component
     nullify(is%wrap)
     call ESMF_GridCompGetInternalState(model, is, rc)
@@ -964,7 +965,7 @@ module advectDiffComp
       line=__LINE__, &
       file=__FILE__)) &
       return  ! bail out
-      
+
     ! -> destroy objects inside of internal state
 
     call ESMF_FieldHaloRelease(routehandle=is%wrap%haloHandle, rc=rc)
@@ -972,27 +973,28 @@ module advectDiffComp
       line=__LINE__, &
       file=__FILE__)) &
       return
-      
+
     call ESMF_FieldDestroy(is%wrap%field, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return
-    
+
     call ESMF_GridDestroy(is%wrap%grid, rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
       return
-      
+
     ! -> deallocate internal state memory  
-    deallocate(is%wrap, stat=stat)
+    wrap => is%wrap ! LLVM workaround for deallocate() runtime error!
+    deallocate(wrap, stat=stat)
     if (ESMF_LogFoundDeallocError(statusToCheck=stat, &
       msg="Deallocation of internal state memory failed.", &
       line=__LINE__, &
-      file=__FILE__)) &
+      file=__FILE__, rcToReturn=rc)) &
       return  ! bail out
-      
+
   end subroutine
 
   !-----------------------------------------------------------------------------
