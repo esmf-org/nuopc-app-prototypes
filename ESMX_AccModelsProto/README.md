@@ -4,7 +4,7 @@
 
 The build systems for CompA and CompB are CMake based, and thus hook easily into the ESMX build procedure.
 
-The components are built in form of static libraries to prevent known issues with memory management, e.g. with OpenAcc and multiple shared libraries.
+The components are built in form of static libraries to prevent known issues with memory management, specifically with OpenACC and multiple components using shared libraries.
 
 The ESMX build approach is based on the **ESMX_Builder** utility.
 
@@ -22,16 +22,18 @@ Files and sub-directories that implement the fundamental concept demonstrated by
 #### Building the ESMX application
 
 Building the ESMX executable using the `ESMX_Builder` utility that comes with ESMF is a single step process. The approach does *not* require a top-level `CMakeLists.txt` file. The following assumes that the `bin` directory of the desired ESMF installation is present in the user's `PATH` environemnt variable.
-     
-     ```
-     ESMX_Builder -v
-     ```
-  This uses the default `esmxBuild.yaml` in the current directory. An alternative ESMX build configuration can be specified on the command line:
-     
-     ```
-     ESMX_Builder -v esmxBuildDL.yaml
-     ```
-  This build the dynamic library version of the test, where the SiMoCo component is built, but not linked into the executable. In this case, the shared object is loaded at run-time.
+
+  ```
+  ESMX_Builder -v
+  ```
+
+This uses the default `esmxBuild.yaml` in the current directory. An alternative ESMX build configuration can be specified on the command line:
+
+  ```
+  ESMX_Builder -v esmxBuildDL.yaml
+  ```
+
+This builds the dynamic library version of the test, where the SiMoCo component is built, but not linked into the executable. In this case, the shared object is loaded at run-time.
 
 #### Running the ESMX application
 
