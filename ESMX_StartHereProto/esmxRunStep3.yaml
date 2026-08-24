@@ -17,4 +17,5 @@ ESMX:
     ABC:
       model:  ESMX_Data
       attributes:
-        Verbosity: low
+        Verbosity:  low
+      timeKeeping:  Model

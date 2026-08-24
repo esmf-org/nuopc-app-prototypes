@@ -18,7 +18,7 @@ ESMX:
 
     runSequence: |
       @900
-        ABC -> DEF :poleMethod=allavg
+        ABC -> DEF :remapMethod=conserve
         ABC
         DEF
       @
@@ -36,7 +36,7 @@ ESMX:
           minCornerCoord: [-180, -89]
           maxCornerCoord: [+180, +89]
           maxIndex:       [ 100,  50]
-          staggerLocList: [corner, center]
+          staggerLocList: [center, corner]
       exportFields:
         sea_surface_temperature:
           geometry:     global@center
@@ -45,11 +45,21 @@ ESMX:
             10*(sin(_step/24*deg2rad(_coord1)) * cos(deg2rad(_coord2))) + 270
           dataAdvance:  *testfunc
           dataValidate: {print: yes}
-          outputList:   export
+          outputList:   [export, export_data_init]
+        sea_surface_height_above_sea_level:
+          geometry:     global@center
+          typekind:     r8
+          dataInit:     &testfunc
+            5*(sin(_step/24*deg2rad(_coord1)) * cos(deg2rad(2*_coord2)))
+          dataAdvance:  *testfunc
+          dataValidate: {print: yes}
+          outputList:   [export, export_data_init]
       outputs:
         export:
-          onDataInit: true
-          onExport:   true
+          onDataInit:         true
+          onExport:           true
+        export_data_init:
+          onDataInit:         true
 
     DEF:
       model:        ESMX_Data
@@ -62,14 +72,23 @@ ESMX:
           minCornerCoord: [-180, -89]
           maxCornerCoord: [+180, +89]
           maxIndex:       [ 200, 100]
-          staggerLocList: center
+          staggerLocList: [center, corner]
       importFields:
         sea_surface_temperature:
-          geometry:     global
+          geometry:     global@center
           typekind:     r4
           dataValidate: {min: 265, max: 280, print: yes, action: warning}
-          outputList:   import
+          outputList:   [import, import_data_init]
+        sea_surface_height_above_sea_level:
+          geometry:     global@center
+          typekind:     r4
+          dataValidate: {min: -10, max: 10, skip: [0,5.1], print: yes}
+          outputList:   [import]
       outputs:
         import:
-          onDataInit: true
-          onImport:   true
+          onDataInit:         true
+          onImport:           true
+          separateFieldFiles: true
+          separateTimeFiles:  true
+        import_data_init:
+          onDataInit:         true
