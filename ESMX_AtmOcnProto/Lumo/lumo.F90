@@ -213,6 +213,7 @@ module LUMO
     type(ESMF_Grid)         :: gridIn, gridOut
     type(ESMF_Mesh)         :: meshIn, meshOut
     type(ESMF_LocStream)    :: locsIn, locsOut
+    type(ESMF_Clock)        :: clock
 
     integer, parameter              :: totalNumPoints=100
     integer(ESMF_KIND_I4), pointer  :: mask(:)
@@ -429,6 +430,18 @@ module LUMO
           fptr(i)=-10000.0 ! Bad value to check that mask works
        endif
     enddo
+
+    ! timestamp all of the fields in the exportState to indicate valid data
+    call NUOPC_ModelGet(model, driverClock=clock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+    call NUOPC_SetTimestamp(exportState, clock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 #endif
 
   end subroutine
