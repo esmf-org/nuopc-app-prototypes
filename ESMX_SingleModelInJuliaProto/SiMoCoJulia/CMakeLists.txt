@@ -32,7 +32,8 @@ target_link_libraries(SiMoCoJulia PUBLIC ESMF::ESMC)
 if (Julia_FOUND)
   message("Julia_INCLUDE_DIRS: ${Julia_INCLUDE_DIRS}")
   message("Julia_LIBRARY: ${Julia_LIBRARY}")
-  target_include_directories(SiMoCoJulia PRIVATE ${Julia_INCLUDE_DIRS})
+  # Use SYSTEM to suppress warnings originating from Julia headers (-Wconversion)
+  target_include_directories(SiMoCoJulia SYSTEM PRIVATE ${Julia_INCLUDE_DIRS})
   target_link_libraries(SiMoCoJulia PUBLIC ${Julia_LIBRARY})
   # make sure the rpath is set correctly when installing to find Julia
   set_target_properties(SiMoCoJulia PROPERTIES

@@ -16,6 +16,11 @@
 
 #include <julia.h>
 
+// Compatibility alias for older Julia versions where jl_function_t was defined
+#ifndef jl_function_t
+typedef jl_value_t jl_function_t;
+#endif
+
 // ESMF header -- provides access to the entire public ESMF C API
 #include "NUOPC.h"
 #include "ESMC.h"
@@ -23,8 +28,8 @@
 //-------------------------------------------------------------------------
 //-------------------------------------------------------------------------
 
-jl_function_t *model_init;
-jl_function_t *model_run;
+jl_value_t *model_init;
+jl_value_t *model_run;
 
 void initialize_julia(int *rc) {
   // initialize return code to success
