@@ -18,10 +18,11 @@ ESMX:
 
     runSequence: |
       @900
-        ABC -> DEF :poleMethod=allavg
-        ABC
         DEF
+        ABC
+        ABC -> DEF :poleMethod=allavg
       @
+      DEF
 
   Components:
 
@@ -71,5 +72,4 @@ ESMX:
           outputList:   import
       outputs:
         import:
-          onDataInit: true
           onImport:   true
