@@ -9,7 +9,7 @@
 !==============================================================================
 
 #define CUSTOMRUNSEQUENCE_on
-#define HIERARCHYCONNECTORSMANUAL_on
+#define HIERARCHYCONNECTORSMANUAL_off
 
 module ATM
 

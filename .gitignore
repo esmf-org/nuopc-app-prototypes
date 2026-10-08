@@ -349,6 +349,8 @@ ESMX_AtmOcnProto/atm.stdout
 ESMX_AtmOcnProto/ocn.stdout.0
 ESMX_AtmOcnProto/ocn.stdout.1
 ESMX_AtmOcnProto/ocn.stdout.2
+ESMX_AtmOcnProto/data_ATM_export.nc
+ESMX_AtmOcnProto/data_ATM_import.nc
 AtmOcnRtmTwoTimescalesProto/PET0.ESMF_LogFile
 AtmOcnRtmTwoTimescalesProto/PET1.ESMF_LogFile
 AtmOcnRtmTwoTimescalesProto/PET2.ESMF_LogFile
@@ -749,8 +751,10 @@ ESMX_AtmOcnFortranAndCProto/PET0.ESMF_LogFile
 ESMX_AtmOcnFortranAndCProto/PET1.ESMF_LogFile
 ESMX_AtmOcnFortranAndCProto/PET2.ESMF_LogFile
 ESMX_AtmOcnFortranAndCProto/PET3.ESMF_LogFile
-ESMX_StartHereProto/ABC_final_export.nc
-ESMX_StartHereProto/DEF_final_import.nc
+ESMX_StartHereProto/data_ABC_export.nc
+ESMX_StartHereProto/data_ABC_import.nc
+ESMX_StartHereProto/data_DEF_export.nc
+ESMX_StartHereProto/data_DEF_import.nc
 ESMX_StartHereProto/ESMF_Profile.summary
 ESMX_StartHereProto/PET0.ESMF_LogFile
 ESMX_StartHereProto/PET1.ESMF_LogFile

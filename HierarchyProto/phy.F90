@@ -102,7 +102,7 @@ module PHY
 #ifdef WITHEXPORTFIELDS
     ! exportable field: precipitation_flux
     call NUOPC_Advertise(exportState, &
-      StandardName="precipitation_flux", rc=rc)
+      StandardName="precipitation_flux", SharePolicyField="share", rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, &
       file=__FILE__)) &
@@ -144,6 +144,7 @@ module PHY
     type(ESMF_Field)          :: field
     type(ESMF_StateItem_Flag) :: itemType
     type(ESMF_State)          :: nestedState
+    type(ESMF_Clock)          :: clock
 
     rc = ESMF_SUCCESS
 
@@ -258,6 +259,18 @@ module PHY
       return  ! bail out
 
 #endif
+
+    call NUOPC_ModelGet(model, driverClock=clock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
+
+    call NUOPC_SetTimestamp(exportState, clock, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, &
+      file=__FILE__)) &
+      return  ! bail out
 
   end subroutine
 
