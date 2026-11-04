@@ -170,6 +170,10 @@ jobs:
         rebuild-check: quick
         esmpy: false
         cache: true
+    - name: Set up Julia
+      uses: julia-actions/setup-julia@v2
+      with:
+        version: '1.10'
     - name: NUOPC Tests
       env:
         ESMF_TEST_NUOPC_JULIA: ON
