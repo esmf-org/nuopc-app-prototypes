@@ -30,7 +30,6 @@ ESMX:
       model:        ESMX_Data
       attributes:
         Verbosity:  high
-      timeKeeping:  Mediator
       geometries:
         global:
           geom:           grid1PeriDimUfrm
@@ -50,6 +49,7 @@ ESMX:
           dataAdvance:
             10*(sin(_step/24*deg2rad(_coord1)) * cos(deg2rad(_coord2))) + 270
           outputList:   [export]
+          timeStamp:    PreAdvance
         sea_surface_height_above_sea_level:
           geometry:     global@center
           typekind:     r8
@@ -57,6 +57,7 @@ ESMX:
             5*(sin(_step/24*deg2rad(_coord1)) * cos(deg2rad(2*_coord2)))
           dataAdvance:  *testfunc
           outputList:   [export]
+          timeStamp:    PreAdvance
       outputs:
         import:
           onDataInit:         true
@@ -69,7 +70,6 @@ ESMX:
       model:        ESMX_Data
       attributes:
         Verbosity:  high
-      timeKeeping:  Model
       geometries:
         global:
           geom:           grid1PeriDimUfrm
