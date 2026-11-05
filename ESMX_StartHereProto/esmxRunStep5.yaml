@@ -6,7 +6,7 @@ ESMX:
     logAppendFlag:          false
     logFlush:               true
     startTime:              2012-10-24T08:00:00
-    stopTime:               2012-10-25T08:00:00
+    stopTime:               2012-10-24T09:00:00
 
     ESMF_RUNTIME_PROFILE:         ON
     ESMF_RUNTIME_PROFILE_OUTPUT:  SUMMARY
@@ -18,8 +18,8 @@ ESMX:
 
     runSequence: |
       @900
-        ABC -> DEF :remapMethod=conserve
         ABC
+        ABC -> DEF :remapMethod=conserve
         DEF
       @
 
@@ -29,7 +29,6 @@ ESMX:
       model:        ESMX_Data
       attributes:
         Verbosity:  high
-      timeKeeping:  Model
       geometries:
         global:
           geom:           grid1PeriDimUfrm
@@ -46,6 +45,7 @@ ESMX:
           dataAdvance:  *testfunc
           dataValidate: {print: yes}
           outputList:   [export, export_data_init]
+          timeStamp:    PostAdvance
         sea_surface_height_above_sea_level:
           geometry:     global@center
           typekind:     r8
@@ -65,7 +65,6 @@ ESMX:
       model:        ESMX_Data
       attributes:
         Verbosity:  high
-      timeKeeping:  Model
       geometries:
         global:
           geom:           grid1PeriDimUfrm
@@ -79,16 +78,18 @@ ESMX:
           typekind:     r4
           dataValidate: {min: 265, max: 280, print: yes, action: warning}
           outputList:   [import, import_data_init]
+          timeStamp:    postAdvance
         sea_surface_height_above_sea_level:
           geometry:     global@center
           typekind:     r4
           dataValidate: {min: -10, max: 10, skip: [0,5.1], print: yes}
           outputList:   [import]
+          timeStamp:    postAdvance
       outputs:
         import:
           onDataInit:         true
           onImport:           true
-          separateFieldFiles: true
-          separateTimeFiles:  true
+#          separateFieldFiles: true
+#          separateTimeFiles:  true
         import_data_init:
           onDataInit:         true

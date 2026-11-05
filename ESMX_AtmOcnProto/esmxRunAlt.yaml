@@ -31,7 +31,6 @@ ESMX:
       petList:          [3, [2-0]]  # petList is list of scalars and lists.
                                     # each list again can be of scalars and lists
                                     # recursively.
-      timeKeeping:      Model
       geometries:
         global:
           geom:           gridNoPeriDimUfrm
