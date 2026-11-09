@@ -6,7 +6,7 @@ ESMX:
     logAppendFlag:          false
     logFlush:               true
     startTime:              2012-10-24T08:00:00
-    stopTime:               2012-10-24T09:00:00
+    stopTime:               2012-10-25T08:00:00
 
     ESMF_RUNTIME_PROFILE:         ON
     ESMF_RUNTIME_PROFILE_OUTPUT:  SUMMARY
