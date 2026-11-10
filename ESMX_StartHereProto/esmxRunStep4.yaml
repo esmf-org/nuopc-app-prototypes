@@ -30,7 +30,6 @@ ESMX:
       model:        ESMX_Data
       attributes:
         Verbosity:  high
-      timeKeeping:  Model
       geometries:
         global:
           geom:           grid1PeriDimUfrm
@@ -56,7 +55,6 @@ ESMX:
       model:        ESMX_Data
       attributes:
         Verbosity:  high
-      timeKeeping:  Model
       geometries:
         global:
           geom:           grid1PeriDimUfrm
